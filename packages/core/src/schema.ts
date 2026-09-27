@@ -34,6 +34,17 @@ const KNOWN_TYPES: ReadonlySet<string> = new Set([
 	"null",
 ]);
 
+const SCANNED_KEYWORDS: ReadonlySet<string> = new Set([
+	"type",
+	"properties",
+	"required",
+	"items",
+	"enum",
+	"additionalProperties",
+	"description",
+	"title",
+]);
+
 interface WalkState {
 	keys: number;
 }
@@ -189,6 +200,14 @@ function checkSchemaNode(
 		}
 	}
 
+	// Unknown keywords are ignored as vocabulary, but their subtrees are still
+	// untrusted input: sweep them for safety without validating them as schema.
+	for (const [key, child] of Object.entries(node)) {
+		if (!SCANNED_KEYWORDS.has(key)) {
+			checkJsonValue(child, depth + 1, state, seen);
+		}
+	}
+
 	seen.delete(node);
 }
 
@@ -213,12 +232,11 @@ export function serializeInputSchema(schema: unknown): string | undefined {
 }
 
 /**
- * Re-parse a stored schema into a fresh deep copy (`undefined` when none was
- * given). The stored string was produced by `serializeInputSchema`, so parsing
- * alone restores the copy semantics.
+ * Re-parse a stored schema into a fresh deep copy. The registry stores the
+ * empty string when no schema was given, so empty reads back as `undefined`.
  */
 export function parseInputSchema(stored: string | undefined): unknown {
-	if (stored === undefined) {
+	if (stored === undefined || stored === "") {
 		return undefined;
 	}
 	return JSON.parse(stored) as unknown;

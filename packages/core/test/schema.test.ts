@@ -23,6 +23,8 @@ function nestedObject(depth: number): unknown {
 describe("serializeInputSchema", () => {
 	it("absent schema stays absent", () => {
 		expect(serializeInputSchema(undefined)).toBeUndefined();
+		expect(parseInputSchema(undefined)).toBeUndefined();
+		expect(parseInputSchema("")).toBeUndefined();
 	});
 
 	it("round-trips through a string with copy semantics", () => {
@@ -123,6 +125,15 @@ describe("serializeInputSchema", () => {
 	it("ignores benign unknown keywords", () => {
 		expect(() =>
 			serializeInputSchema({ type: "string", description: "a name" }),
+		).not.toThrow();
+	});
+	it("rejects dangerous keys inside unknown keywords", () => {
+		const parsed = JSON.parse(
+			'{"type":"object","anyOf":[{"__proto__":{}}]}',
+		) as unknown;
+		expect(() => serializeInputSchema(parsed)).toThrow(TypeError);
+		expect(() =>
+			serializeInputSchema({ type: "string", anyOf: [{ type: "number" }] }),
 		).not.toThrow();
 	});
 });
