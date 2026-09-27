@@ -36,8 +36,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      # Pinned to SHA for v5 (2026-07-16).
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      # Pinned to SHA (version in trailing comment).
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 1
 
@@ -75,8 +75,8 @@ jobs:
 
       - name: Open an issue when it changed
         if: steps.compare.outputs.changed == 'true'
-        # Pinned to SHA for v8 (2025-09-04).
-        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        # Pinned to SHA (version in trailing comment).
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
             const title = 'Upstream WebMCP specification changed';
