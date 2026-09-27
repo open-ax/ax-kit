@@ -18,8 +18,9 @@ It works, but it's slow, brittle, and burns tokens fast.
 agent just does it. Less guesswork, less waiting, less spend.
 
 Open source, built in the open, following the
-[W3C WebMCP](https://www.w3.org/community/wicg/) work on giving agents a first-class
-way to use the web.
+[WebMCP](https://webmachinelearning.github.io/webmcp/) draft from the
+[W3C Web Machine Learning Community Group](https://www.w3.org/community/webmachinelearning/)
+on giving agents a first-class way to use the web. Pinned draft: 2026-09-26.
 
 <p align="center">
   <sub>Part of <a href="https://github.com/open-ax">OpenAX</a> &nbsp;·&nbsp; Apache-2.0</sub>

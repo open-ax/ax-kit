@@ -1,4 +1,6 @@
 # Dependencies
+# NOTE: local-only entries at the bottom must match LOCAL_PATH_PATTERN in
+# .github/ci/vocab.txt. Update both together.
 node_modules/
 .pnpm-store/
 
@@ -35,3 +37,11 @@ Thumbs.db
 !.vscode/extensions.json
 !.vscode/settings.json
 .idea/
+
+/plan/
+/.scratch/
+/.ax/
+/docs/agents/
+/AGENTS.md
+CONTEXT.local.md
+*.internal.*

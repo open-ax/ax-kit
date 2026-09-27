@@ -1,0 +1,125 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+#
+# Review configuration for ax-kit.
+#
+# Division of labour: continuous integration is the enforcer, CodeRabbit is the
+# reviewer. Nothing here blocks a merge on its own judgement. Where a rule must
+# hold, it is expressed as a deterministic CI check.
+
+language: "en-US"
+inheritance: true
+
+reviews:
+  # Stricter than the default. Most of the code in these repositories is written
+  # by an AI agent, and the failure mode that matters is confident code that is
+  # subtly wrong. Nits are cheaper to live with than a missed defect.
+  profile: "assertive"
+
+  request_changes_workflow: true
+  high_level_summary: true
+  high_level_summary_in_walkthrough: false
+  poem: false
+  in_progress_fortune: false
+  collapse_walkthrough: true
+
+  auto_review:
+    enabled: true
+    drafts: false
+    auto_incremental_review: true
+
+  # The default skips repository owners and collaborators. In an
+  # agent-assisted workflow almost every pull request comes from the owner's
+  # own account, so the default would skip detection on precisely the changes
+  # most likely to need it.
+  slop_detection:
+    enabled: true
+    include_all_authors: true
+
+  finishing_touches:
+    simplify:
+      enabled: true
+    autofix:
+      enabled: true
+    unit_tests:
+      enabled: true
+
+  path_instructions:
+    - path: "**/*"
+      instructions: |
+        These repositories are maintained with heavy AI assistance. Most pull
+        requests are agent-authored. Assume the author is competent and the
+        code is unverified.
+
+        - Judge the code against the specification and the stated invariants,
+          not against general style preferences.
+        - Do not suggest renaming a public API to "read better". Names are
+          pinned to an external specification draft and are not ours to change.
+        - Flag unverified assumptions. An agent that writes against a plausible
+          but wrong API version is the most common serious defect here.
+        - Say plainly when you are uncertain. An unverified claim labelled as
+          unverified is useful; a confident wrong claim is not.
+
+    # NOTE: per-package instructions for packages/core/ were removed. No
+    # packages exist yet. Re-add ZERO-deps, size-budget, isolatedDeclarations,
+    # and conformance instructions in the commit that creates the package,
+    # so review rules never describe phantom paths.
+
+  pre_merge_checks:
+    # Warning, not error, on purpose. These are judgement calls and an
+    # agent judging its own work is not a reliable gate. CI is what blocks;
+    # CodeRabbit watches and reports.
+    custom_checks:
+      - name: "No new runtime dependency in the polyfill"
+        mode: "warning"
+        instructions: |
+          Confirm no entry was added to the `dependencies` field of any package
+          under `packages/`. A dependency in `devDependencies` is fine and is not
+          a finding. A runtime dependency in a published package is a blocker:
+          report it.
+
+      - name: "Public names still trace to a specification draft"
+        mode: "warning"
+        instructions: |
+          Confirm the pull request does not rename, remove, or add a public
+          export without stating which dated specification draft it implements
+          against. Renaming a public name to improve readability is a blocker.
+
+      - name: "Size budget respected"
+        mode: "warning"
+        instructions: |
+          If the change touches `packages/core`, confirm the size budget job
+          passed and that the change did not add net bundle weight. A refactor
+          that is elegant but grows the bundle is a regression here.
+
+      - name: "Verification is real"
+        mode: "warning"
+        instructions: |
+          Confirm the pull request states how the change was verified, and that
+          the stated verification is a command that was actually run rather than
+          an inspection. A behavioural change with no test that would fail
+          without it is incomplete.
+
+  # Static analysis CodeRabbit runs alongside its own review. Each of these is
+  # a deterministic check: dependency hygiene, workflow correctness, workflow
+  # security, and committed secrets.
+  tools:
+    gitleaks:
+      enabled: true
+    actionlint:
+      enabled: true
+    zizmor:
+      enabled: true
+    markdownlint:
+      enabled: true
+    yamllint:
+      enabled: true
+    shellcheck:
+      enabled: true
+    biome:
+      enabled: true
+    ast-grep:
+      enabled: true
+
+chat:
+  art: false
+  auto_reply: true

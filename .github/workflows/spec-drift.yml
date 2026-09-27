@@ -1,0 +1,159 @@
+name: spec-drift
+
+# The specification this project implements is a draft, re-dated
+# 2026-09-26 at time of writing, and the venue itself is contested. Silent
+# drift is the failure mode this project cannot afford: an implementation that
+# claims conformance to a draft it has quietly diverged from is worse than one
+# that makes no claim.
+#
+# This job watches upstream and opens an issue when the document changes. It
+# deliberately does not decide whether a change affects us — that judgement
+# needs someone who read the diff against the sections we implement, and an
+# automated job cannot make it. What it does is make sure the change cannot
+# pass unnoticed.
+#
+# Read-only by design. This job never commits. To record a new baseline,
+# update .github/spec-drift.sha256 in a reviewed PR and close the issue.
+
+on:
+  schedule:
+    # 06:17 UTC daily. Off the hour on purpose: the top of the hour is when
+    # every other scheduled job fires.
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: spec-drift
+  cancel-in-progress: false
+
+jobs:
+  drift:
+    name: Upstream specification
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # Pinned to SHA for v5 (2026-07-16).
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 1
+
+      - name: Fetch the published specification
+        id: fetch
+        run: |
+          set -euo pipefail
+          url="https://webmachinelearning.github.io/webmcp/"
+          curl --fail --silent --show-error --location --max-time 30 --retry 3 "$url" --output spec.html
+          # Hash covers rendered HTML, so markup-only upstream edits also open
+          # issues. Triage closes those with a reason; that noise is the cost
+          # of never missing a real change.
+          sha="$(sha256sum spec.html | cut -d' ' -f1)"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "Fetched $url"
+          echo "sha256: $sha"
+
+      - name: Compare against the last recorded hash
+        id: compare
+        run: |
+          set -euo pipefail
+          if [ ! -f .github/spec-drift.sha256 ]; then
+            echo "::error::No baseline recorded yet. Record one in .github/spec-drift.sha256 via PR."
+            exit 1
+          fi
+          previous="$(cut -d' ' -f1 < .github/spec-drift.sha256)"
+          echo "previous=$previous" >> "$GITHUB_OUTPUT"
+          if [ "$previous" = "${{ steps.fetch.outputs.sha }}" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No change since the recorded baseline."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "The specification changed: $previous -> ${{ steps.fetch.outputs.sha }}"
+          fi
+
+      - name: Open an issue when it changed
+        if: steps.compare.outputs.changed == 'true'
+        # Pinned to SHA for v8 (2025-09-04).
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        with:
+          script: |
+            const title = 'Upstream WebMCP specification changed';
+            const marker = '<!-- spec-drift -->';
+            const previous = '${{ steps.compare.outputs.previous }}';
+            const current = '${{ steps.fetch.outputs.sha }}';
+            const existing = await github.paginate(github.rest.issues.listForRepo, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              per_page: 100,
+            });
+            const open = existing.find(i => !i.pull_request && i.title === title);
+            if (open) {
+              const noted = await github.paginate(github.rest.issues.listComments, {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: open.number,
+                per_page: 100,
+              });
+              if (noted.some(c => c.body && c.body.includes(current))) {
+                core.info('This hash is already recorded. Not commenting again.');
+                return;
+              }
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: open.number,
+                body: [
+                  marker,
+                  '',
+                  'The published specification changed again while triage is pending.',
+                  '',
+                  '```',
+                  `previous: ${previous}`,
+                  `current:  ${current}`,
+                  '```',
+                ].join('\n'),
+              });
+              core.info('An issue is already open. Recorded the new hash as a comment.');
+              return;
+            }
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body: [
+                marker,
+                '',
+                'The published specification at',
+                'https://webmachinelearning.github.io/webmcp/',
+                'differs from the last recorded baseline.',
+                '',
+                '```',
+                `previous: ${previous}`,
+                `current:  ${current}`,
+                '```',
+                '',
+                '## What to do',
+                '',
+                'This job cannot tell whether the change affects us. Somebody has to',
+                'read the diff against the sections we actually implement and answer',
+                'three questions:',
+                '',
+                '1. Does any IDL surface we implement change — names, arity, or types?',
+                '2. Does the pinned draft date in the README need to move?',
+                '3. Does the conformance suite baseline need a new expected failure, or',
+                '   can a previous expected failure now pass?',
+                '',
+                'If the answer to all three is no, close the issue and record why in the',
+                'decision log. If the answer to any is yes, the conformance claim is now',
+                'wrong until the code follows the new draft.',
+                '',
+                'Do not resolve this by renaming a public name in the source. That is an',
+                'upstream discussion, not a local edit.',
+                '',
+                'To record the new baseline, update `.github/spec-drift.sha256` in a',
+                'reviewed PR and close this issue.',
+              ].join('\n'),
+            });

@@ -1,0 +1,17 @@
+# Default owner for everything not matched below.
+* @senutpal
+
+# Toolchain and release plumbing. Changes here decide what CI enforces, so they
+# get a second pair of eyes even in a one-person project.
+/.github/workflows/ @senutpal
+/.github/dependabot.yml @senutpal
+
+# Architecture decisions and the domain glossary. Changing these changes what
+# the words mean, which invalidates work that was correct when written.
+/docs/adr/ @senutpal
+/CONTEXT.md @senutpal
+
+# NOTE: entries for /package.json, /pnpm-lock.yaml, /turbo.json, and
+# /packages/core/ were removed. None of those exist yet. Re-add each entry in
+# the commit that creates the file it owns, so ownership never describes
+# phantom paths a future agent will treat as ground truth.

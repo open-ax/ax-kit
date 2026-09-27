@@ -1,0 +1,70 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Runs today, on a repository that has no source yet. These are invariants
+  # about the repository itself.
+  guard:
+    name: Repository guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # Pinned to SHA for v5 (2026-07-16). Full history is required:
+      # check-privacy.sh inspects recent commit subjects.
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 0
+
+      - name: No private material is tracked or referenced
+        run: sh .github/ci/check-privacy.sh tracked
+
+      - name: Required files are present
+        run: |
+          set -euo pipefail
+          for f in LICENSE NOTICE CHANGELOG.md README.md .gitignore .nvmrc; do
+            if [ ! -f "$f" ]; then
+              echo "::error::Required file missing: $f"
+              exit 1
+            fi
+          done
+          echo "ok"
+
+      - name: LICENSE carries a copyright line
+        run: |
+          set -euo pipefail
+          # Accepts both "Copyright 2026 X" and "Copyright (c) 2026 X"; the
+          # (c) is conventional but not required, and this project uses the
+          # plain form.
+          if ! grep -qE 'Copyright (\(c\) )?[0-9]{4}' LICENSE; then
+            echo "::error::LICENSE has no copyright line."
+            exit 1
+          fi
+          grep -E 'Copyright (\(c\) )?[0-9]{4}' LICENSE
+
+      - name: No links to the wrong W3C venue
+        run: |
+          set -euo pipefail
+          # Bracket form avoids matching this file itself; do not "fix" spelling.
+          if git grep -nE 'w3[.]org/community/wic[g]' -- . ; then
+            echo "::error::This proposal is in the Web Machine Learning CG, not WICG."
+            exit 1
+          fi
+          echo "ok"
+
+  # Toolchain checks (typecheck, lint, test, build, size, publint, attw,
+  # changeset) live with the root manifest. No manifest exists yet, so no job
+  # here. Re-add them in the commit that creates package.json, when the
+  # commands actually exist and pass. A gate that is skipped forever teaches
+  # contributors to ignore it.
