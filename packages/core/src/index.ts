@@ -4,6 +4,7 @@
 import { installModelContext } from "./install.js";
 
 export { SPEC_VERSION } from "./constants.js";
+export { ToolActivatedEvent, ToolCancelEvent } from "./events.js";
 export { installModelContext } from "./install.js";
 export type {
 	ModelContext,

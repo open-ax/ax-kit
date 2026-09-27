@@ -1,8 +1,8 @@
 // Copyright 2026 Utpal Sen
 // SPDX-License-Identifier: Apache-2.0
 
-import { isPotentiallyTrustworthy } from "./gates.js";
-import { ensureState } from "./registry.js";
+import { isAllowedToUse, isPotentiallyTrustworthy } from "./gates.js";
+import { ensureState, handleDocumentUnload } from "./registry.js";
 import type { ModelContext } from "./types.js";
 
 /**
@@ -21,6 +21,9 @@ export function installModelContext(doc: Document): ModelContext | undefined {
 	if (!isSecureContext(doc)) {
 		return undefined;
 	}
+	if (!isAllowedToUse(doc)) {
+		return undefined;
+	}
 	const state = ensureState(doc);
 	Object.defineProperty(doc, "modelContext", {
 		value: state.context,
@@ -28,7 +31,25 @@ export function installModelContext(doc: Document): ModelContext | undefined {
 		configurable: false,
 		enumerable: true,
 	});
+	watchUnload(doc);
 	return state.context;
+}
+
+function watchUnload(doc: Document): void {
+	const view = doc.defaultView;
+	if (view === null) {
+		return;
+	}
+	view.addEventListener("pagehide", (event) => {
+		if (
+			typeof PageTransitionEvent !== "undefined" &&
+			event instanceof PageTransitionEvent &&
+			event.persisted
+		) {
+			return;
+		}
+		handleDocumentUnload(doc);
+	});
 }
 
 function isSecureContext(doc: Document): boolean {

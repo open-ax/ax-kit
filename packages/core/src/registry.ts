@@ -85,10 +85,43 @@ interface PendingExecution {
 	readonly targetDocument: Document;
 	readonly toolName: string;
 	readonly controller: AbortController;
+	readonly complete: (result: string | null, success: boolean) => void;
 }
 
 const pendingExecutions = new Map<number, PendingExecution>();
 let nextExecutionId = 1;
+
+function cancelExecution(uuid: number, pending: PendingExecution): void {
+	pendingExecutions.delete(uuid);
+	pending.controller.abort();
+	const live = states.get(pending.targetDocument);
+	if (live !== undefined) {
+		fireToolCancel(live.context, pending.toolName);
+	}
+}
+
+/**
+ * Unloading-document cleanup: pending executions touching the destroyed
+ * document settle per the draft — target gone completes false (the caller
+ * rejects `UnknownError`), caller gone cancels, both gone just removes.
+ */
+export function handleDocumentUnload(doc: Document): void {
+	for (const [uuid, pending] of [...pendingExecutions]) {
+		if (pending.callerDocument !== doc && pending.targetDocument !== doc) {
+			continue;
+		}
+		if (pending.targetDocument === doc && pending.callerDocument !== doc) {
+			pending.complete(null, false);
+		} else if (
+			pending.callerDocument === doc &&
+			pending.targetDocument !== doc
+		) {
+			cancelExecution(uuid, pending);
+		} else {
+			pendingExecutions.delete(uuid);
+		}
+	}
+}
 
 function topDocument(doc: Document): Document {
 	let current = doc;
@@ -533,46 +566,45 @@ export class ModelContextImpl extends EventTarget implements ModelContext {
 
 		return new Promise<string>((resolveCaller, rejectCaller) => {
 			const controller = new AbortController();
-			const complete = (result: string | null, success: boolean): void => {
-				if (!pendingExecutions.has(uuid)) {
-					return;
-				}
-				pendingExecutions.delete(uuid);
-				if (success && result !== null) {
-					resolveCaller(result);
-				} else {
-					rejectCaller(unknownError("tool execution did not complete"));
-				}
-			};
-			pendingExecutions.set(uuid, {
+			const record: PendingExecution = {
 				callerDocument: caller,
 				targetDocument: target,
 				toolName,
 				controller,
-			});
+				complete: (result: string | null, success: boolean): void => {
+					if (!pendingExecutions.has(uuid)) {
+						return;
+					}
+					pendingExecutions.delete(uuid);
+					if (success && result !== null) {
+						resolveCaller(result);
+					} else {
+						rejectCaller(unknownError("tool execution did not complete"));
+					}
+				},
+			};
+			pendingExecutions.set(uuid, record);
 
 			if (execSignal !== undefined) {
 				execSignal.addEventListener(
 					"abort",
 					() => {
 						rejectCaller(execSignal.reason);
-						if (!pendingExecutions.has(uuid)) {
+						const pending = pendingExecutions.get(uuid);
+						if (pending === undefined) {
 							return;
 						}
-						pendingExecutions.delete(uuid);
-						controller.abort();
-						const live = states.get(target);
-						if (live !== undefined) {
-							fireToolCancel(live.context, toolName);
-						}
+						cancelExecution(uuid, pending);
 					},
 					{ once: true },
 				);
 			}
 
-			void runToolCall(invocation, controller.signal, complete).catch(() => {
-				complete(null, false);
-			});
+			void runToolCall(invocation, controller.signal, record.complete).catch(
+				() => {
+					record.complete(null, false);
+				},
+			);
 		});
 	}
 }
