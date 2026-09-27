@@ -20,6 +20,13 @@ Then commit the generated `.changeset/*.md` file.
 
 ## [Unreleased]
 
-Repository scaffolding only. No published package, no installable API, and no
-versioned release. Anything below this line describes the repository, not the
-library.
+### Added
+
+- `@ax-kit/core`: `document.modelContext` with tool registration, filtered
+  discovery, invocation, lifecycle events, and unloading cleanup, plus an
+  opt-in `@ax-kit/core/ax` entry with removal, lookup, parsed-result, and
+  change-diff conveniences. Pinned draft (`SPEC_VERSION`): Draft Community
+  Group Report, 26 September 2026.
+
+No published package yet. Entries above describe the in-tree API; versioned
+releases will be cut with Changesets.

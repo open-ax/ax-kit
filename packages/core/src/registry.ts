@@ -272,26 +272,6 @@ export class ModelContextImpl extends EventTarget implements ModelContext {
 		);
 	}
 
-	get ownerDocument(): Document {
-		return this.#document;
-	}
-
-	unregisterToolRecord(name: string): {
-		removed: boolean;
-		exposedOrigins: ReadonlyArray<string>;
-	} {
-		const state = states.get(this.#document);
-		if (state === undefined) {
-			return { removed: false, exposedOrigins: [] };
-		}
-		const record = state.tools.get(name);
-		if (record === undefined) {
-			return { removed: false, exposedOrigins: [] };
-		}
-		state.tools.delete(name);
-		return { removed: true, exposedOrigins: record.exposedOrigins };
-	}
-
 	async registerTool(
 		tool: ModelContextTool,
 		options?: ModelContextRegisterToolOptions | undefined,
@@ -375,7 +355,7 @@ export class ModelContextImpl extends EventTarget implements ModelContext {
 			signal.addEventListener(
 				"abort",
 				() => {
-					unregisterTool(this, name);
+					unregisterRecord(owner, name);
 				},
 				{ once: true },
 			);
@@ -409,58 +389,7 @@ export class ModelContextImpl extends EventTarget implements ModelContext {
 		const fromOrigins =
 			rawFrom === undefined ? [] : parseOriginList(rawFrom, "fromOrigins");
 
-		const callerOrigin = originOf(requestor);
-		const listed: RegisteredTool[] = [];
-
-		for (const targetDocument of collectDocuments(requestor)) {
-			if (!isAllowedToUse(targetDocument)) {
-				continue;
-			}
-			const targetOrigin = originOf(targetDocument);
-			const ownerRequested =
-				targetDocument === requestor ||
-				sameOrigin(targetOrigin, callerOrigin) ||
-				fromOrigins.includes(targetOrigin);
-			if (!ownerRequested) {
-				continue;
-			}
-			const targetState = states.get(targetDocument);
-			if (targetState === undefined) {
-				continue;
-			}
-			const targetWindow = targetDocument.defaultView;
-			if (targetWindow === null) {
-				continue;
-			}
-			for (const record of targetState.tools.values()) {
-				const ownTools =
-					targetDocument === requestor && targetOrigin === callerOrigin;
-				if (
-					!ownTools &&
-					!isExposedTo(targetOrigin, record.exposedOrigins, callerOrigin)
-				) {
-					continue;
-				}
-				listed.push({
-					name: record.name,
-					title: record.title ?? "",
-					description: record.description,
-					...(record.schemaJson === ""
-						? {}
-						: { inputSchema: parseInputSchema(record.schemaJson) }),
-					window: targetWindow,
-					origin: targetOrigin,
-					...(record.annotations === null
-						? {}
-						: { annotations: listedAnnotations(record.annotations) }),
-				});
-			}
-		}
-
-		listed.sort((first, second) =>
-			first.name < second.name ? -1 : first.name > second.name ? 1 : 0,
-		);
-		return listed;
+		return collectRegisteredTools(requestor, fromOrigins);
 	}
 
 	async executeTool(
@@ -677,12 +606,83 @@ async function runToolCall(
 	complete(serialized, true);
 }
 
-export function unregisterTool(context: ModelContextImpl, name: string): void {
-	const { removed, exposedOrigins } = context.unregisterToolRecord(name);
-	if (!removed) {
-		return;
+export function unregisterRecord(
+	doc: Document,
+	name: string,
+): { removed: boolean; exposedOrigins: ReadonlyArray<string> } {
+	const state = states.get(doc);
+	if (state === undefined) {
+		return { removed: false, exposedOrigins: [] };
 	}
-	notifyToolChange(context.ownerDocument, exposedOrigins);
+	const record = state.tools.get(name);
+	if (record === undefined) {
+		return { removed: false, exposedOrigins: [] };
+	}
+	state.tools.delete(name);
+	notifyToolChange(doc, record.exposedOrigins);
+	return { removed: true, exposedOrigins: record.exposedOrigins };
+}
+
+/**
+ * Sync collection behind `getTools`, shared with the opt-in entry so the
+ * exposure and ordering rules cannot drift between the two paths.
+ */
+export function collectRegisteredTools(
+	requestor: Document,
+	fromOrigins: ReadonlyArray<string>,
+): RegisteredTool[] {
+	const callerOrigin = originOf(requestor);
+	const listed: RegisteredTool[] = [];
+
+	for (const targetDocument of collectDocuments(requestor)) {
+		if (!isAllowedToUse(targetDocument)) {
+			continue;
+		}
+		const targetOrigin = originOf(targetDocument);
+		const ownerRequested =
+			targetDocument === requestor ||
+			sameOrigin(targetOrigin, callerOrigin) ||
+			fromOrigins.includes(targetOrigin);
+		if (!ownerRequested) {
+			continue;
+		}
+		const targetState = states.get(targetDocument);
+		if (targetState === undefined) {
+			continue;
+		}
+		const targetWindow = targetDocument.defaultView;
+		if (targetWindow === null) {
+			continue;
+		}
+		for (const record of targetState.tools.values()) {
+			const ownTools =
+				targetDocument === requestor && targetOrigin === callerOrigin;
+			if (
+				!ownTools &&
+				!isExposedTo(targetOrigin, record.exposedOrigins, callerOrigin)
+			) {
+				continue;
+			}
+			listed.push({
+				name: record.name,
+				title: record.title ?? "",
+				description: record.description,
+				...(record.schemaJson === ""
+					? {}
+					: { inputSchema: parseInputSchema(record.schemaJson) }),
+				window: targetWindow,
+				origin: targetOrigin,
+				...(record.annotations === null
+					? {}
+					: { annotations: listedAnnotations(record.annotations) }),
+			});
+		}
+	}
+
+	listed.sort((first, second) =>
+		first.name < second.name ? -1 : first.name > second.name ? 1 : 0,
+	);
+	return listed;
 }
 
 export function notifyToolChange(
