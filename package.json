@@ -1,0 +1,37 @@
+{
+	"name": "ax-kit",
+	"version": "0.0.0",
+	"private": true,
+	"description": "Correct, tiny, dependency-free WebMCP ModelContext implementation",
+	"license": "Apache-2.0",
+	"engines": {
+		"node": ">=24.19.0 <25"
+	},
+	"packageManager": "pnpm@10.34.5",
+	"workspaces": [
+		"packages/*"
+	],
+	"scripts": {
+		"build": "turbo run build",
+		"typecheck": "turbo run typecheck",
+		"lint": "biome check .",
+		"test": "turbo run test",
+		"size": "turbo run size",
+		"publint": "turbo run publint",
+		"attw": "turbo run attw"
+	},
+	"devDependencies": {
+		"@arethetypeswrong/cli": "0.18.5",
+		"@biomejs/biome": "2.5.14",
+		"@vitest/browser-playwright": "5.0.2",
+		"happy-dom": "20.14.5",
+		"playwright": "1.63.0",
+		"publint": "0.3.24",
+		"size-limit": "14.0.1",
+		"@size-limit/file": "14.0.1",
+		"tsdown": "0.23.0",
+		"turbo": "2.11.4",
+		"typescript": "6.0.3",
+		"vitest": "5.0.2"
+	}
+}

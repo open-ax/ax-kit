@@ -63,8 +63,56 @@ jobs:
           fi
           echo "ok"
 
-  # Toolchain checks (typecheck, lint, test, build, size, publint, attw,
-  # changeset) live with the root manifest. No manifest exists yet, so no job
-  # here. Re-add them in the commit that creates package.json, when the
-  # commands actually exist and pass. A gate that is skipped forever teaches
-  # contributors to ignore it.
+  # Toolchain checks. They live here, with the root manifest, so every change
+  # to the polyfill is typechecked, linted, tested, built, measured, and
+  # verified installable in both module systems.
+  toolchain:
+    name: Toolchain
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      # Pinned to SHA (version in trailing comment).
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # Pinned to SHA (version in trailing comment). Reads the pnpm version
+      # from the packageManager field.
+      - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+
+      # Pinned to SHA (version in trailing comment).
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version-file: ".nvmrc"
+          cache: "pnpm"
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Core package has zero runtime dependencies
+        run: |
+          set -euo pipefail
+          if node -e "process.exit('dependencies' in require('./packages/core/package.json') ? 0 : 1)"; then
+            echo "::error::packages/core must not declare runtime dependencies."
+            exit 1
+          fi
+          echo "ok"
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Test
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
+
+      - name: Size gate (5 kB gzip)
+        run: pnpm size
+
+      - name: Packaging checks
+        run: pnpm publint
+
+      - name: Type resolution checks
+        run: pnpm attw

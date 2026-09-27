@@ -1,0 +1,64 @@
+{
+	"name": "@ax-kit/core",
+	"version": "0.0.0",
+	"description": "Correct, tiny, dependency-free WebMCP ModelContext implementation",
+	"license": "Apache-2.0",
+	"engines": {
+		"node": ">=24.19.0 <25"
+	},
+	"type": "module",
+	"main": "./dist/index.cjs",
+	"module": "./dist/index.mjs",
+	"types": "./dist/index.d.mts",
+	"exports": {
+		".": {
+			"import": {
+				"types": "./dist/index.d.mts",
+				"default": "./dist/index.mjs"
+			},
+			"require": {
+				"types": "./dist/index.d.cts",
+				"default": "./dist/index.cjs"
+			}
+		},
+		"./ax": {
+			"import": {
+				"types": "./dist/ax/index.d.mts",
+				"default": "./dist/ax/index.mjs"
+			},
+			"require": {
+				"types": "./dist/ax/index.d.cts",
+				"default": "./dist/ax/index.cjs"
+			}
+		},
+		"./package.json": "./package.json"
+	},
+	"files": [
+		"dist"
+	],
+	"sideEffects": false,
+	"scripts": {
+		"build": "tsdown",
+		"typecheck": "tsc --noEmit -p tsconfig.json",
+		"test": "vitest run",
+		"size": "size-limit",
+		"publint": "publint",
+		"attw": "attw --pack . --profile node16"
+	},
+	"size-limit": [
+		{
+			"path": "dist/index.mjs",
+			"limit": "5 kB",
+			"gzip": true
+		}
+	],
+	"devDependencies": {
+		"@vitest/browser-playwright": "5.0.2",
+		"happy-dom": "20.14.5",
+		"size-limit": "14.0.1",
+		"@size-limit/file": "14.0.1",
+		"tsdown": "0.23.0",
+		"typescript": "6.0.3",
+		"vitest": "5.0.2"
+	}
+}
