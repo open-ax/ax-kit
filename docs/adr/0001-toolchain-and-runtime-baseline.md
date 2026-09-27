@@ -5,11 +5,12 @@ Status: Accepted
 
 ## Context
 
-A toolchain baseline was recorded for this project. The machine did not match
-it, so the first question was whether to upgrade the machine or relax the pin.
+A toolchain baseline was needed before the first manifest lands, so the
+supported range and the contributor default are recorded here rather than
+discovered by accident later.
 
-This ADR records what was actually verified, because the recorded pins and the
-live registries disagreed in a way that was worth writing down.
+Versions below were verified against nodejs.org/dist and the npm registry on
+2026-09-27.
 
 ### Verified against nodejs.org/dist on 2026-09-27
 
@@ -17,13 +18,10 @@ live registries disagreed in a way that was worth writing down.
 |---|---|
 | Active LTS line | **24.x, codename "Krypton"** |
 | Newest 24.x | **24.21.0** (2026-09-07) |
-| 24.20.0 | 2026-08-26 — the previously recorded pin. Real, but one patch behind. |
-| 24.19.0 | 2026-08-03 — what this machine had. Not a security release. |
+| 24.20.0 | 2026-08-26 — real, one patch behind newest |
+| 24.19.0 | 2026-08-03 — real, two patches behind newest |
 | Maintenance LTS | 22.x "Jod" |
 | Current (non-LTS) | 26.x |
-
-The recorded claim that 24.20.0 is the Active LTS line is **correct in kind and
-stale in patch**. The line is right; the exact patch is two behind.
 
 ### Verified against the npm registry on 2026-09-27
 
@@ -32,9 +30,6 @@ stale in patch**. The line is right; the exact patch is two behind.
 | `pnpm` `dist-tags.latest` | **12.6.0** |
 | Newest 12.x | 12.7.0 |
 | Newest 10.x | 10.34.5 |
-| This machine | 10.15.0 |
-
-The recorded pnpm pin of 12.6.0 is accurate — it is the current `latest`.
 
 ### Could not be verified
 
@@ -52,50 +47,42 @@ be checked then rather than configured now on the strength of an unsourced note.
 ## Decision
 
 **Separate what we develop on from what we support.** These are different
-questions and conflating them is what produced the mismatch.
+questions and conflating them produces friction.
 
 | Concern | Value | Where |
 |---|---|---|
 | Supported Node range | `>=24.19.0 <25` | `package.json` `engines.node` |
 | Node we develop and test on | `24.21.0` | `.nvmrc` |
-| Node on this machine | 24.19.0 | below the floor only in patch, not in minor |
 | pnpm | **not pinned yet** | decided when the toolchain lands |
 
 ### Why `>=24.19.0` and not `>=24.20.0`
 
-The previous floor excluded the version actually installed, for a one-patch
-difference, with no security or compatibility justification. A floor that
-excludes a working developer install is friction that buys nothing.
+The narrower floor would exclude a working install for a one-patch difference,
+with no compatibility justification found. A floor that excludes a working
+contributor install is friction that buys nothing.
 
-24.18.1 and 24.21.0 are security releases; 24.19.0 is not itself one, but it is
-not known to be vulnerable either. There is no reason to refuse it.
-
-### Why `.nvmrc` is 24.21.0 while the machine runs 24.19.0
+### Why `.nvmrc` is 24.21.0
 
 `.nvmrc` is the version CI uses and the version a new contributor should get.
-Declaring 24.19.0 would bake a stale patch into every future checkout. Declaring
-24.21.0 is correct, and `engines` is deliberately loose enough that the local
-lag is not a blocker. Bringing the machine forward is a one-command change and
-is recommended, not required.
+Declaring an older patch would bake a stale patch into every future checkout.
+Declaring 24.21.0 is correct, and `engines` is deliberately loose enough that a
+one-patch lag locally is not a blocker.
 
 ### Why pnpm is not pinned yet
 
-There is no `package.json`. A pin has nowhere to live. Declaring 12.6.0 the
-moment a manifest appears would immediately conflict with the installed 10.15.0
-and break the first install — friction created for a decision that has no
-consumer yet.
+There is no `package.json`. A pin has nowhere to live. Pinning now would break
+the first install for a decision that has no consumer yet.
 
-When the root manifest lands, pin through corepack in `devEngines.packageManager`
-and verify the three unverified claims above first.
+When the root manifest lands, pin the version and verify the three unverified
+claims above first. Note: `pnpm/action-setup@v4` reads `packageManager` (or an
+explicit `version` input), not `devEngines.packageManager`; align the manifest
+field with what the workflow actually reads.
 
 ## Consequences
 
-- `engine-strict=true` in `.npmrc`, so a genuinely unsupported Node fails at
-  install rather than at runtime. The range is satisfied by what is installed,
-  so this is free today.
-- `save-exact=true`, because a published library that installs a different
-  transitive version tomorrow than it tested today is a reproducibility problem.
-- The machine should move to 24.21.0. Nothing blocks it until it does.
+- When `.npmrc` lands with the root manifest: `engine-strict=true`, so a
+  genuinely unsupported Node fails at install rather than at runtime, plus
+  `strict-peer-dependencies=true` and `save-exact=true` for reproducibility.
 - Three toolchain claims are unverified and must be checked before the
   toolchain is configured. They are recorded here so they are not mistaken
   for settled.
@@ -109,14 +96,13 @@ and verify the three unverified claims above first.
 
 ## Deferred, not forgotten
 
-Two repository-level files were deliberately **excluded** from the first
-commit, because at this point both configure a tool that is not installed yet
-and therefore do nothing:
+One repository-level file was deliberately **excluded** from the first
+commit, because at this point it configures a tool that is not installed yet
+and therefore does nothing:
 
-- **\.npmrc\** — \ngine-strict=true\, \strict-peer-dependencies=true\,
-  \save-exact=true\. All three are wanted and all three are inert without a
-  \package.json\. They ship with the commit that creates the root manifest.
-- **\.nvmrc\** — kept, because CI reads it via \
-ode-version-file\ as soon as
+- **`.npmrc`** — `engine-strict=true`, `strict-peer-dependencies=true`,
+  `save-exact=true`. All three are wanted and all three are inert without a
+  `package.json`. They ship with the commit that creates the root manifest.
+- **`.nvmrc`** — kept, because CI reads it via `node-version-file` as soon as
   the toolchain job activates, and it is a single line with no settings to
   misread.

@@ -47,9 +47,10 @@ can require human confirmation before invoking it. Consequential is a property
 of the *declared intent*, not a permission the tool itself enforces.
 
 **Exposed to** **[spec]**
-The origin or origins allowed to see and invoke a tool. Absent the annotation,
-a tool is not exposed to anyone. This is the mechanism by which a page offers a
-narrow surface rather than an open one.
+The origin or origins allowed to see and invoke a tool. Definitions start with
+empty exposed origins and same-origin access is allowed; check the dated draft
+for the exact default. This is the mechanism by which a page offers a narrow
+surface rather than an open one. See the pinned draft recorded in the README.
 
 **Agent** **[ours]**
 Whatever is calling the tools. The project makes no assumption about what it is:
@@ -78,8 +79,9 @@ The page's own JavaScript realm. It shares the DOM with an extension's content
 script but not the JavaScript heap.
 
 **Isolated world** **[spec]**
-An extension content script's realm. It shares the DOM, has its own globals, and
-is the only place a browser extension can be trusted.
+An extension content script's realm. It shares the DOM, has its own globals,
+and is isolated from the page's JavaScript heap. Isolation alone is not trust:
+treat content arriving across the boundary as untrusted input like any other.
 
 **Trusted tier** **[ours]**
 The single place where an authorisation decision is made. Everything arriving

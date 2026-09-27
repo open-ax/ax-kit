@@ -1,4 +1,6 @@
 # Dependencies
+# NOTE: local-only entries at the bottom must match LOCAL_PATH_PATTERN in
+# .github/ci/vocab.txt. Update both together.
 node_modules/
 .pnpm-store/
 

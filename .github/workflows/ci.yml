@@ -14,16 +14,18 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # ---------------------------------------------------------------------------
   # Runs today, on a repository that has no source yet. These are invariants
-  # about the repository itself, and they are the ones that must never be
-  # allowed to rot while the code is being written.
-  # ---------------------------------------------------------------------------
+  # about the repository itself.
   guard:
     name: Repository guard
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v5
+      # Pinned to SHA for v5 (2026-07-16). Full history is required:
+      # check-privacy.sh inspects recent commit subjects.
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 0
 
       - name: No private material is tracked or referenced
         run: sh .github/ci/check-privacy.sh tracked
@@ -54,61 +56,15 @@ jobs:
       - name: No links to the wrong W3C venue
         run: |
           set -euo pipefail
-          if git grep -In 'w3[.]org/community/wic[g]' -- . ; then
+          # Bracket form avoids matching this file itself; do not "fix" spelling.
+          if git grep -nE 'w3[.]org/community/wic[g]' -- . ; then
             echo "::error::This proposal is in the Web Machine Learning CG, not WICG."
             exit 1
           fi
           echo "ok"
 
-  # ---------------------------------------------------------------------------
-  # Activates the moment a root package.json exists. Until then the job reports
-  # as skipped, which is honest: there is nothing to typecheck, lint, test or
-  # size-gate yet. A gate that is red on arrival is a gate people learn to
-  # ignore, so this stays green until it can be genuinely green.
-  #
-  # Every step below is a promise. Do not mark one done until the command runs
-  # in this job and passes.
-  # ---------------------------------------------------------------------------
-  toolchain:
-    name: Toolchain
-    if: ${{ hashFiles('package.json') != '' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-
-      - uses: pnpm/action-setup@v4
-        with:
-          run_install: false
-
-      - uses: actions/setup-node@v5
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
-
-      - run: pnpm install --frozen-lockfile
-
-      - name: Typecheck
-        run: pnpm run typecheck
-
-      - name: Lint and format
-        run: pnpm run lint
-
-      - name: Dependency boundaries
-        run: pnpm run lint:boundaries
-
-      - name: Test
-        run: pnpm run test
-
-      - name: Build
-        run: pnpm run build
-
-      - name: Size budget
-        run: pnpm run size
-
-      - name: Packaging (ESM/CJS correctness)
-        run: |
-          pnpm exec publint
-          pnpm exec attw --pack .
-
-      - name: Changeset present for a user-visible change
-        run: pnpm exec changeset status
+  # Toolchain checks (typecheck, lint, test, build, size, publint, attw,
+  # changeset) live with the root manifest. No manifest exists yet, so no job
+  # here. Re-add them in the commit that creates package.json, when the
+  # commands actually exist and pass. A gate that is skipped forever teaches
+  # contributors to ignore it.

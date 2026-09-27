@@ -21,17 +21,12 @@ updates:
     open-pull-requests-limit: 10
     # Grouped by intent rather than by package, so a routine dependency sweep
     # arrives as a few reviewable diffs instead of fifteen single-line bumps.
+    # NOTE: groups.patterns matches dependency names, not filenames, so there
+    # is deliberately no filename-based group here.
     groups:
       runtime:
         dependency-type: production
       dev-tooling:
         dependency-type: development
-      manifest:
-        patterns:
-          - "package.json"
-          - "pnpm-lock.yaml"
-          - "tsconfig*.json"
-          - "biome.json"
-          - ".nvmrc"
     labels:
       - dependencies

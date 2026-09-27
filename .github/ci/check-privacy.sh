@@ -21,10 +21,11 @@
 # times in ordinary English while passing every path-based check. The leak was
 # wording, not a filename. Paths alone do not catch that.
 #
-# Patterns live in .github/ci/vocab.txt, including the two files that are
-# excluded from the vocabulary scan and why.
+# Patterns live in .github/ci/vocab.txt, including the files that are excluded
+# from the vocabulary scan and why. The CI workflow must fetch full history
+# (fetch-depth: 0) so check 4 sees the same subjects locally and in CI.
 
-set -u
+set -uf
 
 mode="${1:-staged}"
 
@@ -42,9 +43,20 @@ cd "$root" || exit 1
 	exit 1
 }
 
+# Fail fast with a named variable when vocab.txt is incomplete. Sourcing a
+# data file under `set -u` otherwise fails with a bare parameter error.
+for _v in PATTERN PATH_PATTERN LOCAL_PATH_PATTERN EXCLUDE_VOCAB EXCLUDE_PATHS; do
+	eval "_val=\${$_v:-}" || true
+	if [ -z "${_val:-}" ]; then
+		echo "vocab.txt is missing ${_v}" >&2
+		exit 1
+	fi
+done
+
 # Turn "a,b" into " :(exclude)a :(exclude)b" for git pathspec syntax.
-# No quoting: the result is consumed unquoted so the shell word-splits it, and
-# these paths contain no spaces.
+# Consumed unquoted so the shell word-splits it into separate pathspec args.
+# Kept in one helper so staged and tracked searches share the same expansion.
+# Globbing is off (`set -f`) so entries are never expanded as file globs.
 csv_pathspecs() {
 	_out=""
 	_rest="$1"
@@ -61,47 +73,57 @@ csv_pathspecs() {
 }
 
 if [ "$mode" = "tracked" ]; then
-	search_paths() { git grep -InE "$1" -- . ":(exclude)$EXCLUDE_PATHS" 2>/dev/null; }
-	search_vocab() { git grep -InE "$1" -- . $(csv_pathspecs "$EXCLUDE_VOCAB") 2>/dev/null; }
+	# Word splitting into separate pathspec args is intentional.
+	# shellcheck disable=SC2046
+	search_paths() { git grep -nE "$1" -- . $(csv_pathspecs "$EXCLUDE_PATHS") || true; }
+	# shellcheck disable=SC2046
+	search_vocab() { git grep -inE "$1" -- . $(csv_pathspecs "$EXCLUDE_VOCAB") || true; }
 else
-	search_paths() { git grep --cached -InE "$1" -- . ":(exclude)$EXCLUDE_PATHS" 2>/dev/null; }
-	search_vocab() { git grep --cached -InE "$1" -- . $(csv_pathspecs "$EXCLUDE_VOCAB") 2>/dev/null; }
+	# shellcheck disable=SC2046
+	search_paths() { git grep --cached -nE "$1" -- . $(csv_pathspecs "$EXCLUDE_PATHS") || true; }
+	# shellcheck disable=SC2046
+	search_vocab() { git grep --cached -inE "$1" -- . $(csv_pathspecs "$EXCLUDE_VOCAB") || true; }
 fi
 
 fail=0
 
 report() {
 	printf '\n  [privacy] %s\n' "$1"
-	shift
-	"$@" | sed 's/^/    /'
+	printf '%s\n' "$2" | sed 's/^/    /'
 }
 
 # 1. Local-only paths must not be tracked.
 tracked_local=$(git ls-files 2>/dev/null | grep -E "$LOCAL_PATH_PATTERN" || true)
 if [ -n "$tracked_local" ]; then
 	fail=1
-	report "local-only paths are tracked:" printf '%s\n' "$tracked_local"
+	report "local-only paths are tracked:" "$tracked_local"
 fi
 
-# 2. No local filesystem paths in tracked content.
-if found=$(search_paths "$PATH_PATTERN"); then
+# 2. No local filesystem paths in tracked content. No `-I`: binaries must not
+# be silently skipped; a binary match fails closed like any other match.
+found=""
+found=$(search_paths "$PATH_PATTERN")
+if [ -n "$found" ]; then
 	fail=1
-	report "a local filesystem path is present:" printf '%s\n' "$found"
+	report "a local filesystem path is present:" "$found"
 fi
 
 # 3. No references to private material in prose, in tracked content.
-if found=$(search_vocab "$PATTERN"); then
+found=""
+found=$(search_vocab "$PATTERN")
+if [ -n "$found" ]; then
 	fail=1
-	report "content refers to private material in prose:" printf '%s\n' "$found"
+	report "content refers to private material in prose:" "$found"
 fi
 
 # 4. No references in commit subjects. Subjects are the least retractable text
 #    in a repository: they outlive the file, and they reach every clone.
-subjects=$(git log --format=%s -30 2>/dev/null \
+#    Depth 50 with full history (see note at top); shallow clones see fewer.
+subjects=$(git log --format=%s -50 2>/dev/null \
 	| grep -inE "$PATTERN" || true)
 if [ -n "$subjects" ]; then
 	fail=1
-	report "a commit subject refers to private material:" printf '%s\n' "$subjects"
+	report "a commit subject refers to private material:" "$subjects"
 fi
 
 if [ "$fail" -ne 0 ]; then
