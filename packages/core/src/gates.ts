@@ -24,6 +24,12 @@ export function isOriginKeyed(doc: Document): boolean {
 	if (location.protocol === "file:") {
 		return true;
 	}
+	// Hostless documents (about:blank and friends) inherit their origin: with
+	// no host to compare, drift is unobservable here. The top document that
+	// can be checked still reports it.
+	if (location.hostname === "") {
+		return true;
+	}
 	try {
 		if (doc.domain !== location.hostname) {
 			return false;

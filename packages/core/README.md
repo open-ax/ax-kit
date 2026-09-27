@@ -9,6 +9,9 @@ the W3C Web Machine Learning Community Group. The pin is exported as
 review happens against an unnamed draft. The draft is not a W3C Standard and
 is not on the Standards Track.
 
+What conformance means here, and what happens when the draft re-dates, is
+described in `../../docs/conformance-baseline.md`.
+
 ## Install
 
 ```sh

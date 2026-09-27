@@ -126,8 +126,13 @@ export function handleDocumentUnload(doc: Document): void {
 function topDocument(doc: Document): Document {
 	let current = doc;
 	for (;;) {
-		const frame = current.defaultView?.frameElement;
-		if (frame === null || frame === undefined) {
+		let frame: Element | null;
+		try {
+			frame = current.defaultView?.frameElement ?? null;
+		} catch {
+			return current;
+		}
+		if (frame === null) {
 			return current;
 		}
 		let parent: Document;
@@ -169,8 +174,46 @@ function readAnnotations(value: unknown): StoredAnnotations | null {
 	};
 }
 
-function originOf(doc: Document): string {
-	return doc.location.origin;
+function ownOrigin(doc: Document): string {
+	try {
+		return String(doc.location.origin ?? "null");
+	} catch {
+		return "null";
+	}
+}
+
+/**
+ * The origin to decide by. Hostless documents (about:blank, srcdoc) report a
+ * null serialization while inheriting their embedder's origin, so callers
+ * that know the parent pass it down; otherwise the frame tree is climbed.
+ * Anything unreachable stays opaque. Ours: the draft names the Document
+ * origin, which the platform does not expose for these documents.
+ */
+export function effectiveOrigin(doc: Document): string {
+	const direct = ownOrigin(doc);
+	if (direct !== "null" && direct !== "") {
+		return direct;
+	}
+	return effectiveOriginOf(doc, null);
+}
+
+function effectiveOriginOf(doc: Document, parent: string | null): string {
+	const direct = ownOrigin(doc);
+	if (direct !== "null" && direct !== "") {
+		return direct;
+	}
+	if (parent !== null) {
+		return parent;
+	}
+	try {
+		const frame = doc.defaultView?.frameElement ?? null;
+		if (frame !== null) {
+			return effectiveOrigin(frame.ownerDocument);
+		}
+	} catch {
+		// Cross-origin embedders are unobservable: stay opaque.
+	}
+	return "null";
 }
 
 function sameOrigin(firstOrigin: string, secondOrigin: string): boolean {
@@ -191,21 +234,39 @@ function isExposedTo(
 	return exposedOrigins.some((allowed) => allowed === accessingOrigin);
 }
 
-function collectDocuments(root: Document): Document[] {
-	const found: Document[] = [root];
-	const frames = root.querySelectorAll("iframe");
-	for (const frame of frames) {
-		let child: Document | null = null;
+interface TreeEntry {
+	readonly document: Document;
+	readonly origin: string;
+}
+
+function collectTree(top: Document): TreeEntry[] {
+	const entries: TreeEntry[] = [];
+	const visit = (doc: Document, parentOrigin: string | null): void => {
+		const origin = effectiveOriginOf(doc, parentOrigin);
+		entries.push({ document: doc, origin });
+		let frames: NodeListOf<HTMLIFrameElement>;
 		try {
-			child = frame.contentDocument;
+			frames = doc.querySelectorAll("iframe");
 		} catch {
-			continue;
+			return;
 		}
-		if (child !== null && !found.includes(child)) {
-			found.push(...collectDocuments(child));
+		for (const frame of frames) {
+			let child: Document | null = null;
+			try {
+				child = frame.contentDocument;
+			} catch {
+				continue;
+			}
+			if (
+				child !== null &&
+				!entries.some((entry) => entry.document === child)
+			) {
+				visit(child, origin);
+			}
 		}
-	}
-	return found;
+	};
+	visit(top, null);
+	return entries;
 }
 
 function listedAnnotations(
@@ -464,7 +525,7 @@ export class ModelContextImpl extends EventTarget implements ModelContext {
 
 		const toolName =
 			given.name === undefined ? "undefined" : String(given.name);
-		const liveOrigin = originOf(target);
+		const liveOrigin = effectiveOrigin(target);
 		if (liveOrigin !== expected.origin) {
 			throw unknownError("the tool origin does not match");
 		}
@@ -475,7 +536,7 @@ export class ModelContextImpl extends EventTarget implements ModelContext {
 			throw unknownError("no such tool is registered");
 		}
 
-		const callerOrigin = originOf(caller);
+		const callerOrigin = effectiveOrigin(caller);
 		const ownCall = target === caller && liveOrigin === expected.origin;
 		if (
 			!ownCall &&
@@ -631,14 +692,15 @@ export function collectRegisteredTools(
 	requestor: Document,
 	fromOrigins: ReadonlyArray<string>,
 ): RegisteredTool[] {
-	const callerOrigin = originOf(requestor);
+	const callerOrigin = effectiveOrigin(requestor);
 	const listed: RegisteredTool[] = [];
 
-	for (const targetDocument of collectDocuments(requestor)) {
+	for (const { document: targetDocument, origin: targetOrigin } of collectTree(
+		topDocument(requestor),
+	)) {
 		if (!isAllowedToUse(targetDocument)) {
 			continue;
 		}
-		const targetOrigin = originOf(targetDocument);
 		const ownerRequested =
 			targetDocument === requestor ||
 			sameOrigin(targetOrigin, callerOrigin) ||
@@ -689,12 +751,13 @@ export function notifyToolChange(
 	owner: Document,
 	exposedOrigins: ReadonlyArray<string>,
 ): void {
-	const ownerOrigin = originOf(owner);
-	for (const targetDocument of collectDocuments(owner)) {
+	const ownerOrigin = effectiveOrigin(owner);
+	for (const { document: targetDocument, origin: targetOrigin } of collectTree(
+		topDocument(owner),
+	)) {
 		if (!isAllowedToUse(targetDocument)) {
 			continue;
 		}
-		const targetOrigin = originOf(targetDocument);
 		const ownDocument =
 			targetDocument === owner && targetOrigin === ownerOrigin;
 		if (

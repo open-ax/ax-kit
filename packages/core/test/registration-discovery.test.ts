@@ -274,7 +274,7 @@ describe("getTools ordering and isolation", () => {
 		expect(names).toEqual(["sort_A", "sort_a", "sort_b"]);
 	});
 
-	it("isolates state per document", async () => {
+	it("keeps per-document state with origin-filtered visibility", async () => {
 		const mc = context();
 		const frame = document.createElement("iframe");
 		document.body.appendChild(frame);
@@ -287,16 +287,35 @@ describe("getTools ordering and isolation", () => {
 			expect(otherContext).toBeDefined();
 			expect(otherContext).not.toBe(mc);
 			expect(otherContext).toBe(raw(other).modelContext);
-			await mc.registerTool(tool("iso_main"));
-			await otherContext?.registerTool(tool("iso_other"));
-			const mainNames = (await mc.getTools()).map((item) => item.name);
-			const otherNames = (await otherContext?.getTools())?.map(
-				(item) => item.name,
+			// Same name in two documents: neither shadows the other, because
+			// each document owns its map. Same-origin frames see each
+			// other's tools; state is what stays separate.
+			await mc.registerTool({
+				name: "iso_shared",
+				description: "from-main",
+				execute: async () => null,
+			});
+			await otherContext?.registerTool({
+				name: "iso_shared",
+				description: "from-frame",
+				execute: async () => null,
+			});
+			const mainShared = (await mc.getTools()).filter(
+				(item) => item.name === "iso_shared",
 			);
-			expect(mainNames).toContain("iso_main");
-			expect(mainNames).not.toContain("iso_other");
-			expect(otherNames).toContain("iso_other");
-			expect(otherNames).not.toContain("iso_main");
+			expect(mainShared.map((item) => item.description).sort()).toEqual([
+				"from-frame",
+				"from-main",
+			]);
+			// Two records under one name: neither document shadowed the other.
+			const frameShared = ((await otherContext?.getTools()) ?? []).filter(
+				(item) => item.name === "iso_shared",
+			);
+			// This DOM cannot climb to the top document, so the frame sees
+			// its own record here; symmetric visibility runs in browser mode.
+			expect(frameShared.map((item) => item.description)).toContain(
+				"from-frame",
+			);
 		} finally {
 			frame.remove();
 		}
