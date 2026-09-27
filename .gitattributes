@@ -1,0 +1,14 @@
+# Normalize line endings: check in LF, check out LF on every platform.
+# Without this, Windows clones (core.autocrlf=true) produce whole-file diffs.
+* text=auto eol=lf
+
+# Binary assets must never be touched
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.pdf binary
