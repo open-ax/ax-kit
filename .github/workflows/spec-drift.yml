@@ -1,7 +1,7 @@
 name: spec-drift
 
 # The specification this project implements is a draft, re-dated
-# 2026-09-17 at time of writing, and the venue itself is contested. Silent
+# 2026-09-26 at time of writing, and the venue itself is contested. Silent
 # drift is the failure mode this project cannot afford: an implementation that
 # claims conformance to a draft it has quietly diverged from is worse than one
 # that makes no claim.
@@ -47,6 +47,9 @@ jobs:
           set -euo pipefail
           url="https://webmachinelearning.github.io/webmcp/"
           curl --fail --silent --show-error --location --max-time 30 --retry 3 "$url" --output spec.html
+          # Hash covers rendered HTML, so markup-only upstream edits also open
+          # issues. Triage closes those with a reason; that noise is the cost
+          # of never missing a real change.
           sha="$(sha256sum spec.html | cut -d' ' -f1)"
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
           echo "Fetched $url"

@@ -75,12 +75,12 @@ csv_pathspecs() {
 if [ "$mode" = "tracked" ]; then
 	# Word splitting into separate pathspec args is intentional.
 	# shellcheck disable=SC2046
-	search_paths() { git grep -nE "$1" -- . $(csv_pathspecs "$EXCLUDE_PATHS") || true; }
+	search_paths() { git grep -inE "$1" -- . $(csv_pathspecs "$EXCLUDE_PATHS") || true; }
 	# shellcheck disable=SC2046
 	search_vocab() { git grep -inE "$1" -- . $(csv_pathspecs "$EXCLUDE_VOCAB") || true; }
 else
 	# shellcheck disable=SC2046
-	search_paths() { git grep --cached -nE "$1" -- . $(csv_pathspecs "$EXCLUDE_PATHS") || true; }
+	search_paths() { git grep --cached -inE "$1" -- . $(csv_pathspecs "$EXCLUDE_PATHS") || true; }
 	# shellcheck disable=SC2046
 	search_vocab() { git grep --cached -inE "$1" -- . $(csv_pathspecs "$EXCLUDE_VOCAB") || true; }
 fi
