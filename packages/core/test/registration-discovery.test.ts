@@ -29,7 +29,7 @@ function raw(doc: Document): Record<string, unknown> {
 }
 
 function context(): ModelContext {
-	const installed = raw(document)["modelContext"] as ModelContext | undefined;
+	const installed = raw(document).modelContext as ModelContext | undefined;
 	if (installed === undefined) {
 		throw new Error("document.modelContext is not installed");
 	}
@@ -50,7 +50,7 @@ function tool(name: string): {
 
 describe("document.modelContext global", () => {
 	it("is the same instance on every access", () => {
-		expect(raw(document)["modelContext"]).toBe(raw(document)["modelContext"]);
+		expect(raw(document).modelContext).toBe(raw(document).modelContext);
 	});
 
 	it("is defined non-writable and non-configurable", () => {
@@ -64,7 +64,7 @@ describe("document.modelContext global", () => {
 
 	it("has no window or navigator alias", () => {
 		const scope = globalThis as unknown as Record<string, unknown>;
-		expect(scope["modelContext"]).toBeUndefined();
+		expect(scope.modelContext).toBeUndefined();
 	});
 });
 
@@ -286,7 +286,7 @@ describe("getTools ordering and isolation", () => {
 			const otherContext = installModelContext(other);
 			expect(otherContext).toBeDefined();
 			expect(otherContext).not.toBe(mc);
-			expect(otherContext).toBe(raw(other)["modelContext"]);
+			expect(otherContext).toBe(raw(other).modelContext);
 			await mc.registerTool(tool("iso_main"));
 			await otherContext?.registerTool(tool("iso_other"));
 			const mainNames = (await mc.getTools()).map((item) => item.name);

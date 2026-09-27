@@ -1,9 +1,16 @@
 // Copyright 2026 Utpal Sen
 // SPDX-License-Identifier: Apache-2.0
 
-import { invalidState, notAllowed, securityError } from "./errors.js";
-import { fireToolChange } from "./events.js";
 import {
+	invalidState,
+	notAllowed,
+	notSupported,
+	securityError,
+	unknownError,
+} from "./errors.js";
+import { fireToolActivated, fireToolCancel, fireToolChange } from "./events.js";
+import {
+	isAbortSignal,
 	isAllowedToUse,
 	isFullyActive,
 	isOriginKeyed,
@@ -11,9 +18,14 @@ import {
 	parseOriginList,
 	warnDiagnostic,
 } from "./gates.js";
-import { parseInputSchema, serializeInputSchema } from "./schema.js";
+import {
+	assertValidArguments,
+	parseInputSchema,
+	serializeInputSchema,
+} from "./schema.js";
 import type {
 	ModelContext,
+	ModelContextExecuteToolOptions,
 	ModelContextGetToolOptions,
 	ModelContextRegisterToolOptions,
 	ModelContextTool,
@@ -68,16 +80,34 @@ export function ensureState(doc: Document): DocumentState {
 
 const NAME_PATTERN = /^[A-Za-z0-9_.-]+$/;
 
-function isAbortSignal(value: unknown): value is AbortSignal {
-	if (typeof value !== "object" || value === null) {
-		return false;
+interface PendingExecution {
+	readonly callerDocument: Document;
+	readonly targetDocument: Document;
+	readonly toolName: string;
+	readonly controller: AbortController;
+}
+
+const pendingExecutions = new Map<number, PendingExecution>();
+let nextExecutionId = 1;
+
+function topDocument(doc: Document): Document {
+	let current = doc;
+	for (;;) {
+		const frame = current.defaultView?.frameElement;
+		if (frame === null || frame === undefined) {
+			return current;
+		}
+		let parent: Document;
+		try {
+			parent = frame.ownerDocument;
+		} catch {
+			return current;
+		}
+		if (parent === current) {
+			return current;
+		}
+		current = parent;
 	}
-	const candidate = value as Record<string, unknown>;
-	return (
-		typeof candidate["aborted"] === "boolean" &&
-		typeof candidate["addEventListener"] === "function" &&
-		"reason" in candidate
-	);
 }
 
 function checkName(raw: string, tools: Map<string, ToolRecord>): string {
@@ -99,10 +129,10 @@ function readAnnotations(value: unknown): StoredAnnotations | null {
 	}
 	const record = value as Record<string, unknown>;
 	return {
-		readOnlyHint: Boolean(record["readOnlyHint"] ?? false),
-		untrustedContentHint: Boolean(record["untrustedContentHint"] ?? false),
-		consequentialHint: Boolean(record["consequentialHint"] ?? false),
-		debugging: Boolean(record["debugging"] ?? false),
+		readOnlyHint: Boolean(record.readOnlyHint ?? false),
+		untrustedContentHint: Boolean(record.untrustedContentHint ?? false),
+		consequentialHint: Boolean(record.consequentialHint ?? false),
+		debugging: Boolean(record.debugging ?? false),
 	};
 }
 
@@ -251,14 +281,14 @@ export class ModelContextImpl extends EventTarget implements ModelContext {
 		}
 		const input = rawTool as Record<string, unknown>;
 
-		const rawName: unknown = input["name"];
+		const rawName: unknown = input.name;
 		if (rawName === undefined) {
 			throw new TypeError("tool name is required");
 		}
 		const state = ensureState(owner);
 		const name = checkName(String(rawName), state.tools);
 
-		const rawDescription: unknown = input["description"];
+		const rawDescription: unknown = input.description;
 		if (rawDescription === undefined) {
 			throw new TypeError("tool description is required");
 		}
@@ -267,17 +297,17 @@ export class ModelContextImpl extends EventTarget implements ModelContext {
 			throw invalidState("tool description must not be empty");
 		}
 
-		const schemaJson = serializeInputSchema(input["inputSchema"]) ?? "";
+		const schemaJson = serializeInputSchema(input.inputSchema) ?? "";
 
-		const rawTitle: unknown = input["title"];
+		const rawTitle: unknown = input.title;
 		const title = rawTitle === undefined ? null : toUSVString(rawTitle);
 
-		const rawExecute: unknown = input["execute"];
+		const rawExecute: unknown = input.execute;
 		if (typeof rawExecute !== "function") {
 			throw new TypeError("tool execute must be a function");
 		}
 
-		const annotations = readAnnotations(input["annotations"]);
+		const annotations = readAnnotations(input.annotations);
 
 		const rawOptions: unknown = options ?? {};
 		if (typeof rawOptions !== "object" || rawOptions === null) {
@@ -285,7 +315,7 @@ export class ModelContextImpl extends EventTarget implements ModelContext {
 		}
 		const opts = rawOptions as Record<string, unknown>;
 
-		const rawSignal: unknown = opts["signal"];
+		const rawSignal: unknown = opts.signal;
 		if (rawSignal !== undefined && !isAbortSignal(rawSignal)) {
 			throw new TypeError("options signal must be an AbortSignal");
 		}
@@ -294,7 +324,7 @@ export class ModelContextImpl extends EventTarget implements ModelContext {
 			throw signal.reason;
 		}
 
-		const rawExposed: unknown = opts["exposedTo"];
+		const rawExposed: unknown = opts.exposedTo;
 		const exposedOrigins =
 			rawExposed === undefined ? [] : parseOriginList(rawExposed, "exposedTo");
 
@@ -342,7 +372,7 @@ export class ModelContextImpl extends EventTarget implements ModelContext {
 			throw new TypeError("options must be an object");
 		}
 		const opts = rawOptions as Record<string, unknown>;
-		const rawFrom: unknown = opts["fromOrigins"];
+		const rawFrom: unknown = opts.fromOrigins;
 		const fromOrigins =
 			rawFrom === undefined ? [] : parseOriginList(rawFrom, "fromOrigins");
 
@@ -400,9 +430,219 @@ export class ModelContextImpl extends EventTarget implements ModelContext {
 		return listed;
 	}
 
-	async executeTool(): Promise<string> {
-		throw new DOMException("not implemented", "UnknownError");
+	async executeTool(
+		tool: RegisteredTool,
+		inputObject?: unknown,
+		options?: ModelContextExecuteToolOptions | undefined,
+	): Promise<string> {
+		const caller = this.#document;
+		if (!isFullyActive(caller)) {
+			throw invalidState("the document is not fully active");
+		}
+		if (!isOriginKeyed(caller)) {
+			warnDiagnostic(originKeyedDiagnostic(caller));
+			throw securityError("the agent cluster is not origin-keyed");
+		}
+		if (!isAllowedToUse(caller)) {
+			throw notAllowed("the tools feature is not allowed");
+		}
+
+		const rawTool: unknown = tool;
+		if (typeof rawTool !== "object" || rawTool === null) {
+			throw new TypeError("tool must be an object");
+		}
+		const given = rawTool as Record<string, unknown>;
+
+		const rawOrigin: unknown = given.origin;
+		const expectedOrigin = rawOrigin === undefined ? "" : String(rawOrigin);
+		let expected: URL;
+		try {
+			expected = new URL(expectedOrigin);
+		} catch {
+			throw notSupported("the tool origin cannot be parsed");
+		}
+		if (expected.origin === "null") {
+			throw notSupported("the tool origin is opaque");
+		}
+
+		if (typeof inputObject !== "object" || inputObject === null) {
+			throw new TypeError("tool arguments must be an object");
+		}
+		const inputArguments: unknown = JSON.stringify(inputObject);
+		if (typeof inputArguments !== "string") {
+			throw new TypeError("tool arguments cannot be serialized");
+		}
+
+		const rawOptions: unknown = options ?? {};
+		if (typeof rawOptions !== "object" || rawOptions === null) {
+			throw new TypeError("options must be an object");
+		}
+		const execSignal: unknown = (rawOptions as Record<string, unknown>).signal;
+		if (execSignal !== undefined && !isAbortSignal(execSignal)) {
+			throw new TypeError("options signal must be an AbortSignal");
+		}
+		if (execSignal?.aborted === true) {
+			throw execSignal.reason;
+		}
+
+		let target: Document;
+		try {
+			const targetWindow = given.window as Window;
+			target = targetWindow.document;
+		} catch {
+			throw unknownError("the tool target cannot be established");
+		}
+		if (typeof target !== "object" || target === null) {
+			throw unknownError("the tool target cannot be established");
+		}
+
+		if (topDocument(caller) !== topDocument(target)) {
+			throw unknownError("the tool lives in another hierarchy");
+		}
+
+		const toolName =
+			given.name === undefined ? "undefined" : String(given.name);
+		const liveOrigin = originOf(target);
+		if (liveOrigin !== expected.origin) {
+			throw unknownError("the tool origin does not match");
+		}
+
+		const targetState = states.get(target);
+		const record = targetState?.tools.get(toolName);
+		if (record === undefined) {
+			throw unknownError("no such tool is registered");
+		}
+
+		const callerOrigin = originOf(caller);
+		const ownCall = target === caller && liveOrigin === expected.origin;
+		if (
+			!ownCall &&
+			!isExposedTo(liveOrigin, record.exposedOrigins, callerOrigin)
+		) {
+			throw unknownError("the tool is not exposed to this origin");
+		}
+
+		const uuid = nextExecutionId;
+		nextExecutionId += 1;
+		const invocation = {
+			arguments: inputArguments,
+			name: toolName,
+			record,
+			target,
+		};
+
+		return new Promise<string>((resolveCaller, rejectCaller) => {
+			const controller = new AbortController();
+			const complete = (result: string | null, success: boolean): void => {
+				if (!pendingExecutions.has(uuid)) {
+					return;
+				}
+				pendingExecutions.delete(uuid);
+				if (success && result !== null) {
+					resolveCaller(result);
+				} else {
+					rejectCaller(unknownError("tool execution did not complete"));
+				}
+			};
+			pendingExecutions.set(uuid, {
+				callerDocument: caller,
+				targetDocument: target,
+				toolName,
+				controller,
+			});
+
+			if (execSignal !== undefined) {
+				execSignal.addEventListener(
+					"abort",
+					() => {
+						rejectCaller(execSignal.reason);
+						if (!pendingExecutions.has(uuid)) {
+							return;
+						}
+						pendingExecutions.delete(uuid);
+						controller.abort();
+						const live = states.get(target);
+						if (live !== undefined) {
+							fireToolCancel(live.context, toolName);
+						}
+					},
+					{ once: true },
+				);
+			}
+
+			void runToolCall(invocation, controller.signal, complete).catch(() => {
+				complete(null, false);
+			});
+		});
 	}
+}
+
+interface ToolInvocation {
+	readonly arguments: string;
+	readonly name: string;
+	readonly record: ToolRecord;
+	readonly target: Document;
+}
+
+async function runToolCall(
+	invocation: ToolInvocation,
+	localSignal: AbortSignal,
+	complete: (result: string | null, success: boolean) => void,
+): Promise<void> {
+	let parsed: unknown;
+	try {
+		parsed = JSON.parse(invocation.arguments) as unknown;
+	} catch {
+		complete(null, false);
+		return;
+	}
+	if (typeof parsed !== "object" || parsed === null) {
+		complete(null, false);
+		return;
+	}
+	// Re-validate against the current definition so an
+	// unregister/re-register race cannot check new arguments against an old
+	// schema. Ours, not draft-derived: the draft re-reads existence only.
+	const current = states.get(invocation.target)?.tools.get(invocation.name);
+	if (current === undefined) {
+		complete(null, false);
+		return;
+	}
+	try {
+		assertValidArguments(
+			parsed,
+			current.schemaJson === "" ? undefined : current.schemaJson,
+		);
+	} catch {
+		complete(null, false);
+		return;
+	}
+	const live = states.get(invocation.target);
+	if (live !== undefined) {
+		fireToolActivated(live.context, invocation.name);
+	}
+	let value: unknown;
+	try {
+		value = await current.execute(parsed, { signal: localSignal });
+	} catch (error) {
+		warnDiagnostic(
+			`tool execution failed: ${error instanceof Error ? error.message : "unknown reason"}`,
+		);
+		complete(null, false);
+		return;
+	}
+	let serialized: unknown;
+	try {
+		serialized = JSON.stringify(value);
+	} catch {
+		complete(null, false);
+		return;
+	}
+	if (typeof serialized !== "string") {
+		complete(null, false);
+		return;
+	}
+	complete(serialized, true);
 }
 
 export function unregisterTool(context: ModelContextImpl, name: string): void {

@@ -115,3 +115,19 @@ export function warnDiagnostic(message: string): void {
 		// Diagnostics must never change control flow.
 	}
 }
+
+/**
+ * Structural `AbortSignal` check that also accepts cross-realm signals, where
+ * `instanceof` fails.
+ */
+export function isAbortSignal(value: unknown): value is AbortSignal {
+	if (typeof value !== "object" || value === null) {
+		return false;
+	}
+	const candidate = value as Record<string, unknown>;
+	return (
+		typeof candidate.aborted === "boolean" &&
+		typeof candidate.addEventListener === "function" &&
+		"reason" in candidate
+	);
+}

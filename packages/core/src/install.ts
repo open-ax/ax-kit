@@ -14,7 +14,7 @@ import type { ModelContext } from "./types.js";
  * depends on script order (spec.md D14).
  */
 export function installModelContext(doc: Document): ModelContext | undefined {
-	const existing = (doc as unknown as Record<string, unknown>)["modelContext"];
+	const existing = (doc as unknown as Record<string, unknown>).modelContext;
 	if (existing !== undefined) {
 		return existing as ModelContext;
 	}
