@@ -83,14 +83,24 @@ jobs:
             const marker = '<!-- spec-drift -->';
             const previous = '${{ steps.compare.outputs.previous }}';
             const current = '${{ steps.fetch.outputs.sha }}';
-            const existing = await github.rest.issues.listForRepo({
+            const existing = await github.paginate(github.rest.issues.listForRepo, {
               owner: context.repo.owner,
               repo: context.repo.repo,
               state: 'open',
               per_page: 100,
             });
-            const open = existing.data.find(i => i.title === title);
+            const open = existing.find(i => !i.pull_request && i.title === title);
             if (open) {
+              const noted = await github.paginate(github.rest.issues.listComments, {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: open.number,
+                per_page: 100,
+              });
+              if (noted.some(c => c.body && c.body.includes(current))) {
+                core.info('This hash is already recorded. Not commenting again.');
+                return;
+              }
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
