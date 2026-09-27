@@ -1,0 +1,49 @@
+# Patterns for the privacy guard.
+#
+# One file, sourced by .github/ci/check-privacy.sh, which the git hooks and the
+# CI workflow both call. A guard that exists in two places and is updated in one
+# is worse than no guard.
+#
+# Why this exists: a tracked document once referred, in ordinary English, to
+# private material eight times. Every path-based check passed it, because the
+# leak was wording rather than a filename. Paths alone do not catch that.
+#
+# ---------------------------------------------------------------------------
+# SELF-REFERENCE
+# ---------------------------------------------------------------------------
+# The guard scans tracked files, and two of them have to contain the words it
+# searches for in order to function. Both are excluded from the vocabulary scan
+# only, and both are listed here so the exclusion is a decision on the record
+# rather than a gap nobody notices:
+#
+#   .github/ci/**   this file, and the script that reads it
+#   .gitignore      must name the local-only directories in order to exclude them
+#
+# Neither is excluded from review, and neither is excluded from the local-path
+# scan. If you add a third file that must contain these words, name it here.
+EXCLUDE_VOCAB='.github/ci,.gitignore'
+EXCLUDE_PATHS='.github/ci'
+
+# ---------------------------------------------------------------------------
+# Vocabulary
+# ---------------------------------------------------------------------------
+# Scheduling nouns that indicate prose referring to private material.
+#
+# Word-bounded on non-alphanumeric characters, so ordinary words that merely
+# contain these as substrings are not flagged: planned, planner, planes,
+# programmer.
+#
+# The boundary class also excludes "/", so a legitimate directory that happens
+# to be named "plan" is not flagged. Referring to a plan in prose is the finding;
+# a path segment is not. A path-shaped reference is caught by PATH_PATTERN below.
+PATTERN='[Pp]lanning|(^|[^[:alnum:]/])[Pp]lans?([^[:alnum:]/]|$)|[Rr]oadmap|(^|[^[:alnum:]/])[Pp]hases?([^[:alnum:]/]|$)|[Mm]ilestone'
+
+# A local checkout path, the local overlay filename, a drive-qualified path to
+# private material, or a bare path-shaped reference to a private document.
+#
+# The last alternative catches "see plan/01.md" written in prose, which the
+# vocabulary pattern deliberately allows because the word is a path segment.
+PATH_PATTERN="[A-Za-z]:[\\\\/]Us[e]rs[\\\\/]|VsCode[/\\\\]a[x]|agent[-]brief|[A-Za-z]:[/\\\\]plan|(^|[[:space:]\"'(])[Pp]lan[/\\\\]"
+
+# Local-only directories and files, matched as paths.
+LOCAL_PATH_PATTERN='^(plan|\.scratch|\.ax|docs/agents)/|^AGENTS\.md$|(^|/)CONTEXT\.local\.md$|\.internal\.'

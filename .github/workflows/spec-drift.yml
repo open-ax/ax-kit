@@ -1,0 +1,130 @@
+name: spec-drift
+
+# The specification this project implements is a draft, it was re-dated in
+# September 2026, and the venue itself is contested. Silent drift is the failure
+# mode this project cannot afford: a polyfill that claims conformance to a draft
+# it has quietly diverged from is worse than one that makes no claim.
+#
+# This job watches upstream and opens an issue when the document changes. It
+# deliberately does not try to decide whether a change affects us — that
+# judgement needs someone who read the diff against the sections we implement,
+# and an automated job cannot make it. What it does is make sure the change
+# cannot pass unnoticed.
+
+on:
+  schedule:
+    # 06:17 UTC daily. Off the hour on purpose: the top of the hour is when
+    # every other scheduled job on the platform fires.
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: spec-drift
+  cancel-in-progress: false
+
+jobs:
+  drift:
+    name: Upstream specification
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Fetch the published specification
+        id: fetch
+        run: |
+          set -euo pipefail
+          url="https://webmachinelearning.github.io/webmcp/"
+          curl --fail --silent --show-error --location "$url" --output spec.html
+          sha="$(sha256sum spec.html | cut -d' ' -f1)"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "Fetched $url"
+          echo "sha256: $sha"
+
+      - name: Compare against the last recorded hash
+        id: compare
+        run: |
+          set -euo pipefail
+          if [ ! -f .github/spec-drift.sha256 ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "first=true" >> "$GITHUB_OUTPUT"
+            echo "No baseline recorded yet; writing one."
+            printf '%s  spec.html\n' "${{ steps.fetch.outputs.sha }}" > .github/spec-drift.sha256
+            exit 0
+          fi
+          previous="$(cut -d' ' -f1 < .github/spec-drift.sha256)"
+          echo "previous=$previous" >> "$GITHUB_OUTPUT"
+          if [ "$previous" = "${{ steps.fetch.outputs.sha }}" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No change since the recorded baseline."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "The specification changed: $previous -> ${{ steps.fetch.outputs.sha }}"
+          fi
+
+      - name: Open an issue when it changed
+        if: steps.compare.outputs.changed == 'true' && steps.compare.outputs.first != 'true'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const title = 'Upstream WebMCP specification changed';
+            const marker = '<!-- spec-drift -->';
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              per_page: 100,
+            });
+            if (existing.data.some(i => i.title === title)) {
+              core.info('An issue for this is already open. Not filing a duplicate.');
+              return;
+            }
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              labels: ['needs-triage'],
+              body: [
+                marker,
+                '',
+                'The published specification at',
+                'https://webmachinelearning.github.io/webmcp/',
+                'differs from the last recorded baseline.',
+                '',
+                '```',
+                'previous: ${{ steps.compare.outputs.previous }}',
+                'current:  ${{ steps.fetch.outputs.sha }}',
+                '```',
+                '',
+                '## What to do',
+                '',
+                'This job cannot tell whether the change affects us. Somebody has to',
+                'read the diff against the sections we actually implement and answer',
+                'three questions:',
+                '',
+                '1. Does any IDL surface we implement change — names, arity, or types?',
+                '2. Does the pinned draft date in `SPEC_VERSION` need to move?',
+                '3. Does the conformance suite baseline need a new expected failure, or',
+                '   can a previous expected failure now pass?',
+                '',
+                'If the answer to all three is no, close the issue and record why in the',
+                'decision log. If the answer to any is yes, the conformance claim is now',
+                'wrong until the code follows the new draft.',
+                '',
+                'Do not resolve this by renaming a public name in the source. That is an',
+                'upstream discussion, not a local edit.',
+              ].join('\n'),
+            });
+
+      - name: Advance the baseline
+        if: steps.compare.outputs.changed == 'true' && steps.compare.outputs.first != 'true'
+        run: |
+          printf '%s  spec.html\n' "${{ steps.fetch.outputs.sha }}" > .github/spec-drift.sha256
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/spec-drift.sha256
+          git commit -m "chore: advance recorded specification baseline"
+          git push

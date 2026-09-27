@@ -1,0 +1,176 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+#
+# Central configuration for the OpenAX organisation.
+#
+# Applies to every repository that does not carry its own .coderabbit.yaml.
+# Individual repositories override what they need; `inheritance: true` in each
+# repository merges rather than replaces.
+#
+# Division of labour: continuous integration is the enforcer, CodeRabbit is the
+# reviewer. Nothing here blocks a merge on its own judgement. Where a rule must
+# hold, it is expressed as a deterministic CI check, and CodeRabbit is told to
+# watch for it.
+
+language: "en-US"
+inheritance: true
+
+reviews:
+  # Stricter than the default. Most of the code in these repositories is written
+  # by an AI agent, and the failure mode that matters is confident code that is
+  # subtly wrong. Nits are cheaper to live with than a missed defect.
+  profile: "assertive"
+
+  request_changes_workflow: true
+  high_level_summary: true
+  high_level_summary_in_walkthrough: false
+  poem: false
+  in_progress_fortune: false
+  collapse_walkthrough: true
+
+  auto_review:
+    enabled: true
+    drafts: false
+    auto_incremental_review: true
+
+  # The default skips repository owners and collaborators. In an
+  # agent-assisted workflow almost every pull request comes from the owner's
+  # own account, so the default would skip detection on precisely the changes
+  # most likely to need it. This is the single most important setting here.
+  slop_detection:
+    enabled: true
+    include_all_authors: true
+
+  finishing_touches:
+    simplify:
+      enabled: true
+    autofix:
+      enabled: true
+    unit_tests:
+      enabled: true
+
+  path_instructions:
+    - path: "**/*"
+      instructions: |
+        These repositories are maintained with heavy AI assistance. Most pull
+        requests are agent-authored. Assume the author is competent and the
+        code is unverified.
+
+        - Judge the code against the specification and the stated invariants,
+          not against general style preferences.
+        - Do not suggest renaming a public API to "read better". Names are
+          pinned to an external specification draft and are not ours to change.
+        - Flag unverified assumptions. An agent that writes against a plausible
+          but wrong API version is the most common serious defect here.
+        - Say plainly when you are uncertain. An unverified claim labelled as
+          unverified is useful; a confident wrong claim is not.
+
+    - path: "packages/core/**"
+      instructions: |
+        This is the polyfill. It is the entire product, and it has constraints
+        that run against the usual advice. Read all of these before commenting.
+
+        HARD CONSTRAINTS — violating any of these is a blocker, not a suggestion:
+
+        - ZERO runtime dependencies. Never suggest adding a library, a polyfill,
+          a validation helper, or a utility package. A schema *interface* may be
+          consumed structurally, but nothing may be installed. If a piece of
+          logic seems to need a dependency, the answer is to write the twenty
+          lines, not to import them.
+        - The gzip bundle size is a correctness property with a hard CI gate.
+          Treat any suggestion that grows the bundle as a regression unless it
+          removes more than it adds. Do not propose abstractions, helper layers,
+          or generic mechanisms that add bytes. Simplification wins ties.
+        - ZERO `any`. Anything arriving from outside — message payloads, JSON
+          frames, DOM attributes, schema documents, tool arguments, tool output
+          — is `unknown` until validated at runtime. A cast used to silence an
+          error is a defect. Flag every one.
+        - No arbitrary waits. `setTimeout` used to wait for an animation, a
+          state update, or a DOM change is always wrong. Use event-driven
+          subscriptions, observers, or lifecycle hooks.
+        - Do not attach mutable properties to `window` and do not patch native
+          prototypes.
+        - Execution order is never a control. "It has not run yet" is not a
+          security boundary, and any reasoning that depends on it is a finding.
+
+        STRICT TYPING:
+
+        - `isolatedDeclarations` is enabled, so every exported symbol needs an
+          explicit type annotation. An inferred return type on an export is a
+          build failure, not a style preference.
+        - `exactOptionalPropertyTypes` is on. `{ a?: string }` does not accept
+          `{ a: undefined }`. Flag anywhere that conflates the two.
+        - The platform does not type the error taxonomy for us at these call
+          sites, so it is written by hand. Do not suggest replacing it with a
+          generic Error or a string code.
+
+        CONFORMANCE:
+
+        - This implements a draft specification that is re-dated frequently.
+          The exact error raised under a given condition is observable behaviour
+          that the conformance suite checks. Do not suggest "simplifying" an
+          error path, widening an error type, or collapsing two distinct
+          rejection conditions into one.
+        - A test that asserts on a rejection must assert the specific error, not
+          merely that something threw.
+
+  pre_merge_checks:
+    # Warning, not error, on purpose. These are judgement calls and an
+    # agent judging its own work is not a reliable gate. Every one of them is
+    # also expressed as a deterministic check in CI, and CI is what blocks.
+    custom_checks:
+      - name: "No new runtime dependency in the polyfill"
+        mode: "warning"
+        instructions: |
+          Confirm no entry was added to the `dependencies` field of any package
+          under `packages/`. A dependency in `devDependencies` is fine and is not
+          a finding. A runtime dependency in a published package is a blocker:
+          report it.
+
+      - name: "Public names still trace to a specification draft"
+        mode: "warning"
+        instructions: |
+          Confirm the pull request does not rename, remove, or add a public
+          export without stating which dated specification draft it implements
+          against. Renaming a public name to improve readability is a blocker.
+
+      - name: "Size budget respected"
+        mode: "warning"
+        instructions: |
+          If the change touches `packages/core`, confirm the size budget job
+          passed and that the change did not add net bundle weight. A refactor
+          that is elegant but grows the bundle is a regression here.
+
+      - name: "Verification is real"
+        mode: "warning"
+        instructions: |
+          Confirm the pull request states how the change was verified, and that
+          the stated verification is a command that was actually run rather than
+          an inspection. A behavioural change with no test that would fail
+          without it is incomplete.
+
+  # Static analysis CodeRabbit runs alongside its own review. Each of these is
+  # a deterministic check, which is why they are trusted where its judgement is
+  # not: dependency hygiene, workflow correctness, workflow security, and
+  # committed secrets.
+  tools:
+    gitleaks:
+      enabled: true
+    actionlint:
+      enabled: true
+    zizmor:
+      enabled: true
+    markdownlint:
+      enabled: true
+    yamllint:
+      enabled: true
+    shellcheck:
+      enabled: true
+    biome:
+      enabled: true
+    ast-grep:
+      enabled: true
+
+chat:
+  art: false
+  auto_reply: true
+

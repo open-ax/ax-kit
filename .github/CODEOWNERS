@@ -1,0 +1,20 @@
+# Default owner for everything not matched below.
+* @senutpal
+
+# Toolchain and release plumbing. Changes here decide what CI enforces, so they
+# get a second pair of eyes even in a one-person project — an agent writing
+# these files is exactly the case where a human should read the diff twice.
+/.github/workflows/ @senutpal
+/.github/dependabot.yml @senutpal
+/package.json @senutpal
+/pnpm-lock.yaml @senutpal
+/turbo.json @senutpal
+
+# The polyfill is the product. Its conformance, size budget and error
+# taxonomy are the claims the project makes.
+/packages/core/ @senutpal
+
+# Architecture decisions and the domain glossary. Changing these changes what
+# the words mean, which invalidates work that was correct when written.
+/docs/adr/ @senutpal
+/CONTEXT.md @senutpal

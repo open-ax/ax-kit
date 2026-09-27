@@ -1,0 +1,37 @@
+version: 2
+
+updates:
+  # Runtime and toolchain. Grouped so a Node or pnpm bump is one reviewable
+  # change rather than a scatter of unrelated bumps.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      actions:
+        patterns: ["*"]
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    # Grouped by intent rather than by package, so a routine dependency sweep
+    # arrives as a few reviewable diffs instead of fifteen single-line bumps.
+    groups:
+      runtime:
+        dependency-type: production
+      dev-tooling:
+        dependency-type: development
+      manifest:
+        patterns:
+          - "package.json"
+          - "pnpm-lock.yaml"
+          - "tsconfig*.json"
+          - "biome.json"
+          - ".nvmrc"
+    labels:
+      - dependencies
