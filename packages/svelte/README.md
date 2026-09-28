@@ -56,10 +56,13 @@ Rune helper inside `$effect` with returned teardown:
 ```
 
 One teardown mechanism per binding, never both. Update aborts then
-registers while destroy aborts, so re-runs never orphan names. Reactive
-values read synchronously retrigger correctly with no state writes inside
-the binding. Actions never run during server rendering, and shared helper
-paths keep an explicit guard for universal-module imports.
+registers while destroy aborts, so re-runs never orphan names. Handler-only
+updates forward through the latest-handler mailbox without re-registering.
+Reactive values read synchronously retrigger correctly with no state writes
+inside the binding. The rune helper registers once per effect run, so a
+same-identity handler swap applies on the next reactive re-run. Actions
+never run during server rendering, and shared helper paths keep an explicit
+guard for universal-module imports.
 
 Attachments were evaluated against Svelte 5.57 at build time: the action
 contract above remains supported and typed, and callers preferring

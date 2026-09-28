@@ -44,7 +44,7 @@ function safeJson(value: unknown): string {
 	}
 }
 
-export function snapshotIdentity(tool: AxToolDefinition): string {
+function snapshotIdentity(tool: AxToolDefinition): string {
 	return `${tool.name}|${tool.description}|${tool.title ?? ""}|${safeJson(tool.inputSchema)}|${safeJson(tool.annotations ?? null)}|${safeJson(tool.exposedTo ?? null)}`;
 }
 
@@ -112,7 +112,9 @@ async function startRegistration(
 				return;
 			}
 			await startRegistration(tool, execute, signal, 1);
+			return;
 		}
+		console.warn(`[ax-kit/svelte] tool registration failed: ${String(error)}`);
 	}
 }
 

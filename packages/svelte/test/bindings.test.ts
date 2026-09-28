@@ -3,7 +3,7 @@
 
 import type { ModelContext } from "@ax-kit/core";
 import { installModelContext } from "@ax-kit/core";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { axTool, axToolEffect, isAxSupported } from "../src/index.js";
 
 function context(): ModelContext {
@@ -154,6 +154,27 @@ describe("axTool element binding", () => {
 		controller.abort(new DOMException("stop", "AbortError"));
 		await expect(pending).rejects.toMatchObject({ name: "AbortError" });
 		expect(await listedNames()).toContain("svelte_signals");
+		handle.destroy?.();
+		el.remove();
+	});
+
+	it("warns with the specified error family on invalid identity", async () => {
+		const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+		const el = document.createElement("div");
+		document.body.appendChild(el);
+		const handle = axTool(el, {
+			name: "bad name!",
+			description: "bad",
+			execute: () => Promise.resolve("ok"),
+		});
+		await settle();
+		await settle();
+		expect(warn).toHaveBeenCalledOnce();
+		expect(String(warn.mock.calls[0]?.[0] ?? "")).toContain(
+			"InvalidStateError",
+		);
+		expect(await listedNames()).not.toContain("bad name!");
+		warn.mockRestore();
 		handle.destroy?.();
 		el.remove();
 	});
