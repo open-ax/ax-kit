@@ -5,9 +5,9 @@ Status: Accepted
 
 ## Context
 
-The pinned draft requires an input schema on registration, stores it as a
-string, and re-parses it on listing — but it does not define how a polyfill
-validates schema documents or the arguments checked against them. An
+The pinned draft permits registration without an input schema, stores the
+schema as a string, and re-parses it on listing — but it does not define how
+a polyfill validates schema documents or the arguments checked against them. An
 unrestricted validator that silently passes what it does not understand is
 worse than one that rejects clearly, and attacker-supplied schema content is
 untrusted input like any other.
