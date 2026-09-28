@@ -27,6 +27,9 @@ Then commit the generated `.changeset/*.md` file.
   opt-in `@ax-kit/core/ax` entry with removal, lookup, parsed-result, and
   change-diff conveniences. Pinned draft (`SPEC_VERSION`): Draft Community
   Group Report, 26 September 2026.
+- `@ax-kit/react`: `useAxTool`, `useAxAction`, `AxProvider`, and
+  `isAxSupported` for lifecycle-native tool registration with namespacing
+  and execution middleware.
 
 No published package yet. Entries above describe the in-tree API; versioned
 releases will be cut with Changesets.

@@ -1,0 +1,11 @@
+{
+	"extends": "../tsconfig/base.json",
+	"compilerOptions": {
+		"rootDir": ".",
+		"noEmit": true,
+		"types": ["node"],
+		"jsx": "react-jsx",
+		"lib": ["es2022", "dom", "dom.iterable"]
+	},
+	"include": ["src/**/*.ts", "src/**/*.tsx", "test/**/*.ts", "test/**/*.tsx"]
+}
