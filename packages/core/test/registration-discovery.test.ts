@@ -50,6 +50,25 @@ function tool(name: string): {
 	};
 }
 
+// Task-source waits without timers: each round yields one MessageChannel
+// turn, flushing queued change notifications ahead of the continuation.
+function nextTask(): Promise<void> {
+	return new Promise<void>((resolve) => {
+		const channel = new MessageChannel();
+		channel.port1.onmessage = (): void => {
+			channel.port1.close();
+			channel.port2.close();
+			resolve();
+		};
+		channel.port2.postMessage(undefined);
+	});
+}
+
+async function settleTasks(): Promise<void> {
+	await nextTask();
+	await nextTask();
+}
+
 describe("document.modelContext global", () => {
 	it("is the same instance on every access", () => {
 		expect(raw(document).modelContext).toBe(raw(document).modelContext);
@@ -227,6 +246,8 @@ describe("registration signal", () => {
 		const mc = context();
 		const controller = new AbortController();
 		let notified = 0;
+		// Drain notifications queued by earlier tests before listening.
+		await settleTasks();
 		mc.addEventListener("toolchange", () => {
 			notified += 1;
 		});
@@ -239,7 +260,8 @@ describe("registration signal", () => {
 		expect(
 			(await mc.getTools()).some((item) => item.name === "reg_abort"),
 		).toBe(false);
-		expect(notified).toBeGreaterThan(seen);
+		await settleTasks();
+		expect(notified).toBe(seen + 2);
 	});
 
 	it("stale registration signals do not delete a re-registered tool", async () => {
@@ -419,11 +441,14 @@ describe("getTools ordering and isolation", () => {
 	it("fires toolchange on registration", async () => {
 		const mc = context();
 		let count = 0;
+		// Drain notifications queued by earlier tests before listening.
+		await settleTasks();
 		const onChange = (): void => {
 			count += 1;
 		};
 		mc.addEventListener("toolchange", onChange);
 		await mc.registerTool(tool("reg_event"));
+		await settleTasks();
 		expect(count).toBe(1);
 		mc.removeEventListener("toolchange", onChange);
 	});

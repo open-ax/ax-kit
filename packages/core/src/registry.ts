@@ -781,7 +781,27 @@ export function notifyToolChange(
 		) {
 			continue;
 		}
-		fireToolChange(targetState.context);
+		queueToolChange(targetState.context);
+	}
+}
+
+/**
+ * Task-source delivery for change notification. The draft queues each
+ * notification as a task, so listeners never run inside the registering call
+ * and cannot re-enter it. MessageChannel posts a real task without timers;
+ * where the platform hides it, a microtask is the closest ordering available.
+ */
+function queueToolChange(target: EventTarget): void {
+	if (typeof MessageChannel === "function") {
+		const channel = new MessageChannel();
+		channel.port1.onmessage = (): void => {
+			channel.port1.close();
+			channel.port2.close();
+			fireToolChange(target);
+		};
+		channel.port2.postMessage(undefined);
+	} else {
+		queueMicrotask(() => fireToolChange(target));
 	}
 }
 

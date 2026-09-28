@@ -52,6 +52,25 @@ function childDocument(): Document {
 	return child;
 }
 
+// Task-source waits without timers: each round yields one MessageChannel
+// turn, flushing queued change notifications ahead of the continuation.
+function nextTask(): Promise<void> {
+	return new Promise<void>((resolve) => {
+		const channel = new MessageChannel();
+		channel.port1.onmessage = (): void => {
+			channel.port1.close();
+			channel.port2.close();
+			resolve();
+		};
+		channel.port2.postMessage(undefined);
+	});
+}
+
+async function settleTasks(): Promise<void> {
+	await nextTask();
+	await nextTask();
+}
+
 describe("browser global", () => {
 	it("runs in a secure context with one hardened instance", () => {
 		expect(window.isSecureContext).toBe(true);
@@ -248,6 +267,7 @@ describe("browser frames", () => {
 				description: "notify",
 				execute: async () => null,
 			});
+			await settleTasks();
 			expect(seen).toEqual(["child"]);
 		} finally {
 			child.defaultView?.frameElement?.remove();

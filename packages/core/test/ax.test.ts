@@ -44,6 +44,25 @@ function errorName(error: unknown): string {
 	return `unexpected:${String(error)}`;
 }
 
+// Task-source waits without timers: each round yields one MessageChannel
+// turn, flushing queued change notifications ahead of the continuation.
+function nextTask(): Promise<void> {
+	return new Promise<void>((resolve) => {
+		const channel = new MessageChannel();
+		channel.port1.onmessage = (): void => {
+			channel.port1.close();
+			channel.port2.close();
+			resolve();
+		};
+		channel.port2.postMessage(undefined);
+	});
+}
+
+async function settleTasks(): Promise<void> {
+	await nextTask();
+	await nextTask();
+}
+
 describe("ax entry isolation", () => {
 	it("exposes no extension on the root entry or the live surface", () => {
 		for (const name of [
@@ -85,6 +104,8 @@ describe("unregisterTool", () => {
 			description: "remove",
 			execute: async () => null,
 		});
+		// Drain the registration notification before listening.
+		await settleTasks();
 		let changes = 0;
 		mc.addEventListener("toolchange", () => {
 			changes += 1;
@@ -94,6 +115,7 @@ describe("unregisterTool", () => {
 		expect(
 			(await mc.getTools()).some((item) => item.name === "ax_remove"),
 		).toBe(false);
+		await settleTasks();
 		expect(changes).toBe(1);
 	});
 });
@@ -144,10 +166,11 @@ describe("trackToolChanges", () => {
 				description: "tracked",
 				execute: async () => null,
 			});
+			await settleTasks();
 			expect(diffs).toEqual([{ added: ["ax_tracked"], removed: [] }]);
 			expect(unregisterTool("ax_tracked")).toBe(true);
 			// Let the queued refresh finish ahead of this continuation.
-			await mc.getTools();
+			await settleTasks();
 			expect(diffs).toEqual([
 				{ added: ["ax_tracked"], removed: [] },
 				{ added: [], removed: ["ax_tracked"] },

@@ -58,6 +58,25 @@ function docOf(win: { readonly document: unknown }): Document {
 	return win.document as Document;
 }
 
+// Task-source waits without timers: each round yields one MessageChannel
+// turn, flushing queued change notifications ahead of the continuation.
+function nextTask(): Promise<void> {
+	return new Promise<void>((resolve) => {
+		const channel = new MessageChannel();
+		channel.port1.onmessage = (): void => {
+			channel.port1.close();
+			channel.port2.close();
+			resolve();
+		};
+		channel.port2.postMessage(undefined);
+	});
+}
+
+async function settleTasks(): Promise<void> {
+	await nextTask();
+	await nextTask();
+}
+
 describe("event shapes", () => {
 	it("toolchange is a plain event without payload", async () => {
 		const mc = context();
@@ -70,10 +89,29 @@ describe("event shapes", () => {
 			description: "change",
 			execute: async () => null,
 		});
+		await settleTasks();
 		expect(seen.length).toBe(1);
 		expect(seen[0]).toBeInstanceOf(Event);
 		expect(seen[0]).not.toBeInstanceOf(ToolActivatedEvent);
 		expect("toolName" in seen[0]).toBe(false);
+	});
+
+	it("queues change notification instead of firing synchronously", async () => {
+		const mc = context();
+		let count = 0;
+		mc.addEventListener("toolchange", () => {
+			count += 1;
+		});
+		const pending = mc.registerTool({
+			name: "life_queued",
+			description: "queued",
+			execute: async () => null,
+		});
+		// A synchronous dispatch would already have fired here.
+		expect(count).toBe(0);
+		await pending;
+		await settleTasks();
+		expect(count).toBe(1);
 	});
 
 	it("activation and cancellation events carry only the tool name", () => {
@@ -107,6 +145,7 @@ describe("event shapes", () => {
 			description: "handler",
 			execute: async () => null,
 		});
+		await settleTasks();
 		expect(first).toBe(1);
 		mc.ontoolchange = () => {
 			second += 1;
@@ -137,6 +176,7 @@ describe("event shapes", () => {
 				description: "handler",
 				execute: async () => null,
 			});
+			await settleTasks();
 		};
 		await changed("life_order_one");
 		expect(order.length).toBe(2);
@@ -172,6 +212,7 @@ describe("event shapes", () => {
 			execute: async () => null,
 		});
 		// Direct registration would deduplicate the two into one call.
+		await settleTasks();
 		expect(calls).toBe(2);
 		mc.ontoolchange = null;
 		await mc.registerTool({
@@ -180,6 +221,7 @@ describe("event shapes", () => {
 			execute: async () => null,
 		});
 		// Clearing the handler must not remove the explicit listener.
+		await settleTasks();
 		expect(calls).toBe(3);
 		mc.removeEventListener("toolchange", shared);
 		mc.ontoolchange = null;
