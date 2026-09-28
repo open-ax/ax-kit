@@ -20,7 +20,8 @@ agent just does it. Less guesswork, less waiting, less spend.
 Open source, built in the open, following the
 [WebMCP](https://webmachinelearning.github.io/webmcp/) draft from the
 [W3C Web Machine Learning Community Group](https://www.w3.org/community/webmachinelearning/)
-on giving agents a first-class way to use the web. Pinned draft: 2026-09-26.
+on giving agents a first-class way to use the web. Pinned draft: 2026-09-26,
+exported as `SPEC_VERSION` from `@ax-kit/core`.
 
 <p align="center">
   <sub>Part of <a href="https://github.com/open-ax">OpenAX</a> &nbsp;·&nbsp; Apache-2.0</sub>
