@@ -6,11 +6,11 @@
 import { useContext, useEffect, useRef, useState } from "react";
 import { AxContext } from "./context.js";
 import type {
-	AxActionOptions,
 	AxExecuteCallback,
 	AxModelContextLike,
 	AxToolDefinition,
 	AxToolHandle,
+	AxToolOptions,
 } from "./types.js";
 
 const INERT: AxToolHandle = {
@@ -59,6 +59,25 @@ function safeJson(value: unknown): string {
 	}
 }
 
+function fromCallback(
+	name: string,
+	handler: AxExecuteCallback | undefined,
+	options: AxToolOptions | undefined,
+): AxToolDefinition {
+	if (typeof handler !== "function") {
+		throw new TypeError("bad execute");
+	}
+	return {
+		name,
+		description: options?.description ?? "",
+		title: options?.title,
+		inputSchema: options?.inputSchema,
+		execute: handler,
+		annotations: options?.annotations,
+		exposedTo: options?.exposedTo,
+	};
+}
+
 function isDuplicateName(error: unknown): boolean {
 	return error instanceof DOMException && error.name === "InvalidStateError";
 }
@@ -90,11 +109,24 @@ async function quiesce(): Promise<void> {
  * registration. The registered callback is stable and forwards to a
  * latest-handler mailbox, while identity change aborts then registers with
  * tolerance for transient duplicate-name rejection.
+ *
+ * The name-plus-handler form is the same tool under a shorter call: the
+ * description and contract options default to empty so mistakes surface the
+ * draft error family instead of a placeholder.
  */
+export function useAxTool(tool: AxToolDefinition): AxToolHandle;
 export function useAxTool(
-	tool: AxToolDefinition,
-	deps?: ReadonlyArray<unknown>,
+	name: string,
+	handler: AxExecuteCallback,
+	options?: AxToolOptions,
+): AxToolHandle;
+export function useAxTool(
+	arg0: AxToolDefinition | string,
+	arg1?: AxExecuteCallback,
+	arg2?: AxToolOptions,
 ): AxToolHandle {
+	const tool: AxToolDefinition =
+		typeof arg0 === "string" ? fromCallback(arg0, arg1, arg2) : arg0;
 	const { namespace, middleware } = useContext(AxContext);
 	const effectiveName = `${namespace}${tool.name}`;
 
@@ -111,8 +143,7 @@ export function useAxTool(
 		tool.annotations,
 		tool.exposedTo,
 	);
-	const extra = deps === undefined ? "" : safeJson(deps);
-	const key = `${identity}|${extra}`;
+	const key = identity;
 
 	const [state, setState] = useState<AxToolHandle>(() => {
 		if (!hasWindow()) {
@@ -216,25 +247,4 @@ export function isAxSupported(doc: Document | undefined): boolean {
 		return false;
 	}
 	return surfaceOf(doc) !== undefined;
-}
-
-/**
- * Register a named action with a handler. The description and contract
- * options default to empty so mistakes surface the draft error family
- * instead of a placeholder.
- */
-export function useAxAction(
-	name: string,
-	handler: AxExecuteCallback,
-	options?: AxActionOptions,
-): AxToolHandle {
-	return useAxTool({
-		name,
-		description: options?.description ?? "",
-		title: options?.title,
-		inputSchema: options?.inputSchema,
-		execute: handler,
-		annotations: options?.annotations,
-		exposedTo: options?.exposedTo,
-	});
 }

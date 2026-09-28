@@ -27,16 +27,16 @@ Then commit the generated `.changeset/*.md` file.
   opt-in `@ax-kit/core/ax` entry with removal, lookup, parsed-result, and
   change-diff conveniences. Pinned draft (`SPEC_VERSION`): Draft Community
   Group Report, 26 September 2026.
-- `@ax-kit/react`: `useAxTool`, `useAxAction`, `AxProvider`, and
-  `isAxSupported` for lifecycle-native tool registration with namespacing
-  and execution middleware.
+- `@ax-kit/react`: `useAxTool` (full definition or name plus handler),
+  `AxProvider`, and `isAxSupported` for lifecycle-native tool registration
+  with namespacing and execution middleware.
 - `@ax-kit/vue`: `useAxTool`, `vAxTool`, and `isAxSupported` for
   composable plus directive tool registration with client mount lifecycle.
 - `@ax-kit/svelte`: `axTool`, `axToolEffect`, and `isAxSupported` for
   element binding plus rune tool registration with update and destroy
   teardown.
-- `@ax-kit/react`: `dispatchAxAction` for fallback-wrapped dispatch against
-  React-managed nodes with native bubbling fallback.
+- `@ax-kit/react`: `dispatchAxClick` for fallback-wrapped click dispatch
+  against React-managed nodes with native bubbling fallback.
 
 No published package yet. Entries above describe the in-tree API; versioned
 releases will be cut with Changesets.

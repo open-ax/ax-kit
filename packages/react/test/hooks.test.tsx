@@ -6,7 +6,7 @@ import { installModelContext } from "@ax-kit/core";
 import { act, StrictMode, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { AxProvider, useAxAction, useAxTool } from "../src/index.js";
+import { AxProvider, useAxTool } from "../src/index.js";
 
 (globalThis as unknown as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT =
 	true;
@@ -335,10 +335,10 @@ describe("useAxTool binding contract", () => {
 	});
 });
 
-describe("useAxAction and provider", () => {
-	it("registers an action by name and handler", async () => {
+describe("named tool registration and provider", () => {
+	it("registers a tool by name and handler", async () => {
 		function Tool(): React.ReactNode {
-			useAxAction("action_tool", async () => "done", {
+			useAxTool("action_tool", async () => "done", {
 				description: "does work",
 			});
 			return null;
@@ -395,7 +395,7 @@ describe("useAxAction and provider", () => {
 	it("observes latest state through actions", async () => {
 		function Counter(): React.ReactNode {
 			const [count] = useState(7);
-			useAxAction("state_tool", async () => count, {
+			useAxTool("state_tool", async () => count, {
 				description: "reads state",
 			});
 			return null;

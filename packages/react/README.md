@@ -24,7 +24,7 @@ Requires React 18 or 19 as a peer. Zero runtime dependencies.
 ```tsx
 "use client";
 
-import { AxProvider, useAxAction, useAxTool } from "@ax-kit/react";
+import { AxProvider, useAxTool } from "@ax-kit/react";
 
 function CartTools({ total }: { total: number }) {
   useAxTool({
@@ -32,7 +32,7 @@ function CartTools({ total }: { total: number }) {
     description: "Return the current cart contents.",
     execute: async () => ({ total }),
   });
-  useAxAction("proceedToCheckout", async () => ({ ok: true }), {
+  useAxTool("proceedToCheckout", async () => ({ ok: true }), {
     description: "Start checkout.",
     annotations: { consequentialHint: true },
   });
@@ -58,15 +58,19 @@ rejection. Registration and execution signals stay distinct.
 
 ## Dispatch
 
-`dispatchAxAction` drives one interaction against a React-managed node as
-a fallback-wrapped enhancement over native dispatch: it traverses enclosing
-handlers with a synthesized event carrying the real target, and falls back
-to native bubbling dispatch where the enhancement is missing. Bridge
-failure never rejects an invocation native dispatch could complete, and
-fallback use is logged. Plain nodes use native dispatch with no bridge.
+`dispatchAxClick` drives one click against a React-managed node as a
+fallback-wrapped enhancement over native dispatch: it invokes the nearest
+enclosing `onClick` with a synthesized event carrying the real target, and
+falls back to native bubbling dispatch where the enhancement is missing.
+Click-only and single-handler by design — capture handlers, other event
+types, and further ancestors never run through the bridge. Bridge failure
+never rejects an invocation native dispatch could complete, a bridged
+handler that throws is reported without a native re-run, and fallback use
+is logged. Plain nodes use native dispatch with no bridge. The native path
+uses the prototype-chain `click`, never a page-owned expando.
 
 ```tsx
-import { dispatchAxAction } from "@ax-kit/react";
+import { dispatchAxClick } from "@ax-kit/react";
 
-dispatchAxAction(document.querySelector("button") as Element);
+dispatchAxClick(document.querySelector("button") as Element);
 ```

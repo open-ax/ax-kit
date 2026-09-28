@@ -46,7 +46,7 @@ export type AxMiddleware = (
 	options: AxExecuteOptions,
 ) => Promise<unknown>;
 
-export interface AxActionOptions {
+export interface AxToolOptions {
 	readonly description?: string | undefined;
 	readonly title?: string | undefined;
 	readonly inputSchema?: unknown;

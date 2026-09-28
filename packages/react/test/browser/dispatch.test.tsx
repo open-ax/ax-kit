@@ -4,7 +4,7 @@
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { dispatchAxAction } from "../../src/index.js";
+import { dispatchAxClick } from "../../src/index.js";
 
 (globalThis as unknown as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT =
 	true;
@@ -59,7 +59,7 @@ describe("dispatch outcome", () => {
 		if (button === null) {
 			throw new Error("missing button");
 		}
-		expect(dispatchAxAction(button)).toBe("bridge");
+		expect(dispatchAxClick(button)).toBe("bridge");
 		expect(seen).toHaveLength(1);
 		expect(seen[0]).toBe(button);
 	});
@@ -85,7 +85,7 @@ describe("dispatch outcome", () => {
 		if (icon === null) {
 			throw new Error("missing icon");
 		}
-		expect(dispatchAxAction(icon)).toBe("bridge");
+		expect(dispatchAxClick(icon)).toBe("bridge");
 		expect(seen).toHaveLength(1);
 		expect(seen[0]).toBe(icon);
 	});
@@ -98,7 +98,7 @@ describe("dispatch outcome", () => {
 			calls += 1;
 		});
 		const log = vi.spyOn(console, "info").mockImplementation(() => {});
-		expect(dispatchAxAction(el)).toBe("native");
+		expect(dispatchAxClick(el)).toBe("native");
 		expect(calls).toBe(1);
 		expect(log).not.toHaveBeenCalled();
 		el.remove();
@@ -120,8 +120,48 @@ describe("dispatch outcome", () => {
 			calls += 1;
 		});
 		const log = vi.spyOn(console, "info").mockImplementation(() => {});
-		expect(dispatchAxAction(button)).toBe("native");
+		expect(dispatchAxClick(button)).toBe("native");
 		expect(log).toHaveBeenCalled();
 		expect(calls).toBe(1);
+	});
+
+	it("never invokes a throwing bridge handler twice", async () => {
+		let bridgeCalls = 0;
+		function Page(): React.ReactNode {
+			return (
+				<button
+					type="button"
+					onClick={() => {
+						bridgeCalls += 1;
+						throw new Error("boom");
+					}}
+				>
+					save
+				</button>
+			);
+		}
+		const host = await render(<Page />);
+		await settled();
+		const button = host.querySelector("button");
+		expect(button).not.toBeNull();
+		if (button === null) {
+			throw new Error("missing button");
+		}
+		let nativeCalls = 0;
+		button.addEventListener("click", () => {
+			nativeCalls += 1;
+		});
+		const error = vi.spyOn(console, "error").mockImplementation(() => {});
+		expect(dispatchAxClick(button)).toBe("bridge");
+		expect(bridgeCalls).toBe(1);
+		expect(nativeCalls).toBe(0);
+		expect(error).toHaveBeenCalled();
+	});
+
+	it("rejects non-element targets with TypeError", () => {
+		expect(() => dispatchAxClick(null as unknown as Element)).toThrow(
+			TypeError,
+		);
+		expect(() => dispatchAxClick({} as unknown as Element)).toThrow(TypeError);
 	});
 });

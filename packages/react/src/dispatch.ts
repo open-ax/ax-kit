@@ -2,13 +2,17 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /**
- * Fallback-wrapped dispatch for React-managed nodes. Best-effort
- * progressive enhancement over native dispatch: traverse enclosing
- * handlers via the framework props prefix, invoke with a synthesized event
- * carrying the real target, and always fall back to native bubbling
- * dispatch. Failure of the enhancement never rejects an invocation native
- * dispatch could complete. Scoped to React-managed nodes; plain DOM uses
- * native dispatch with no bridge.
+ * Click dispatch for React-managed nodes. Best-effort progressive
+ * enhancement over native dispatch: invoke the nearest enclosing `onClick`
+ * via the framework props prefix with a synthesized event carrying the real
+ * target, and always fall back to native bubbling dispatch. Click-only and
+ * single-handler by design: capture handlers, other event types, and further
+ * ancestors never run through the bridge. Plain DOM and everything the
+ * bridge misses use native dispatch with no bridge. Failure of the
+ * enhancement never rejects an invocation native dispatch could complete. A
+ * bridged handler that throws is reported without a native re-run, so one
+ * logical click never invokes the handler twice. Scoped to React-managed
+ * nodes; plain DOM uses native dispatch with no bridge.
  */
 
 const PROPS_PREFIX = "__reactProps$";
@@ -59,15 +63,32 @@ function readHandler(
 	}
 }
 
-function nativeDispatch(target: Element): void {
-	try {
-		const clickable = target as unknown as { click?: unknown };
-		if (typeof clickable.click === "function") {
-			(clickable.click as () => void).call(target);
-			return;
+/**
+ * The native click up the target's own prototype chain, skipping own
+ * expandos. A page-owned `click` property must never shadow the trusted
+ * activation the bridge falls back to.
+ */
+function nativeClickOf(target: Element): (() => void) | undefined {
+	let proto: unknown = Object.getPrototypeOf(target);
+	while (proto !== null) {
+		const found = (proto as Record<string, unknown>).click;
+		if (typeof found === "function") {
+			return found as () => void;
 		}
-	} catch {
-		// Fall through to event dispatch below.
+		proto = Object.getPrototypeOf(proto);
+	}
+	return undefined;
+}
+
+function nativeDispatch(target: Element): void {
+	const nativeClick = nativeClickOf(target);
+	if (nativeClick !== undefined) {
+		try {
+			nativeClick.call(target);
+			return;
+		} catch {
+			// Fall through to event dispatch below.
+		}
 	}
 	const view = target.ownerDocument?.defaultView ?? undefined;
 	try {
@@ -86,11 +107,18 @@ function nativeDispatch(target: Element): void {
 }
 
 /**
- * Drive one interaction. Returns how it was handled. Never throws for a
- * reachable target: bridge failure falls back to native dispatch with a
- * logged fallback.
+ * Drive one click. Returns how it was handled. Never throws for a reachable
+ * target: bridge failure falls back to native dispatch with a logged
+ * fallback. Non-element targets reject with `TypeError`.
  */
-export function dispatchAxAction(target: Element): AxDispatchOutcome {
+export function dispatchAxClick(target: Element): AxDispatchOutcome {
+	if (
+		typeof target !== "object" ||
+		target === null ||
+		(target as Node).nodeType !== 1
+	) {
+		throw new TypeError("bad dispatch target");
+	}
 	const original = target;
 	let node: Element | null = target;
 	let sawReactNode = false;
@@ -110,7 +138,14 @@ export function dispatchAxAction(target: Element): AxDispatchOutcome {
 						stopPropagation() {},
 						nativeEvent: null,
 					};
-					handler.call(node, synthetic);
+					try {
+						handler.call(node, synthetic);
+					} catch (error) {
+						console.error(
+							"[ax-kit/react] bridged handler threw; skipping native fallback",
+							error,
+						);
+					}
 					return "bridge";
 				}
 			}
