@@ -1,0 +1,14 @@
+{
+	"extends": "../tsconfig/base.json",
+	"compilerOptions": {
+		"rootDir": ".",
+		"noEmit": true,
+		"types": ["node"],
+		"jsx": "preserve",
+		"lib": ["es2022", "dom", "dom.iterable"]
+	},
+	"include": ["src/**/*.ts", "test/**/*.ts"],
+	"vueCompilerOptions": {
+		"target": 3.5
+	}
+}

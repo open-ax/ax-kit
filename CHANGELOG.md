@@ -30,6 +30,8 @@ Then commit the generated `.changeset/*.md` file.
 - `@ax-kit/react`: `useAxTool`, `useAxAction`, `AxProvider`, and
   `isAxSupported` for lifecycle-native tool registration with namespacing
   and execution middleware.
+- `@ax-kit/vue`: `useAxTool`, `vAxTool`, and `isAxSupported` for
+  composable plus directive tool registration with client mount lifecycle.
 
 No published package yet. Entries above describe the in-tree API; versioned
 releases will be cut with Changesets.
