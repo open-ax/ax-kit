@@ -233,6 +233,83 @@ describe("origin-keyed gate", () => {
 	});
 });
 
+describe("install hardening", () => {
+	it("ignores a pre-existing fake instead of trusting it", () => {
+		const win = new Window({ url: "https://example.com/" });
+		try {
+			const doc = docOf(win);
+			(doc as unknown as Record<string, unknown>).modelContext = {
+				registerTool: async () => {
+					throw new Error("fake");
+				},
+			};
+			const mc = installModelContext(doc);
+			if (mc === undefined) {
+				throw new Error("expected an installed context");
+			}
+			expect(typeof mc.registerTool).toBe("function");
+			expect((doc as unknown as Record<string, unknown>).modelContext).toBe(mc);
+		} finally {
+			void win.happyDOM?.close();
+		}
+	});
+});
+
+describe("trustworthy origins", () => {
+	it("requires a full IPv4 loopback literal", async () => {
+		const mc = context();
+		for (const bad of [
+			"http://127.0.0.1.evil.com",
+			"http://127.evil",
+			"http://127.0.0.300",
+		]) {
+			expect(
+				errorName(
+					await errorOf(
+						mc.registerTool(
+							{
+								name: "loopback_bad",
+								description: "bad",
+								execute: async () => null,
+							},
+							{ exposedTo: [bad] },
+						),
+					),
+				),
+			).toBe("SecurityError");
+		}
+		await mc.registerTool(
+			{
+				name: "loopback_ok",
+				description: "ok",
+				execute: async () => null,
+			},
+			{ exposedTo: ["http://127.0.0.1:8080/"] },
+		);
+		expect(
+			(await mc.getTools()).some((item) => item.name === "loopback_ok"),
+		).toBe(true);
+	});
+
+	it("rejects non-string origin entries with TypeError", async () => {
+		const mc = context();
+		expect(
+			errorName(
+				await errorOf(
+					mc.registerTool(
+						{
+							name: "loopback_type",
+							description: "type",
+							execute: async () => null,
+						},
+						{ exposedTo: [42 as unknown as string] },
+					),
+				),
+			),
+		).toBe("TypeError");
+	});
+});
+
 describe("unloading cleanup", () => {
 	// Cross-document unload branches (target destroyed completing false,
 	// caller destroyed cancelling) need two real origins and run against real

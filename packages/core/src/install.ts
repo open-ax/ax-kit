@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { isAllowedToUse, isPotentiallyTrustworthy } from "./gates.js";
-import { ensureState, handleDocumentUnload } from "./registry.js";
+import { ensureState, handleDocumentUnload, stateOf } from "./registry.js";
 import type { ModelContext } from "./types.js";
 
 /**
@@ -14,9 +14,10 @@ import type { ModelContext } from "./types.js";
  * on script order: any later-obtained reference wins.
  */
 export function installModelContext(doc: Document): ModelContext | undefined {
+	const known = stateOf(doc)?.context;
 	const existing = (doc as unknown as Record<string, unknown>).modelContext;
-	if (existing !== undefined) {
-		return existing as ModelContext;
+	if (existing !== undefined && existing === known) {
+		return known;
 	}
 	if (!isSecureContext(doc)) {
 		return undefined;

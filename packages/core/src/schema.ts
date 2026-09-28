@@ -88,7 +88,7 @@ function checkJsonValue(
 		}
 		return;
 	}
-	if (Array.isArray(value)) {
+	if (Array.isArray(value) || isRecord(value)) {
 		if (depth > MAX_SCHEMA_DEPTH) {
 			throw new TypeError("input schema exceeds the depth limit");
 		}
@@ -96,25 +96,20 @@ function checkJsonValue(
 			throw new TypeError("input schema is circular");
 		}
 		seen.add(value);
-		for (const entry of value) {
-			checkJsonValue(entry, depth + 1, state, seen);
+		try {
+			if (Array.isArray(value)) {
+				for (const entry of value) {
+					checkJsonValue(entry, depth + 1, state, seen);
+				}
+			} else {
+				checkKeys(value, state);
+				for (const entry of Object.values(value)) {
+					checkJsonValue(entry, depth + 1, state, seen);
+				}
+			}
+		} finally {
+			seen.delete(value);
 		}
-		seen.delete(value);
-		return;
-	}
-	if (isRecord(value)) {
-		if (depth > MAX_SCHEMA_DEPTH) {
-			throw new TypeError("input schema exceeds the depth limit");
-		}
-		if (seen.has(value)) {
-			throw new TypeError("input schema is circular");
-		}
-		seen.add(value);
-		checkKeys(value, state);
-		for (const entry of Object.values(value)) {
-			checkJsonValue(entry, depth + 1, state, seen);
-		}
-		seen.delete(value);
 		return;
 	}
 	throw new TypeError("input schema holds a non-JSON value");
@@ -136,79 +131,77 @@ function checkSchemaNode(
 		throw new TypeError("input schema is circular");
 	}
 	seen.add(node);
-	checkKeys(node, state);
+	try {
+		checkKeys(node, state);
 
-	const nodeType: unknown = node.type;
-	if (nodeType !== undefined) {
-		if (typeof nodeType !== "string" || !KNOWN_TYPES.has(nodeType)) {
-			seen.delete(node);
-			throw new TypeError("input schema has an unsupported type");
+		const nodeType: unknown = node.type;
+		if (nodeType !== undefined) {
+			if (typeof nodeType !== "string" || !KNOWN_TYPES.has(nodeType)) {
+				throw new TypeError("input schema has an unsupported type");
+			}
 		}
-	}
 
-	const properties: unknown = node.properties;
-	if (properties !== undefined) {
-		if (!isRecord(properties)) {
-			seen.delete(node);
-			throw new TypeError("input schema properties must be an object");
+		const properties: unknown = node.properties;
+		if (properties !== undefined) {
+			if (!isRecord(properties)) {
+				throw new TypeError("input schema properties must be an object");
+			}
+			// Property names are keys in the document too: scan and count them.
+			checkKeys(properties, state);
+			for (const child of Object.values(properties)) {
+				checkSchemaNode(child, depth + 1, state, seen);
+			}
 		}
-		// Property names are keys in the document too: scan and count them.
-		checkKeys(properties, state);
-		for (const child of Object.values(properties)) {
-			checkSchemaNode(child, depth + 1, state, seen);
-		}
-	}
 
-	const required: unknown = node.required;
-	if (required !== undefined) {
-		if (
-			!Array.isArray(required) ||
-			required.some((entry) => typeof entry !== "string")
-		) {
-			seen.delete(node);
-			throw new TypeError("input schema required must list strings");
+		const required: unknown = node.required;
+		if (required !== undefined) {
+			if (
+				!Array.isArray(required) ||
+				required.some((entry) => typeof entry !== "string")
+			) {
+				throw new TypeError("input schema required must list strings");
+			}
 		}
-	}
 
-	const items: unknown = node.items;
-	if (items !== undefined) {
-		checkSchemaNode(items, depth + 1, state, seen);
-	}
-
-	const enumValues: unknown = node.enum;
-	if (enumValues !== undefined) {
-		if (!Array.isArray(enumValues)) {
-			seen.delete(node);
-			throw new TypeError("input schema enum must be an array");
+		const items: unknown = node.items;
+		if (items !== undefined) {
+			checkSchemaNode(items, depth + 1, state, seen);
 		}
-		for (const entry of enumValues) {
-			checkJsonValue(entry, depth + 1, state, seen);
-		}
-	}
 
-	const additional: unknown = node.additionalProperties;
-	if (additional !== undefined && typeof additional !== "boolean") {
+		const enumValues: unknown = node.enum;
+		if (enumValues !== undefined) {
+			if (!Array.isArray(enumValues)) {
+				throw new TypeError("input schema enum must be an array");
+			}
+			for (const entry of enumValues) {
+				checkJsonValue(entry, depth + 1, state, seen);
+			}
+		}
+
+		const additional: unknown = node.additionalProperties;
+		if (additional !== undefined && typeof additional !== "boolean") {
+			throw new TypeError(
+				"input schema additionalProperties must be a boolean",
+			);
+		}
+
+		for (const key of ["description", "title"] as const) {
+			const hint: unknown = node[key];
+			if (hint !== undefined && typeof hint !== "string") {
+				throw new TypeError(`input schema ${key} must be a string`);
+			}
+		}
+
+		// Unknown keywords are ignored as vocabulary, but their subtrees are still
+		// untrusted input: sweep them for safety without validating them as schema.
+		for (const [key, child] of Object.entries(node)) {
+			if (!SCANNED_KEYWORDS.has(key)) {
+				checkJsonValue(child, depth + 1, state, seen);
+			}
+		}
+	} finally {
 		seen.delete(node);
-		throw new TypeError("input schema additionalProperties must be a boolean");
 	}
-
-	for (const key of ["description", "title"] as const) {
-		const hint: unknown = node[key];
-		if (hint !== undefined && typeof hint !== "string") {
-			seen.delete(node);
-			throw new TypeError(`input schema ${key} must be a string`);
-		}
-	}
-
-	// Unknown keywords are ignored as vocabulary, but their subtrees are still
-	// untrusted input: sweep them for safety without validating them as schema.
-	for (const [key, child] of Object.entries(node)) {
-		if (!SCANNED_KEYWORDS.has(key)) {
-			checkJsonValue(child, depth + 1, state, seen);
-		}
-	}
-
-	seen.delete(node);
 }
 
 /**
@@ -232,11 +225,11 @@ export function serializeInputSchema(schema: unknown): string | undefined {
 }
 
 /**
- * Re-parse a stored schema into a fresh deep copy. The registry stores the
- * empty string when no schema was given, so empty reads back as `undefined`.
+ * Re-parse a stored schema into a fresh deep copy. Absent schemas stay
+ * absent; every listing hands out a new object no caller can mutate.
  */
 export function parseInputSchema(stored: string | undefined): unknown {
-	if (stored === undefined || stored === "") {
+	if (stored === undefined) {
 		return undefined;
 	}
 	return JSON.parse(stored) as unknown;
@@ -360,11 +353,9 @@ function validateAgainstSchema(
 	}
 
 	const properties: unknown = schema.properties;
-	const known: ReadonlySet<string> = isRecord(properties)
-		? new Set(Object.keys(properties))
-		: new Set<string>();
-	if (isRecord(properties)) {
-		for (const [name, child] of Object.entries(properties)) {
+	const props = isRecord(properties) ? properties : undefined;
+	if (props !== undefined) {
+		for (const [name, child] of Object.entries(props)) {
 			if (Object.hasOwn(value, name) && isRecord(child)) {
 				validateAgainstSchema(
 					Reflect.get(value, name) as unknown,
@@ -376,6 +367,7 @@ function validateAgainstSchema(
 	}
 
 	if (schema.additionalProperties === false) {
+		const known = new Set(Object.keys(props ?? {}));
 		for (const name of Object.keys(value)) {
 			if (!known.has(name)) {
 				throw new TypeError(`${path} has an unexpected property ${name}`);

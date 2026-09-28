@@ -12,6 +12,7 @@ import { parseOriginList, warnDiagnostic } from "../gates.js";
 import {
 	checkCallerGates,
 	collectRegisteredTools,
+	readOptionsDict,
 	unregisterRecord,
 } from "../registry.js";
 import type {
@@ -60,7 +61,8 @@ export async function getTool(
 	const target = doc ?? defaultDocument();
 	checkCallerGates(target);
 	const wanted = String(name);
-	const rawFrom: unknown = options?.fromOrigins;
+	const opts = readOptionsDict(options ?? {});
+	const rawFrom: unknown = opts.fromOrigins;
 	const fromOrigins =
 		rawFrom === undefined ? [] : parseOriginList(rawFrom, "fromOrigins");
 	return collectRegisteredTools(target, fromOrigins).find(
@@ -89,14 +91,21 @@ export type ToolChangeListener = (diff: ToolChangeDiff) => void;
  * Track set changes with `{ added, removed }` name diffs. The draft change
  * notification carries no payload; this re-lists on every notification and
  * diffs. Resolves to an unsubscribe function once the baseline snapshot is
- * taken, so the first diff never replays pre-existing tools.
+ * taken, so the first diff never replays pre-existing tools. A second read
+ * after subscribing closes the race where a registration lands between the
+ * baseline snapshot and the listener attach.
  */
 export async function trackToolChanges(
 	context: ModelContext,
 	listener: ToolChangeListener,
 ): Promise<() => void> {
-	let previous = new Set((await context.getTools()).map((tool) => tool.name));
-	const onChange = (): void => {
+	let previous = new Set<string>();
+	let isReady = false;
+	let resolveReady: () => void = () => {};
+	const ready = new Promise<void>((resolve) => {
+		resolveReady = resolve;
+	});
+	const refresh = (): void => {
 		void context
 			.getTools()
 			.then((tools) => {
@@ -112,7 +121,17 @@ export async function trackToolChanges(
 				warnDiagnostic("tool listing failed during change tracking");
 			});
 	};
+	const onChange = (): void => {
+		if (isReady) {
+			refresh();
+		} else {
+			void ready.then(refresh);
+		}
+	};
 	context.addEventListener("toolchange", onChange);
+	previous = new Set((await context.getTools()).map((tool) => tool.name));
+	isReady = true;
+	resolveReady();
 	return () => {
 		context.removeEventListener("toolchange", onChange);
 	};

@@ -68,25 +68,31 @@ export function isAllowedToUse(doc: Document): boolean {
 }
 
 export function isPotentiallyTrustworthy(url: URL): boolean {
-	switch (url.protocol) {
-		case "https:":
-		case "wss:":
-		case "file:":
-			return true;
-		default:
-			break;
+	if (
+		url.protocol === "https:" ||
+		url.protocol === "wss:" ||
+		url.protocol === "file:"
+	) {
+		return true;
 	}
 	const host = url.hostname.toLowerCase();
-	if (host === "localhost" || host === "[::1]") {
+	if (host === "localhost" || host === "[::1]" || host === "::1") {
 		return true;
 	}
-	if (/^127\./.test(host)) {
-		return true;
-	}
-	if (host === "::1") {
+	if (isLoopbackIPv4(host)) {
 		return true;
 	}
 	return false;
+}
+
+function isLoopbackIPv4(host: string): boolean {
+	const parts = host.split(".");
+	if (parts.length !== 4 || parts[0] !== "127") {
+		return false;
+	}
+	return parts
+		.slice(1)
+		.every((part) => /^\d{1,3}$/.test(part) && Number(part) <= 255);
 }
 
 /**
@@ -100,9 +106,12 @@ export function parseOriginList(entries: unknown, kind: string): string[] {
 	}
 	const origins: string[] = [];
 	for (const entry of entries) {
+		if (typeof entry !== "string") {
+			throw new TypeError(`${kind} must be a list of origins`);
+		}
 		let parsed: URL;
 		try {
-			parsed = new URL(String(entry));
+			parsed = new URL(entry);
 		} catch {
 			throw securityError(`${kind} holds an unparseable origin`);
 		}

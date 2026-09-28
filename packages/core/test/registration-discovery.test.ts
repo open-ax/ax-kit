@@ -152,6 +152,20 @@ describe("registerTool validation", () => {
 		).toBe("TypeError");
 	});
 
+	it("rejects non-boolean annotations with TypeError", async () => {
+		const mc = context();
+		expect(
+			errorName(
+				await errorOf(
+					mc.registerTool({
+						...tool("reg_badannot"),
+						annotations: { readOnlyHint: "yes" as unknown as boolean },
+					}),
+				),
+			),
+		).toBe("TypeError");
+	});
+
 	it("rejects unserializable schemas with TypeError", async () => {
 		const mc = context();
 		const circular: Record<string, unknown> = { type: "object" };
@@ -209,6 +223,21 @@ describe("registration signal", () => {
 			(await mc.getTools()).some((item) => item.name === "reg_abort"),
 		).toBe(false);
 		expect(notified).toBeGreaterThan(seen);
+	});
+
+	it("stale registration signals do not delete a re-registered tool", async () => {
+		const mc = context();
+		const first = new AbortController();
+		await mc.registerTool(tool("reg_stale_signal"), {
+			signal: first.signal,
+		});
+		const { unregisterTool } = await import("../src/ax/index.js");
+		expect(unregisterTool("reg_stale_signal")).toBe(true);
+		await mc.registerTool(tool("reg_stale_signal"));
+		first.abort();
+		expect(
+			(await mc.getTools()).some((item) => item.name === "reg_stale_signal"),
+		).toBe(true);
 	});
 });
 

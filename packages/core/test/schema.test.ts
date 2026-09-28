@@ -23,7 +23,6 @@ describe("serializeInputSchema", () => {
 	it("absent schema stays absent", () => {
 		expect(serializeInputSchema(undefined)).toBeUndefined();
 		expect(parseInputSchema(undefined)).toBeUndefined();
-		expect(parseInputSchema("")).toBeUndefined();
 	});
 
 	it("round-trips through a string with copy semantics", () => {

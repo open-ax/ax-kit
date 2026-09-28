@@ -24,7 +24,7 @@ cited as draft-derived:
   null), `properties`, `required`, `items` (single-schema form),
   `enum`, `additionalProperties` (boolean form), `description`, `title`.
   Unknown keywords are ignored as vocabulary but still swept for safety.
-- Storage: serialized at registration, stored as a string (empty string when
+- Storage: serialized at registration, stored as a string (`undefined` when
   absent), re-parsed on every read, so no live caller object is ever retained
   and listings hand out fresh deep copies.
 - Arguments re-validated against the current definition immediately before
