@@ -8,9 +8,13 @@
  * library. Only the `validate` subset is mirrored; anything else is out of
  * scope for the polyfill.
  */
+export interface StandardPathSegment {
+	readonly key: PropertyKey;
+}
+
 export interface StandardIssue {
 	readonly message: string;
-	readonly path?: ReadonlyArray<PropertyKey> | undefined;
+	readonly path?: ReadonlyArray<PropertyKey | StandardPathSegment> | undefined;
 }
 
 export interface StandardResult {

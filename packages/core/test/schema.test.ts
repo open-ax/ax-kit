@@ -10,6 +10,7 @@ import {
 	parseInputSchema,
 	serializeInputSchema,
 } from "../src/schema.js";
+import type { StandardIssue } from "../src/standard-schema.js";
 
 function nestedObject(depth: number): unknown {
 	let current: unknown = { type: "string" };
@@ -221,5 +222,15 @@ describe("assertValidArguments", () => {
 		schema.properties.a.type = "number";
 		expect(() => assertValidArguments({ a: "x" }, stored)).not.toThrow();
 		expect(() => assertValidArguments({ a: 1 }, stored)).toThrow(TypeError);
+	});
+
+	it("accepts path-segment issue paths structurally", () => {
+		// Mirrors @standard-schema/spec@1.1.0, where a path element is
+		// PropertyKey | PathSegment. Fails typecheck without the union.
+		const issue: StandardIssue = {
+			message: "bad",
+			path: ["a", { key: "b" }, 0],
+		};
+		expect(issue.path?.length).toBe(3);
 	});
 });
