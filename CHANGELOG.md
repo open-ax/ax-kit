@@ -32,6 +32,9 @@ Then commit the generated `.changeset/*.md` file.
   and execution middleware.
 - `@ax-kit/vue`: `useAxTool`, `vAxTool`, and `isAxSupported` for
   composable plus directive tool registration with client mount lifecycle.
+- `@ax-kit/svelte`: `axTool`, `axToolEffect`, and `isAxSupported` for
+  element binding plus rune tool registration with update and destroy
+  teardown.
 
 No published package yet. Entries above describe the in-tree API; versioned
 releases will be cut with Changesets.
