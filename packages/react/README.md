@@ -65,7 +65,7 @@ falls back to native bubbling dispatch where the enhancement is missing.
 Click-only and single-handler by design — capture handlers, other event
 types, and further ancestors never run through the bridge. Disabled form
 controls skip the bridge and use native dispatch, which correctly performs
-no action. The synthesized event carries `type`, bubbling flags, the real
+no action — including controls disabled by an ancestor `fieldset`. The synthesized event carries `type`, bubbling flags, the real
 target, and a usable `nativeEvent`. Bridge failure
 never rejects an invocation native dispatch could complete, a bridged
 handler that throws is reported without a native re-run, and fallback use

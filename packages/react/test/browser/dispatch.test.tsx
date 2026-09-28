@@ -193,6 +193,35 @@ describe("dispatch outcome", () => {
 		expect(log).toHaveBeenCalled();
 	});
 
+	it("skips the bridge for controls disabled by a fieldset", async () => {
+		let bridgeCalls = 0;
+		function Page(): React.ReactNode {
+			return (
+				<fieldset disabled>
+					<button
+						type="button"
+						onClick={() => {
+							bridgeCalls += 1;
+						}}
+					>
+						save
+					</button>
+				</fieldset>
+			);
+		}
+		const host = await render(<Page />);
+		await settled();
+		const button = host.querySelector("button");
+		expect(button).not.toBeNull();
+		if (button === null) {
+			throw new Error("missing button");
+		}
+		const log = vi.spyOn(console, "info").mockImplementation(() => {});
+		expect(dispatchAxClick(button)).toBe("native");
+		expect(bridgeCalls).toBe(0);
+		expect(log).toHaveBeenCalled();
+	});
+
 	it("provides the event contract expected by handlers", async () => {
 		const seen: unknown[] = [];
 		function Page(): React.ReactNode {

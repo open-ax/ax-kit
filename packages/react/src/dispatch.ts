@@ -35,6 +35,13 @@ interface AxSyntheticClick {
 
 function isDisabled(el: Element): boolean {
 	try {
+		if (typeof el.matches === "function" && el.matches(":disabled")) {
+			return true;
+		}
+	} catch {
+		// Fall through to the own-property check below.
+	}
+	try {
 		return (el as unknown as { disabled?: unknown }).disabled === true;
 	} catch {
 		return false;

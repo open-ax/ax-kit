@@ -164,11 +164,18 @@ export function useAxTool(
 					throw new TypeError("bad execute");
 				};
 	const handlerRef = useRef<AxExecuteCallback>(safeExecute);
-	if (typeof rawExecute === "function") {
-		handlerRef.current = rawExecute as AxExecuteCallback;
-	}
 	const middlewareRef = useRef(middleware);
-	middlewareRef.current = middleware;
+	// Write the mailbox in an effect, never during render: a render-time
+	// write could expose a handler from an abandoned render while the
+	// previous registration stays active.
+	useEffect(() => {
+		if (typeof rawExecute === "function") {
+			handlerRef.current = rawExecute as AxExecuteCallback;
+		}
+	});
+	useEffect(() => {
+		middlewareRef.current = middleware;
+	});
 
 	const identity = snapshotIdentity(
 		effectiveName,
