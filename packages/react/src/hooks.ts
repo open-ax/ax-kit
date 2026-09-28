@@ -44,10 +44,14 @@ function snapshotIdentity(
 	annotations: unknown,
 	exposedTo: ReadonlyArray<string> | undefined,
 ): string {
-	const schemaText = safeJson(inputSchema);
-	const annotationsText = safeJson(annotations ?? null);
-	const exposedText = safeJson(exposedTo ?? null);
-	return `${name}|${description}|${title ?? ""}|${schemaText}|${annotationsText}|${exposedText}`;
+	return safeJson([
+		name,
+		description,
+		title ?? null,
+		safeJson(inputSchema),
+		safeJson(annotations ?? null),
+		safeJson(exposedTo ?? null),
+	]);
 }
 
 function safeJson(value: unknown): string {
@@ -125,13 +129,44 @@ export function useAxTool(
 	arg1?: AxExecuteCallback,
 	arg2?: AxToolOptions,
 ): AxToolHandle {
+	const validationError: TypeError | null =
+		typeof arg0 === "string"
+			? typeof arg1 !== "function"
+				? new TypeError("bad execute")
+				: null
+			: typeof (arg0 as unknown as { execute?: unknown }).execute !== "function"
+				? new TypeError("bad execute")
+				: null;
 	const tool: AxToolDefinition =
-		typeof arg0 === "string" ? fromCallback(arg0, arg1, arg2) : arg0;
+		typeof arg0 === "string"
+			? typeof arg1 === "function"
+				? fromCallback(arg0, arg1, arg2)
+				: {
+						name: arg0,
+						description: arg2?.description ?? "",
+						title: arg2?.title,
+						inputSchema: arg2?.inputSchema,
+						execute: async (): Promise<unknown> => {
+							throw new TypeError("bad execute");
+						},
+						annotations: arg2?.annotations,
+						exposedTo: arg2?.exposedTo,
+					}
+			: arg0;
 	const { namespace, middleware } = useContext(AxContext);
 	const effectiveName = `${namespace}${tool.name}`;
 
-	const handlerRef = useRef<AxExecuteCallback>(tool.execute);
-	handlerRef.current = tool.execute;
+	const rawExecute = (tool as unknown as { execute?: unknown }).execute;
+	const safeExecute: AxExecuteCallback =
+		typeof rawExecute === "function"
+			? (rawExecute as AxExecuteCallback)
+			: async (): Promise<unknown> => {
+					throw new TypeError("bad execute");
+				};
+	const handlerRef = useRef<AxExecuteCallback>(safeExecute);
+	if (typeof rawExecute === "function") {
+		handlerRef.current = rawExecute as AxExecuteCallback;
+	}
 	const middlewareRef = useRef(middleware);
 	middlewareRef.current = middleware;
 
@@ -144,10 +179,14 @@ export function useAxTool(
 		tool.exposedTo,
 	);
 	const key = identity;
+	const validationFailed = validationError !== null;
 
 	const [state, setState] = useState<AxToolHandle>(() => {
 		if (!hasWindow()) {
 			return INERT;
+		}
+		if (validationError !== null) {
+			return { supported: true, registered: false, error: validationError };
 		}
 		return { supported: true, registered: false, error: null };
 	});
@@ -156,6 +195,14 @@ export function useAxTool(
 	useEffect(() => {
 		if (!hasWindow()) {
 			setState(INERT);
+			return;
+		}
+		if (validationFailed) {
+			setState({
+				supported: true,
+				registered: false,
+				error: new TypeError("bad execute"),
+			});
 			return;
 		}
 		const doc: Document = document;
@@ -227,7 +274,7 @@ export function useAxTool(
 			controller.abort();
 			setState({ supported: true, registered: false, error: null });
 		};
-	}, [key]);
+	}, [key, validationFailed]);
 
 	if (!hasWindow()) {
 		return INERT;

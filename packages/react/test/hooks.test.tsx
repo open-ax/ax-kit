@@ -84,17 +84,6 @@ async function mount(
 	return el;
 }
 
-async function mountAsync(node: React.ReactNode): Promise<void> {
-	const el = document.createElement("div");
-	document.body.appendChild(el);
-	containers.push(el);
-	const root = createRoot(el);
-	roots.push(root);
-	await act(async () => {
-		root.render(node);
-	});
-}
-
 describe("useAxTool binding contract", () => {
 	it("registers on mount and removes on unmount", async () => {
 		function Tool(): React.ReactNode {
@@ -412,12 +401,12 @@ describe("named tool registration and provider", () => {
 		expect(JSON.parse(await context().executeTool(tool, {}))).toBe(7);
 	});
 
-	it("never touches the surface during server rendering", async () => {
+	it("does not register during server rendering", async () => {
 		const { renderToString } = await import("react-dom/server");
-		// Ensure no tool leaks from a server render.
 		const before = new Set(await listedNames());
+		let handle: ReturnType<typeof useAxTool> | undefined;
 		function Tool(): React.ReactNode {
-			useAxTool({
+			handle = useAxTool({
 				name: "hook_ssr",
 				description: "ssr",
 				execute: async () => "ok",
@@ -426,9 +415,43 @@ describe("named tool registration and provider", () => {
 		}
 		renderToString(<Tool />);
 		await settle();
-		const after = await listedNames();
-		expect(after.filter((n) => n === "hook_ssr")).toEqual([]);
-		expect(new Set(after).size).toBeGreaterThanOrEqual(before.size);
-		void mountAsync;
+		expect(await listedNames()).not.toContain("hook_ssr");
+		expect(handle?.registered).toBe(false);
+		expect(new Set(await listedNames()).size).toBeGreaterThanOrEqual(
+			before.size,
+		);
+	});
+
+	it("reports an invalid callback on the handle", async () => {
+		let handle: ReturnType<typeof useAxTool> | undefined;
+		function Tool(): React.ReactNode {
+			handle = useAxTool(
+				"bad_execute",
+				undefined as unknown as () => Promise<unknown>,
+			);
+			return null;
+		}
+		await mount(<Tool />);
+		await settle();
+		await settle();
+		expect(handle?.registered).toBe(false);
+		expect(handle?.error).toBeInstanceOf(TypeError);
+	});
+
+	it("reports a missing object-form execute on the handle", async () => {
+		let handle: ReturnType<typeof useAxTool> | undefined;
+		function Tool(): React.ReactNode {
+			handle = useAxTool({
+				name: "bad_object",
+				description: "bad",
+				execute: undefined as unknown as () => Promise<unknown>,
+			});
+			return null;
+		}
+		await mount(<Tool />);
+		await settle();
+		await settle();
+		expect(handle?.registered).toBe(false);
+		expect(handle?.error).toBeInstanceOf(TypeError);
 	});
 });

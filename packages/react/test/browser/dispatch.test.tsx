@@ -164,4 +164,80 @@ describe("dispatch outcome", () => {
 		);
 		expect(() => dispatchAxClick({} as unknown as Element)).toThrow(TypeError);
 	});
+
+	it("skips the bridge for disabled controls", async () => {
+		let bridgeCalls = 0;
+		function Page(): React.ReactNode {
+			return (
+				<button
+					type="button"
+					disabled
+					onClick={() => {
+						bridgeCalls += 1;
+					}}
+				>
+					save
+				</button>
+			);
+		}
+		const host = await render(<Page />);
+		await settled();
+		const button = host.querySelector("button");
+		expect(button).not.toBeNull();
+		if (button === null) {
+			throw new Error("missing button");
+		}
+		const log = vi.spyOn(console, "info").mockImplementation(() => {});
+		expect(dispatchAxClick(button)).toBe("native");
+		expect(bridgeCalls).toBe(0);
+		expect(log).toHaveBeenCalled();
+	});
+
+	it("provides the event contract expected by handlers", async () => {
+		const seen: unknown[] = [];
+		function Page(): React.ReactNode {
+			return (
+				<button
+					type="button"
+					onClick={(event: unknown) => {
+						seen.push(event);
+					}}
+				>
+					save
+				</button>
+			);
+		}
+		const host = await render(<Page />);
+		await settled();
+		const button = host.querySelector("button");
+		expect(button).not.toBeNull();
+		if (button === null) {
+			throw new Error("missing button");
+		}
+		expect(dispatchAxClick(button)).toBe("bridge");
+		expect(seen).toHaveLength(1);
+		const event = seen[0] as {
+			type: unknown;
+			bubbles: unknown;
+			cancelable: unknown;
+			target: unknown;
+			currentTarget: unknown;
+			nativeEvent: unknown;
+			defaultPrevented: unknown;
+			isDefaultPrevented: () => boolean;
+			isPropagationStopped: () => boolean;
+			preventDefault: () => void;
+		};
+		expect(event.type).toBe("click");
+		expect(event.bubbles).toBe(true);
+		expect(event.cancelable).toBe(true);
+		expect(event.target).toBe(button);
+		expect(event.nativeEvent).toBeInstanceOf(Event);
+		expect((event.nativeEvent as Event).type).toBe("click");
+		expect(event.defaultPrevented).toBe(false);
+		expect(event.isDefaultPrevented()).toBe(false);
+		expect(event.isPropagationStopped()).toBe(false);
+		event.preventDefault();
+		expect(event.isDefaultPrevented()).toBe(true);
+	});
 });

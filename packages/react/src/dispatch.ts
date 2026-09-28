@@ -20,13 +20,38 @@ const PROPS_PREFIX = "__reactProps$";
 export type AxDispatchOutcome = "bridge" | "native";
 
 interface AxSyntheticClick {
+	readonly type: "click";
 	readonly bubbles: boolean;
 	readonly cancelable: boolean;
+	readonly defaultPrevented: boolean;
 	readonly target: EventTarget;
 	readonly currentTarget: EventTarget;
+	readonly nativeEvent: Event;
 	preventDefault(): void;
 	stopPropagation(): void;
-	readonly nativeEvent: null;
+	isDefaultPrevented(): boolean;
+	isPropagationStopped(): boolean;
+}
+
+function isDisabled(el: Element): boolean {
+	try {
+		return (el as unknown as { disabled?: unknown }).disabled === true;
+	} catch {
+		return false;
+	}
+}
+
+function nativeEventFor(target: Element): Event {
+	const view = target.ownerDocument?.defaultView ?? undefined;
+	try {
+		return new MouseEvent("click", {
+			bubbles: true,
+			cancelable: true,
+			view: view ?? null,
+		});
+	} catch {
+		return new Event("click", { bubbles: true, cancelable: true });
+	}
 }
 
 function readPropsKey(el: Element): string | undefined {
@@ -129,14 +154,49 @@ export function dispatchAxClick(target: Element): AxDispatchOutcome {
 				sawReactNode = true;
 				const handler = readHandler(node, key);
 				if (handler !== undefined) {
+					if (isDisabled(node) || isDisabled(original)) {
+						break;
+					}
+					let defaultPrevented = false;
+					let propagationStopped = false;
+					let nativeEvent: Event;
+					try {
+						nativeEvent = nativeEventFor(original);
+					} catch {
+						break;
+					}
 					const synthetic: AxSyntheticClick = {
+						type: "click",
 						bubbles: true,
 						cancelable: true,
+						get defaultPrevented(): boolean {
+							return defaultPrevented;
+						},
 						target: original,
 						currentTarget: node,
-						preventDefault() {},
-						stopPropagation() {},
-						nativeEvent: null,
+						nativeEvent,
+						preventDefault(): void {
+							defaultPrevented = true;
+							try {
+								nativeEvent.preventDefault();
+							} catch {
+								// Native event is best-effort only.
+							}
+						},
+						stopPropagation(): void {
+							propagationStopped = true;
+							try {
+								nativeEvent.stopPropagation();
+							} catch {
+								// Native event is best-effort only.
+							}
+						},
+						isDefaultPrevented(): boolean {
+							return defaultPrevented;
+						},
+						isPropagationStopped(): boolean {
+							return propagationStopped;
+						},
 					};
 					try {
 						handler.call(node, synthetic);

@@ -63,7 +63,10 @@ fallback-wrapped enhancement over native dispatch: it invokes the nearest
 enclosing `onClick` with a synthesized event carrying the real target, and
 falls back to native bubbling dispatch where the enhancement is missing.
 Click-only and single-handler by design — capture handlers, other event
-types, and further ancestors never run through the bridge. Bridge failure
+types, and further ancestors never run through the bridge. Disabled form
+controls skip the bridge and use native dispatch, which correctly performs
+no action. The synthesized event carries `type`, bubbling flags, the real
+target, and a usable `nativeEvent`. Bridge failure
 never rejects an invocation native dispatch could complete, a bridged
 handler that throws is reported without a native re-run, and fallback use
 is logged. Plain nodes use native dispatch with no bridge. The native path
