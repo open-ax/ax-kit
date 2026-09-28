@@ -25,6 +25,23 @@ Pinned draft: WebMCP Draft Community Group Report, 26 September 2026
   against upstream `webmcp/imperative/object-arguments.https.html`, which
   asserts the default alongside array acceptance and `TypeError` for
   primitives, null, and `toJSON`-yields-undefined objects.
+- Change notification is queued as a task, never fired synchronously, so
+  listeners cannot run inside the registering call. Decided 2026-09-28 from
+  review: the draft queues one task per target on its task source.
+- Handler attributes (`ontoolchange` and siblings) follow standard
+  `EventHandler` semantics via one internal wrapper per event type:
+  non-functions collapse to null, and explicit listeners are never disturbed.
+  Decided 2026-09-28 from review.
+- An unrecognized Permissions Policy feature does not deny installation;
+  only a recognized-but-denied `tools` feature does. Decided 2026-09-28 from
+  review: `allowsFeature` reports false for unknown features too.
+- Allow-list entries that serialize to the opaque origin are rejected with
+  `SecurityError`, so a file-scheme entry can never match an opaque caller.
+  Decided 2026-09-28 from review.
+- Execution re-checks the target document's gates; a target that lost
+  eligibility rejects with `UnknownError`. Target-only unload aborts the
+  callback signal while the caller still observes `UnknownError`. Decided
+  2026-09-28 from review.
 
 ## Expected failures (seed)
 

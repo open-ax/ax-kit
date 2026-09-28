@@ -42,9 +42,8 @@ export function isOriginKeyed(doc: Document): boolean {
 
 export function originKeyedDiagnostic(doc: Document): string {
 	return (
-		`WebMCP is unavailable: the document at ${doc.location.href} is not ` +
-		`origin-keyed (document.domain was modified or the response carries ` +
-		`Origin-Agent-Cluster: ?0, possibly stripped by a proxy).`
+		`WebMCP unavailable: ${doc.location.href} is not origin-keyed ` +
+		`(domain drift or Origin-Agent-Cluster: ?0).`
 	);
 }
 
@@ -120,21 +119,24 @@ function isLoopbackIPv4(host: string): boolean {
  */
 export function parseOriginList(entries: unknown, kind: string): string[] {
 	if (!Array.isArray(entries)) {
-		throw new TypeError(`${kind} must be a list of origins`);
+		throw new TypeError(`${kind}: bad origin list`);
 	}
 	const origins: string[] = [];
 	for (const entry of entries) {
 		if (typeof entry !== "string") {
-			throw new TypeError(`${kind} must be a list of origins`);
+			throw new TypeError(`${kind}: bad origin list`);
 		}
 		let parsed: URL;
 		try {
 			parsed = new URL(entry);
 		} catch {
-			throw securityError(`${kind} holds an unparseable origin`);
+			throw securityError(`${kind}: unparseable origin`);
 		}
 		if (!isPotentiallyTrustworthy(parsed)) {
-			throw securityError(`${kind} holds a non-trustworthy origin`);
+			throw securityError(`${kind}: untrustworthy origin`);
+		}
+		if (parsed.origin === "null") {
+			throw securityError(`${kind}: opaque origin`);
 		}
 		origins.push(parsed.origin);
 	}

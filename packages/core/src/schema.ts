@@ -4,7 +4,7 @@
 /**
  * Restricted JSON Schema subset handling for tool input schemas.
  *
- * Everything in this file is ours, not draft-derived: the draft requires an
+ * Everything in this file is ours, not draft-derived: the draft permits an
  * input schema but does not define how a polyfill validates it. The guards
  * here (dangerous keys, depth/key/size caps, the keyword subset) are our
  * design choices, recorded in `docs/adr/0002-input-schema-subset.md`.
@@ -60,12 +60,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function checkKeys(node: Record<string, unknown>, state: WalkState): void {
 	for (const key of Object.keys(node)) {
 		if (DANGEROUS_KEYS.has(key)) {
-			throw new TypeError(`input schema uses a forbidden key: ${key}`);
+			throw new TypeError(`forbidden key: ${key}`);
 		}
 	}
 	state.keys += Object.keys(node).length;
 	if (state.keys > MAX_SCHEMA_KEYS) {
-		throw new TypeError("input schema exceeds the key limit");
+		throw new TypeError("too many keys");
 	}
 }
 
@@ -84,16 +84,16 @@ function checkJsonValue(
 	}
 	if (kind === "number") {
 		if (!Number.isFinite(value)) {
-			throw new TypeError("input schema holds a non-finite number");
+			throw new TypeError("non-finite number");
 		}
 		return;
 	}
 	if (Array.isArray(value) || isRecord(value)) {
 		if (depth > MAX_SCHEMA_DEPTH) {
-			throw new TypeError("input schema exceeds the depth limit");
+			throw new TypeError("too deep");
 		}
 		if (seen.has(value)) {
-			throw new TypeError("input schema is circular");
+			throw new TypeError("circular schema");
 		}
 		seen.add(value);
 		try {
@@ -112,7 +112,7 @@ function checkJsonValue(
 		}
 		return;
 	}
-	throw new TypeError("input schema holds a non-JSON value");
+	throw new TypeError("non-JSON value");
 }
 
 function checkSchemaNode(
@@ -122,13 +122,13 @@ function checkSchemaNode(
 	seen: Set<object>,
 ): void {
 	if (!isRecord(node)) {
-		throw new TypeError("input schema must be an object");
+		throw new TypeError("schema not an object");
 	}
 	if (depth > MAX_SCHEMA_DEPTH) {
-		throw new TypeError("input schema exceeds the depth limit");
+		throw new TypeError("too deep");
 	}
 	if (seen.has(node)) {
-		throw new TypeError("input schema is circular");
+		throw new TypeError("circular schema");
 	}
 	seen.add(node);
 	try {
@@ -137,14 +137,14 @@ function checkSchemaNode(
 		const nodeType: unknown = node.type;
 		if (nodeType !== undefined) {
 			if (typeof nodeType !== "string" || !KNOWN_TYPES.has(nodeType)) {
-				throw new TypeError("input schema has an unsupported type");
+				throw new TypeError("unsupported type");
 			}
 		}
 
 		const properties: unknown = node.properties;
 		if (properties !== undefined) {
 			if (!isRecord(properties)) {
-				throw new TypeError("input schema properties must be an object");
+				throw new TypeError("bad properties");
 			}
 			// Property names are keys in the document too: scan and count them.
 			checkKeys(properties, state);
@@ -159,7 +159,7 @@ function checkSchemaNode(
 				!Array.isArray(required) ||
 				required.some((entry) => typeof entry !== "string")
 			) {
-				throw new TypeError("input schema required must list strings");
+				throw new TypeError("bad required");
 			}
 		}
 
@@ -171,7 +171,7 @@ function checkSchemaNode(
 		const enumValues: unknown = node.enum;
 		if (enumValues !== undefined) {
 			if (!Array.isArray(enumValues)) {
-				throw new TypeError("input schema enum must be an array");
+				throw new TypeError("bad enum");
 			}
 			for (const entry of enumValues) {
 				checkJsonValue(entry, depth + 1, state, seen);
@@ -180,15 +180,13 @@ function checkSchemaNode(
 
 		const additional: unknown = node.additionalProperties;
 		if (additional !== undefined && typeof additional !== "boolean") {
-			throw new TypeError(
-				"input schema additionalProperties must be a boolean",
-			);
+			throw new TypeError("bad additionalProperties");
 		}
 
 		for (const key of ["description", "title"] as const) {
 			const hint: unknown = node[key];
 			if (hint !== undefined && typeof hint !== "string") {
-				throw new TypeError(`input schema ${key} must be a string`);
+				throw new TypeError(`bad ${key}`);
 			}
 		}
 
@@ -216,10 +214,10 @@ export function serializeInputSchema(schema: unknown): string | undefined {
 	checkSchemaNode(schema, 0, { keys: 0 }, new Set());
 	const json: unknown = JSON.stringify(schema);
 	if (typeof json !== "string") {
-		throw new TypeError("input schema cannot be serialized");
+		throw new TypeError("unserializable schema");
 	}
 	if (json.length > MAX_SCHEMA_BYTES) {
-		throw new TypeError("input schema exceeds the size limit");
+		throw new TypeError("schema too large");
 	}
 	return json;
 }
@@ -274,41 +272,41 @@ function checkValueType(value: unknown, expected: string, path: string): void {
 	switch (expected) {
 		case "object":
 			if (!isRecord(value)) {
-				throw new TypeError(`${path} must be an object`);
+				throw new TypeError(`${path} not an object`);
 			}
 			break;
 		case "array":
 			if (!Array.isArray(value)) {
-				throw new TypeError(`${path} must be an array`);
+				throw new TypeError(`${path} not an array`);
 			}
 			break;
 		case "string":
 			if (typeof value !== "string") {
-				throw new TypeError(`${path} must be a string`);
+				throw new TypeError(`${path} not a string`);
 			}
 			break;
 		case "number":
 			if (typeof value !== "number" || !Number.isFinite(value)) {
-				throw new TypeError(`${path} must be a number`);
+				throw new TypeError(`${path} not a number`);
 			}
 			break;
 		case "integer":
 			if (typeof value !== "number" || !Number.isInteger(value)) {
-				throw new TypeError(`${path} must be an integer`);
+				throw new TypeError(`${path} not an integer`);
 			}
 			break;
 		case "boolean":
 			if (typeof value !== "boolean") {
-				throw new TypeError(`${path} must be a boolean`);
+				throw new TypeError(`${path} not a boolean`);
 			}
 			break;
 		case "null":
 			if (value !== null) {
-				throw new TypeError(`${path} must be null`);
+				throw new TypeError(`${path} not null`);
 			}
 			break;
 		default:
-			throw new TypeError(`${path} has an unsupported type`);
+			throw new TypeError(`${path} unsupported type`);
 	}
 }
 
@@ -325,7 +323,7 @@ function validateAgainstSchema(
 	const enumValues: unknown = schema.enum;
 	if (Array.isArray(enumValues)) {
 		if (!enumValues.some((entry) => deepEqual(value, entry))) {
-			throw new TypeError(`${path} is not an allowed value`);
+			throw new TypeError(`${path} disallowed value`);
 		}
 	}
 
@@ -347,7 +345,7 @@ function validateAgainstSchema(
 	if (Array.isArray(required)) {
 		for (const name of required) {
 			if (typeof name === "string" && !Object.hasOwn(value, name)) {
-				throw new TypeError(`${path} is missing required property ${name}`);
+				throw new TypeError(`${path} missing required ${name}`);
 			}
 		}
 	}
@@ -370,7 +368,7 @@ function validateAgainstSchema(
 		const known = new Set(Object.keys(props ?? {}));
 		for (const name of Object.keys(value)) {
 			if (!known.has(name)) {
-				throw new TypeError(`${path} has an unexpected property ${name}`);
+				throw new TypeError(`${path} unexpected ${name}`);
 			}
 		}
 	}
@@ -387,14 +385,14 @@ export function assertValidArguments(
 	storedSchema: string | undefined,
 ): void {
 	if (typeof args !== "object" || args === null) {
-		throw new TypeError("tool arguments must be an object");
+		throw new TypeError("bad arguments");
 	}
 	if (storedSchema === undefined) {
 		return;
 	}
 	const schema: unknown = parseInputSchema(storedSchema);
 	if (!isRecord(schema)) {
-		throw new TypeError("stored input schema is not an object");
+		throw new TypeError("bad stored schema");
 	}
 	validateAgainstSchema(args, schema, "arguments");
 }

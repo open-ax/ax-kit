@@ -334,6 +334,23 @@ describe("exposure and origins", () => {
 		).toBe("SecurityError");
 	});
 
+	it("rejects opaque allow-list origins with SecurityError", async () => {
+		const mc = context();
+		// file: URLs serialize to "null", which collides with opaque origins.
+		expect(
+			errorName(
+				await errorOf(
+					mc.registerTool(tool("reg_opaque"), {
+						exposedTo: ["file:///tmp/tool"],
+					}),
+				),
+			),
+		).toBe("SecurityError");
+		expect(
+			(await mc.getTools()).find((item) => item.name === "reg_opaque"),
+		).toBeUndefined();
+	});
+
 	it("keeps owner-visible tools with valid exposedTo", async () => {
 		const mc = context();
 		await mc.registerTool(tool("reg_exposed"), {

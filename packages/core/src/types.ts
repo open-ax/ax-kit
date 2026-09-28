@@ -88,7 +88,7 @@ const REPLACEMENT_CHARACTER = String.fromCharCode(0xfffd);
 
 export function toUSVString(value: unknown): string {
 	if (typeof value === "symbol") {
-		throw new TypeError("title must not be a symbol");
+		throw new TypeError("symbol title");
 	}
 	return String(value).replace(
 		/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g,

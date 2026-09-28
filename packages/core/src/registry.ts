@@ -31,7 +31,6 @@ import type {
 	ModelContextTool,
 	ModelEventHandler,
 	RegisteredTool,
-	ToolAnnotations,
 	ToolExecuteCallback,
 } from "./types.js";
 import { toUSVString } from "./types.js";
@@ -88,21 +87,21 @@ const NAME_PATTERN = /^[A-Za-z0-9_.-]+$/;
  */
 export function checkCallerGates(doc: Document): void {
 	if (!isFullyActive(doc)) {
-		throw invalidState("the document is not fully active");
+		throw invalidState("inactive document");
 	}
 	if (!isOriginKeyed(doc)) {
 		warnDiagnostic(originKeyedDiagnostic(doc));
-		throw securityError("the agent cluster is not origin-keyed");
+		throw securityError("cluster not origin-keyed");
 	}
 	if (!isAllowedToUse(doc)) {
-		throw notAllowed("the tools feature is not allowed");
+		throw notAllowed("tools not allowed");
 	}
 }
 
 export function readOptionsDict(options: unknown): Record<string, unknown> {
 	const raw: unknown = options ?? {};
 	if (typeof raw !== "object" || raw === null) {
-		throw new TypeError("options must be an object");
+		throw new TypeError("bad options");
 	}
 	return raw as Record<string, unknown>;
 }
@@ -115,7 +114,7 @@ export function readSignal(
 		return undefined;
 	}
 	if (!isAbortSignal(raw)) {
-		throw new TypeError("options signal must be an AbortSignal");
+		throw new TypeError("bad signal");
 	}
 	if (raw.aborted === true) {
 		throw raw.reason;
@@ -134,10 +133,6 @@ interface PendingExecution {
 const pendingExecutions = new Map<number, PendingExecution>();
 
 let nextExecutionId = 1;
-
-function allocExecutionId(): number {
-	return nextExecutionId++;
-}
 
 function cancelExecution(uuid: number, pending: PendingExecution): void {
 	pendingExecutions.delete(uuid);
@@ -161,6 +156,7 @@ export function handleDocumentUnload(doc: Document): void {
 		const callerGone = pending.callerDocument === doc;
 		const targetGone = pending.targetDocument === doc;
 		if (targetGone && !callerGone) {
+			pending.controller.abort();
 			pending.complete(null);
 		} else if (callerGone && !targetGone) {
 			cancelExecution(uuid, pending);
@@ -197,10 +193,10 @@ function topDocument(doc: Document): Document {
 
 function checkName(raw: string, tools: Map<string, ToolRecord>): string {
 	if (tools.has(raw)) {
-		throw invalidState(`a tool named ${raw} is already registered`);
+		throw invalidState(`duplicate tool ${raw}`);
 	}
 	if (raw.length > 128 || !NAME_PATTERN.test(raw)) {
-		throw invalidState("tool name must be 1-128 ASCII alphanumerics, _, -, .");
+		throw invalidState("bad tool name");
 	}
 	return raw;
 }
@@ -210,37 +206,25 @@ function readAnnotations(value: unknown): StoredAnnotations | null {
 		return null;
 	}
 	if (typeof value !== "object" || value === null || Array.isArray(value)) {
-		throw new TypeError("tool annotations must be an object");
+		throw new TypeError("bad annotations");
 	}
 	const record = value as Record<string, unknown>;
-	return {
-		readOnlyHint: readAnnotationFlag(record, "readOnlyHint"),
-		untrustedContentHint: readAnnotationFlag(record, "untrustedContentHint"),
-		consequentialHint: readAnnotationFlag(record, "consequentialHint"),
-		debugging: readAnnotationFlag(record, "debugging"),
+	const flag = (key: string): boolean => {
+		const flagValue = record[key];
+		if (flagValue === undefined) {
+			return false;
+		}
+		if (typeof flagValue !== "boolean") {
+			throw new TypeError("annotations not booleans");
+		}
+		return flagValue;
 	};
-}
-
-function readAnnotationFlag(
-	record: Record<string, unknown>,
-	key: string,
-): boolean {
-	const value = record[key];
-	if (value === undefined) {
-		return false;
-	}
-	if (typeof value !== "boolean") {
-		throw new TypeError("tool annotations must be booleans");
-	}
-	return value;
-}
-
-function ownOrigin(doc: Document): string {
-	try {
-		return String(doc.location.origin ?? "null");
-	} catch {
-		return "null";
-	}
+	return {
+		readOnlyHint: flag("readOnlyHint"),
+		untrustedContentHint: flag("untrustedContentHint"),
+		consequentialHint: flag("consequentialHint"),
+		debugging: flag("debugging"),
+	};
 }
 
 /**
@@ -255,7 +239,12 @@ export function effectiveOrigin(doc: Document): string {
 }
 
 function effectiveOriginOf(doc: Document, parent: string | null): string {
-	const direct = ownOrigin(doc);
+	let direct: string;
+	try {
+		direct = String(doc.location.origin ?? "null");
+	} catch {
+		direct = "null";
+	}
 	if (direct !== "null" && direct !== "") {
 		return direct;
 	}
@@ -354,15 +343,6 @@ function collectVisibleDocs(top: Document): VisibleDoc[] {
 	return visible;
 }
 
-function listedAnnotations(
-	stored: StoredAnnotations | null,
-): ToolAnnotations | undefined {
-	if (stored === null) {
-		return undefined;
-	}
-	return { ...stored };
-}
-
 export class ModelContextImpl extends EventTarget implements ModelContext {
 	#document: Document;
 	#onToolChange: ModelEventHandler = null;
@@ -422,24 +402,24 @@ export class ModelContextImpl extends EventTarget implements ModelContext {
 
 		const rawTool: unknown = tool;
 		if (typeof rawTool !== "object" || rawTool === null) {
-			throw new TypeError("tool must be an object");
+			throw new TypeError("bad tool");
 		}
 		const input = rawTool as Record<string, unknown>;
 
 		const rawName: unknown = input.name;
 		if (rawName === undefined) {
-			throw new TypeError("tool name is required");
+			throw new TypeError("name required");
 		}
 		const state = ensureState(owner);
 		const name = checkName(String(rawName), state.tools);
 
 		const rawDescription: unknown = input.description;
 		if (rawDescription === undefined) {
-			throw new TypeError("tool description is required");
+			throw new TypeError("description required");
 		}
 		const description = String(rawDescription);
 		if (description === "") {
-			throw invalidState("tool description must not be empty");
+			throw invalidState("empty description");
 		}
 
 		const schemaJson = serializeInputSchema(input.inputSchema);
@@ -449,7 +429,7 @@ export class ModelContextImpl extends EventTarget implements ModelContext {
 
 		const rawExecute: unknown = input.execute;
 		if (typeof rawExecute !== "function") {
-			throw new TypeError("tool execute must be a function");
+			throw new TypeError("bad execute");
 		}
 
 		const annotations = readAnnotations(input.annotations);
@@ -517,7 +497,7 @@ export class ModelContextImpl extends EventTarget implements ModelContext {
 
 		const rawTool: unknown = tool;
 		if (typeof rawTool !== "object" || rawTool === null) {
-			throw new TypeError("tool must be an object");
+			throw new TypeError("bad tool");
 		}
 		const given = rawTool as Record<string, unknown>;
 
@@ -527,21 +507,21 @@ export class ModelContextImpl extends EventTarget implements ModelContext {
 		try {
 			expected = new URL(expectedOrigin);
 		} catch {
-			throw notSupported("the tool origin cannot be parsed");
+			throw notSupported("bad tool origin");
 		}
 		if (expected.origin === "null") {
-			throw notSupported("the tool origin is opaque");
+			throw notSupported("opaque tool origin");
 		}
 
 		// Omitted arguments default to {}. Upstream:
 		// webmcp/imperative/object-arguments.https.html.
 		const args: unknown = inputObject === undefined ? {} : inputObject;
 		if (typeof args !== "object" || args === null) {
-			throw new TypeError("tool arguments must be an object");
+			throw new TypeError("bad arguments");
 		}
 		const inputArguments: unknown = JSON.stringify(args);
 		if (typeof inputArguments !== "string") {
-			throw new TypeError("tool arguments cannot be serialized");
+			throw new TypeError("arguments unserializable");
 		}
 
 		const opts = readOptionsDict(options);
@@ -552,35 +532,44 @@ export class ModelContextImpl extends EventTarget implements ModelContext {
 			const targetWindow = given.window as Window;
 			target = targetWindow.document;
 		} catch {
-			throw unknownError("the tool target cannot be established");
+			throw unknownError("bad tool target");
 		}
 		if (typeof target !== "object" || target === null) {
-			throw unknownError("the tool target cannot be established");
+			throw unknownError("bad tool target");
 		}
 
 		if (topDocument(caller) !== topDocument(target)) {
-			throw unknownError("the tool lives in another hierarchy");
+			throw unknownError("foreign tool target");
+		}
+
+		// Authority can change after registration: re-check the target's
+		// eligibility at invocation time. A target that fails its own gates
+		// is indistinguishable from a missing tool to the caller.
+		try {
+			checkCallerGates(target);
+		} catch {
+			throw unknownError("target not eligible");
 		}
 
 		const toolName =
 			given.name === undefined ? "undefined" : String(given.name);
 		const liveOrigin = effectiveOrigin(target);
 		if (liveOrigin !== expected.origin) {
-			throw unknownError("the tool origin does not match");
+			throw unknownError("tool origin mismatch");
 		}
 
 		const targetState = states.get(target);
 		const record = targetState?.tools.get(toolName);
 		if (record === undefined) {
-			throw unknownError("no such tool is registered");
+			throw unknownError("unknown tool");
 		}
 
 		const callerOrigin = effectiveOrigin(caller);
 		if (!isExposedTo(liveOrigin, record.exposedOrigins, callerOrigin)) {
-			throw unknownError("the tool is not exposed to this origin");
+			throw unknownError("tool not exposed");
 		}
 
-		const uuid = allocExecutionId();
+		const uuid = nextExecutionId++;
 		const invocation = {
 			arguments: inputArguments,
 			name: toolName,
@@ -606,7 +595,7 @@ export class ModelContextImpl extends EventTarget implements ModelContext {
 					if (result !== null) {
 						resolveCaller(result);
 					} else {
-						rejectCaller(unknownError("tool execution did not complete"));
+						rejectCaller(unknownError("tool did not complete"));
 					}
 				},
 			};
@@ -649,7 +638,7 @@ async function runToolCall(
 	try {
 		parsed = JSON.parse(invocation.arguments) as unknown;
 		if (typeof parsed !== "object" || parsed === null) {
-			throw new TypeError("tool arguments must be an object");
+			throw new TypeError("bad arguments");
 		}
 		// Re-validate against the current definition so an
 		// unregister/re-register race cannot check new arguments against an old
@@ -658,7 +647,7 @@ async function runToolCall(
 			.get(invocation.target)
 			?.tools.get(invocation.name);
 		if (liveRecord === undefined) {
-			throw new TypeError("no such tool is registered");
+			throw new TypeError("unknown tool");
 		}
 		current = liveRecord;
 		assertValidArguments(parsed, current.schemaJson);
@@ -675,7 +664,7 @@ async function runToolCall(
 		value = await current.execute(parsed, { signal: localSignal });
 	} catch (error) {
 		warnDiagnostic(
-			`tool execution failed: ${error instanceof Error ? error.message : "unknown reason"}`,
+			`tool failed: ${error instanceof Error ? error.message : "unknown reason"}`,
 		);
 		complete(null);
 		return;
@@ -754,7 +743,7 @@ export function collectRegisteredTools(
 				origin: targetOrigin,
 				...(record.annotations === null
 					? {}
-					: { annotations: listedAnnotations(record.annotations) }),
+					: { annotations: { ...record.annotations } }),
 			});
 		}
 	}

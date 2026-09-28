@@ -273,6 +273,76 @@ describe("browser frames", () => {
 			child.defaultView?.frameElement?.remove();
 		}
 	});
+
+	it("rejects execution when the target loses eligibility", async () => {
+		const mc = context();
+		const child = childDocument();
+		try {
+			const childContext = installModelContext(child);
+			if (childContext === undefined) {
+				throw new Error("expected an installed context");
+			}
+			await childContext.registerTool({
+				name: "browser_target_gate",
+				description: "target",
+				execute: async () => "unreachable",
+			});
+			const tool = (await mc.getTools()).find(
+				(item) => item.name === "browser_target_gate",
+			);
+			if (tool === undefined) {
+				throw new Error("tool is not listed");
+			}
+			Object.defineProperty(child, "permissionsPolicy", {
+				value: { allowsFeature: () => false, features: () => ["tools"] },
+				configurable: true,
+			});
+			expect(errorName(await errorOf(mc.executeTool(tool, {})))).toBe(
+				"UnknownError",
+			);
+		} finally {
+			child.defaultView?.frameElement?.remove();
+		}
+	});
+
+	it("aborts the callback when only the target unloads", async () => {
+		const mc = context();
+		const child = childDocument();
+		try {
+			const childContext = installModelContext(child);
+			if (childContext === undefined) {
+				throw new Error("expected an installed context");
+			}
+			let aborted = false;
+			await childContext.registerTool({
+				name: "browser_unload_target",
+				description: "target",
+				execute: (_input, options) =>
+					new Promise<unknown>((_resolve, reject) => {
+						options.signal.addEventListener(
+							"abort",
+							() => {
+								aborted = true;
+								reject(options.signal.reason);
+							},
+							{ once: true },
+						);
+					}),
+			});
+			const tool = (await mc.getTools()).find(
+				(item) => item.name === "browser_unload_target",
+			);
+			if (tool === undefined) {
+				throw new Error("tool is not listed");
+			}
+			const pending = mc.executeTool(tool, {});
+			child.defaultView?.frameElement?.remove();
+			expect(errorName(await errorOf(pending))).toBe("UnknownError");
+			expect(aborted).toBe(true);
+		} finally {
+			child.defaultView?.frameElement?.remove();
+		}
+	});
 });
 
 describe("browser events", () => {
