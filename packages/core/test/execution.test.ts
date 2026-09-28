@@ -59,6 +59,44 @@ function windowOf(doc: Document): Window {
 	return view;
 }
 
+// A caller-owned signal that counts listener attachment, so tests can prove
+// the implementation detaches what it attaches.
+function tappedSignal(): {
+	signal: AbortSignal;
+	abort: () => void;
+	added: () => number;
+	removed: () => number;
+} {
+	const controller = new AbortController();
+	const signal = controller.signal;
+	let added = 0;
+	let removed = 0;
+	const rawAdd = signal.addEventListener.bind(signal);
+	const rawRemove = signal.removeEventListener.bind(signal);
+	signal.addEventListener = (
+		type: string,
+		listener: EventListenerOrEventListenerObject,
+		options?: AddEventListenerOptions | boolean,
+	): void => {
+		added += 1;
+		rawAdd(type, listener, options);
+	};
+	signal.removeEventListener = (
+		type: string,
+		listener: EventListenerOrEventListenerObject,
+		options?: EventListenerOptions | boolean,
+	): void => {
+		removed += 1;
+		rawRemove(type, listener, options);
+	};
+	return {
+		signal,
+		abort: () => controller.abort(),
+		added: () => added,
+		removed: () => removed,
+	};
+}
+
 describe("executeTool resolution", () => {
 	it("resolves to the JSON string of the callback value", async () => {
 		const mc = context();
@@ -302,5 +340,28 @@ describe("executeTool signal", () => {
 		expect(
 			(await mc.getTools()).some((item) => item.name === "exec_inflight"),
 		).toBe(false);
+	});
+
+	it("detaches the execution listener when the call settles", async () => {
+		const mc = context();
+		await mc.registerTool({
+			name: "exec_cleanup",
+			description: "cleanup",
+			execute: async (inputObject) => inputObject,
+		});
+		const tool = await listedBy(mc, "exec_cleanup");
+		const tap = tappedSignal();
+		expect(await mc.executeTool(tool, { a: 1 }, { signal: tap.signal })).toBe(
+			JSON.stringify({ a: 1 }),
+		);
+		expect(tap.added()).toBe(1);
+		expect(tap.removed()).toBe(1);
+		// A long-lived signal reused across calls must not accumulate.
+		const shared = tappedSignal();
+		for (let index = 0; index < 3; index += 1) {
+			await mc.executeTool(tool, { a: index }, { signal: shared.signal });
+		}
+		expect(shared.added()).toBe(3);
+		expect(shared.removed()).toBe(3);
 	});
 });

@@ -234,7 +234,10 @@ describe("secure context and policy gates", () => {
 		const win = new Window({ url: "https://example.com/" });
 		try {
 			Object.defineProperty(win.document, "permissionsPolicy", {
-				value: policyWith(() => false, () => ["camera"]),
+				value: policyWith(
+					() => false,
+					() => ["camera"],
+				),
 				configurable: true,
 			});
 			const mc = installModelContext(docOf(win));
@@ -260,7 +263,10 @@ describe("secure context and policy gates", () => {
 		const win = new Window({ url: "https://example.com/" });
 		try {
 			Object.defineProperty(win.document, "permissionsPolicy", {
-				value: policyWith(() => false, () => ["camera", "tools"]),
+				value: policyWith(
+					() => false,
+					() => ["camera", "tools"],
+				),
 				configurable: true,
 			});
 			expect(installModelContext(docOf(win))).toBeUndefined();

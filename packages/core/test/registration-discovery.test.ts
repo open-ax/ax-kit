@@ -256,6 +256,37 @@ describe("registration signal", () => {
 			(await mc.getTools()).some((item) => item.name === "reg_stale_signal"),
 		).toBe(true);
 	});
+
+	it("detaches the registration listener on removal through any path", async () => {
+		const mc = context();
+		const controller = new AbortController();
+		const signal = controller.signal;
+		let added = 0;
+		let removed = 0;
+		const rawAdd = signal.addEventListener.bind(signal);
+		const rawRemove = signal.removeEventListener.bind(signal);
+		signal.addEventListener = (
+			type: string,
+			listener: EventListenerOrEventListenerObject,
+			options?: AddEventListenerOptions | boolean,
+		): void => {
+			added += 1;
+			rawAdd(type, listener, options);
+		};
+		signal.removeEventListener = (
+			type: string,
+			listener: EventListenerOrEventListenerObject,
+			options?: EventListenerOptions | boolean,
+		): void => {
+			removed += 1;
+			rawRemove(type, listener, options);
+		};
+		await mc.registerTool(tool("reg_cleanup"), { signal });
+		expect(added).toBe(1);
+		const { unregisterTool } = await import("../src/ax/index.js");
+		expect(unregisterTool("reg_cleanup")).toBe(true);
+		expect(removed).toBe(1);
+	});
 });
 
 describe("exposure and origins", () => {

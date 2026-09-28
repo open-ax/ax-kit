@@ -51,6 +51,7 @@ interface ToolRecord {
 	readonly execute: ToolExecuteCallback;
 	readonly annotations: StoredAnnotations | null;
 	readonly exposedOrigins: ReadonlyArray<string>;
+	readonly cleanup?: (() => void) | undefined;
 }
 
 interface DocumentState {
@@ -461,6 +462,21 @@ export class ModelContextImpl extends EventTarget implements ModelContext {
 		const exposedOrigins =
 			rawExposed === undefined ? [] : parseOriginList(rawExposed, "exposedTo");
 
+		// Removal detaches the listener, so an unregister through any path
+		// never leaves a stale abort subscription behind.
+		let removeRegAbort: (() => void) | undefined;
+		if (signal !== undefined) {
+			const onAbort = (): void => {
+				if (state.tools.get(name) === record) {
+					unregisterRecord(owner, name);
+				}
+			};
+			signal.addEventListener("abort", onAbort, { once: true });
+			removeRegAbort = (): void => {
+				signal.removeEventListener("abort", onAbort);
+			};
+		}
+
 		const record: ToolRecord = {
 			name,
 			title,
@@ -469,20 +485,9 @@ export class ModelContextImpl extends EventTarget implements ModelContext {
 			execute: rawExecute as ToolExecuteCallback,
 			annotations,
 			exposedOrigins,
+			cleanup: removeRegAbort,
 		};
 		state.tools.set(name, record);
-
-		if (signal !== undefined) {
-			signal.addEventListener(
-				"abort",
-				() => {
-					if (state.tools.get(name) === record) {
-						unregisterRecord(owner, name);
-					}
-				},
-				{ once: true },
-			);
-		}
 
 		notifyToolChange(owner, exposedOrigins);
 		return undefined;
@@ -584,6 +589,7 @@ export class ModelContextImpl extends EventTarget implements ModelContext {
 
 		return new Promise<string>((resolveCaller, rejectCaller) => {
 			const controller = new AbortController();
+			let onAbort: (() => void) | undefined;
 			const record: PendingExecution = {
 				callerDocument: caller,
 				targetDocument: target,
@@ -594,6 +600,9 @@ export class ModelContextImpl extends EventTarget implements ModelContext {
 						return;
 					}
 					pendingExecutions.delete(uuid);
+					if (onAbort !== undefined && execSignal !== undefined) {
+						execSignal.removeEventListener("abort", onAbort);
+					}
 					if (result !== null) {
 						resolveCaller(result);
 					} else {
@@ -604,18 +613,15 @@ export class ModelContextImpl extends EventTarget implements ModelContext {
 			pendingExecutions.set(uuid, record);
 
 			if (execSignal !== undefined) {
-				execSignal.addEventListener(
-					"abort",
-					() => {
-						rejectCaller(execSignal.reason);
-						const pending = pendingExecutions.get(uuid);
-						if (pending === undefined) {
-							return;
-						}
-						cancelExecution(uuid, pending);
-					},
-					{ once: true },
-				);
+				onAbort = (): void => {
+					rejectCaller(execSignal.reason);
+					const pending = pendingExecutions.get(uuid);
+					if (pending === undefined) {
+						return;
+					}
+					cancelExecution(uuid, pending);
+				};
+				execSignal.addEventListener("abort", onAbort, { once: true });
 			}
 
 			void runToolCall(invocation, controller.signal, record.complete).catch(
@@ -701,6 +707,7 @@ export function unregisterRecord(
 		return { removed: false, exposedOrigins: [] };
 	}
 	state.tools.delete(name);
+	record.cleanup?.();
 	notifyToolChange(doc, record.exposedOrigins);
 	return { removed: true, exposedOrigins: record.exposedOrigins };
 }
@@ -789,7 +796,7 @@ export function notifyToolChange(
 const handlerWrappers = new WeakMap<
 	EventTarget,
 	Map<string, (event: Event) => void>
->;
+>();
 
 function setHandler(
 	target: EventTarget,
