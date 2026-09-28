@@ -35,6 +35,8 @@ Then commit the generated `.changeset/*.md` file.
 - `@ax-kit/svelte`: `axTool`, `axToolEffect`, and `isAxSupported` for
   element binding plus rune tool registration with update and destroy
   teardown.
+- `@ax-kit/react`: `dispatchAxAction` for fallback-wrapped dispatch against
+  React-managed nodes with native bubbling fallback.
 
 No published package yet. Entries above describe the in-tree API; versioned
 releases will be cut with Changesets.

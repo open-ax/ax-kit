@@ -55,3 +55,18 @@ exactly one registration. Server render access returns an inert handle where
 The registered callback forwards to a latest-handler mailbox while identity
 change aborts then registers with tolerance for transient duplicate-name
 rejection. Registration and execution signals stay distinct.
+
+## Dispatch
+
+`dispatchAxAction` drives one interaction against a React-managed node as
+a fallback-wrapped enhancement over native dispatch: it traverses enclosing
+handlers with a synthesized event carrying the real target, and falls back
+to native bubbling dispatch where the enhancement is missing. Bridge
+failure never rejects an invocation native dispatch could complete, and
+fallback use is logged. Plain nodes use native dispatch with no bridge.
+
+```tsx
+import { dispatchAxAction } from "@ax-kit/react";
+
+dispatchAxAction(document.querySelector("button") as Element);
+```

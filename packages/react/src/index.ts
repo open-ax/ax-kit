@@ -14,6 +14,8 @@
 
 export type { AxProviderProps } from "./context.js";
 export { AxProvider } from "./context.js";
+export type { AxDispatchOutcome } from "./dispatch.js";
+export { dispatchAxAction } from "./dispatch.js";
 export { isAxSupported, useAxAction, useAxTool } from "./hooks.js";
 export type {
 	AxActionOptions,
