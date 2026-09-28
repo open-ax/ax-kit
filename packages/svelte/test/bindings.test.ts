@@ -206,6 +206,55 @@ describe("axTool element binding", () => {
 		first.remove();
 		second.remove();
 	});
+
+	it("re-registers on in-place parameter mutation", async () => {
+		const el = document.createElement("div");
+		document.body.appendChild(el);
+		const params = {
+			name: "svelte_inplace",
+			description: "one",
+			execute: () => Promise.resolve("ok"),
+		};
+		const handle = axTool(el, params);
+		await settle();
+		params.description = "two";
+		handle.update?.(params);
+		await settle();
+		await settle();
+		const entry = (await context().getTools()).find(
+			(t) => t.name === "svelte_inplace",
+		);
+		expect(entry?.description).toBe("two");
+		handle.destroy?.();
+		el.remove();
+	});
+
+	it("treats field boundaries and absent titles as distinct", async () => {
+		const el = document.createElement("div");
+		document.body.appendChild(el);
+		const handle = axTool(el, {
+			name: "svelte_pipe",
+			description: "a|b",
+			title: "c",
+			execute: () => Promise.resolve("ok"),
+		});
+		await settle();
+		handle.update?.({
+			name: "svelte_pipe",
+			description: "a",
+			title: "b|c",
+			execute: () => Promise.resolve("ok"),
+		});
+		await settle();
+		await settle();
+		const entry = (await context().getTools()).find(
+			(t) => t.name === "svelte_pipe",
+		);
+		expect(entry?.description).toBe("a");
+		expect(entry?.title).toBe("b|c");
+		handle.destroy?.();
+		el.remove();
+	});
 });
 
 describe("axToolEffect rune helper", () => {

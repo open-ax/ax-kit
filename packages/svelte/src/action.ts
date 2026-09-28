@@ -45,7 +45,14 @@ function safeJson(value: unknown): string {
 }
 
 function snapshotIdentity(tool: AxToolDefinition): string {
-	return `${tool.name}|${tool.description}|${tool.title ?? ""}|${safeJson(tool.inputSchema)}|${safeJson(tool.annotations ?? null)}|${safeJson(tool.exposedTo ?? null)}`;
+	return safeJson([
+		tool.name,
+		tool.description,
+		tool.title ?? null,
+		safeJson(tool.inputSchema),
+		safeJson(tool.annotations ?? null),
+		safeJson(tool.exposedTo ?? null),
+	]);
 }
 
 function isDuplicateName(error: unknown): boolean {
@@ -80,13 +87,14 @@ interface Registration {
 async function startRegistration(
 	tool: AxToolDefinition,
 	execute: AxExecuteCallback,
+	doc: Document,
 	signal: AbortSignal,
 	attempt: number,
 ): Promise<void> {
 	if (!hasWindow()) {
 		return;
 	}
-	const surface = surfaceOf(document);
+	const surface = surfaceOf(doc);
 	if (surface === undefined) {
 		return;
 	}
@@ -111,7 +119,7 @@ async function startRegistration(
 			if (signal.aborted) {
 				return;
 			}
-			await startRegistration(tool, execute, signal, 1);
+			await startRegistration(tool, execute, doc, signal, 1);
 			return;
 		}
 		console.warn(`[ax-kit/svelte] tool registration failed: ${String(error)}`);
@@ -121,9 +129,10 @@ async function startRegistration(
 function begin(
 	tool: AxToolDefinition,
 	execute: AxExecuteCallback,
+	doc: Document,
 ): Registration {
 	const controller = new AbortController();
-	const done = startRegistration(tool, execute, controller.signal, 0);
+	const done = startRegistration(tool, execute, doc, controller.signal, 0);
 	return { controller, done };
 }
 
@@ -143,18 +152,21 @@ export function axTool(
 	params: AxToolDefinition,
 ): ActionReturn<AxToolDefinition> {
 	let current = params;
+	let identity = snapshotIdentity(params);
 	let latest: AxExecuteCallback = params.execute;
-	let registration = begin(current, (args, opts) => latest(args, opts));
+	const doc = _node.ownerDocument;
+	let registration = begin(current, (args, opts) => latest(args, opts), doc);
 	return {
 		update(next: AxToolDefinition): void {
-			const prev = current;
 			current = next;
 			latest = next.execute;
-			if (snapshotIdentity(next) === snapshotIdentity(prev)) {
+			const nextIdentity = snapshotIdentity(next);
+			if (nextIdentity === identity) {
 				return;
 			}
+			identity = nextIdentity;
 			registration.controller.abort();
-			registration = begin(current, (args, opts) => latest(args, opts));
+			registration = begin(current, (args, opts) => latest(args, opts), doc);
 		},
 		destroy(): void {
 			registration.controller.abort();
@@ -195,7 +207,7 @@ export function axToolEffect(tool: AxToolDefinition): () => void {
 		annotations: tool.annotations,
 		exposedTo: tool.exposedTo,
 	};
-	const registration = begin(snapshot, snapshot.execute);
+	const registration = begin(snapshot, snapshot.execute, document);
 	return () => {
 		registration.controller.abort();
 	};
