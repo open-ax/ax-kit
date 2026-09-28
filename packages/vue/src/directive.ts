@@ -111,10 +111,6 @@ export const vAxTool: ObjectDirective<Element, AxToolDefinition> = {
 		controllers.set(el, controller);
 		void registerElement(el, tool, controller.signal, 0);
 	},
-	beforeUpdate(el, _binding: DirectiveBinding<AxToolDefinition>): void {
-		void el;
-		void _binding;
-	},
 	updated(el, binding: DirectiveBinding<AxToolDefinition>): void {
 		const next = readTool(binding.value);
 		const prev = readTool(binding.oldValue);

@@ -193,9 +193,7 @@ export function axToolEffect(tool: AxToolDefinition): () => void {
 		annotations: tool.annotations,
 		exposedTo: tool.exposedTo,
 	};
-	let latest: AxExecuteCallback = snapshot.execute;
-	const registration = begin(snapshot, (args, opts) => latest(args, opts));
-	latest = tool.execute;
+	const registration = begin(snapshot, snapshot.execute);
 	return () => {
 		registration.controller.abort();
 	};

@@ -121,9 +121,6 @@ export function useAxTool(
 		return { supported: true, registered: false, error: null };
 	});
 
-	const stateRef = useRef(key);
-	void stateRef;
-
 	// biome-ignore lint/correctness/useExhaustiveDependencies: key encodes identity
 	useEffect(() => {
 		if (!hasWindow()) {
