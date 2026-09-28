@@ -190,6 +190,23 @@ describe("registerTool validation", () => {
 		);
 		expect(entry?.title).toBe("\uFFFDx");
 	});
+
+	it("rejects symbol titles with TypeError", async () => {
+		const mc = context();
+		expect(
+			errorName(
+				await errorOf(
+					mc.registerTool({
+						...tool("reg_symbol"),
+						title: Symbol("x") as unknown as string,
+					}),
+				),
+			),
+		).toBe("TypeError");
+		expect(
+			(await mc.getTools()).find((item) => item.name === "reg_symbol"),
+		).toBeUndefined();
+	});
 });
 
 describe("registration signal", () => {
