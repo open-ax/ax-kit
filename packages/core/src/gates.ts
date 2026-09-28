@@ -52,10 +52,28 @@ export function isAllowedToUse(doc: Document): boolean {
 	try {
 		const policy = (
 			doc as unknown as {
-				permissionsPolicy?: { allowsFeature?: unknown };
+				permissionsPolicy?: {
+					allowsFeature?: unknown;
+					features?: unknown;
+				};
 			}
 		).permissionsPolicy;
 		if (policy !== undefined && typeof policy.allowsFeature === "function") {
+			// allowsFeature reports false for an unknown feature as well as a
+			// denied one. Only treat false as a denial when the feature list
+			// names "tools"; otherwise the browser simply predates the draft.
+			// allowedFeatures is unusable here: it also omits known denials.
+			const known = policy.features;
+			if (typeof known === "function") {
+				try {
+					const names = (known as () => unknown).call(policy);
+					if (Array.isArray(names) && !names.includes("tools")) {
+						return true;
+					}
+				} catch {
+					// Fall through to allowsFeature below.
+				}
+			}
 			return (
 				(policy.allowsFeature as (feature: string) => unknown)("tools") !==
 				false

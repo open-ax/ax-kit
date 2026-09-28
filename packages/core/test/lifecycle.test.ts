@@ -46,6 +46,13 @@ function denyTools(win: Window): void {
 	});
 }
 
+function policyWith(
+	allowsFeature: () => boolean,
+	features: () => string[],
+): unknown {
+	return { allowsFeature, features };
+}
+
 // happy-dom's Document predates parts of lib.dom: bridge once, documented.
 function docOf(win: { readonly document: unknown }): Document {
 	return win.document as Document;
@@ -158,6 +165,45 @@ describe("secure context and policy gates", () => {
 					(item) => item.name === "life_policy_isolated",
 				),
 			).toBe(true);
+		} finally {
+			void win.happyDOM?.close();
+		}
+	});
+
+	it("treats an unknown policy feature as allowed, not denied", async () => {
+		const win = new Window({ url: "https://example.com/" });
+		try {
+			Object.defineProperty(win.document, "permissionsPolicy", {
+				value: policyWith(() => false, () => ["camera"]),
+				configurable: true,
+			});
+			const mc = installModelContext(docOf(win));
+			if (mc === undefined) {
+				throw new Error("expected an installed context");
+			}
+			await mc.registerTool({
+				name: "life_policy_unknown",
+				description: "policy",
+				execute: async () => null,
+			});
+			expect(
+				(await mc.getTools()).some(
+					(item) => item.name === "life_policy_unknown",
+				),
+			).toBe(true);
+		} finally {
+			void win.happyDOM?.close();
+		}
+	});
+
+	it("denies a recognized policy feature reported as disallowed", async () => {
+		const win = new Window({ url: "https://example.com/" });
+		try {
+			Object.defineProperty(win.document, "permissionsPolicy", {
+				value: policyWith(() => false, () => ["camera", "tools"]),
+				configurable: true,
+			});
+			expect(installModelContext(docOf(win))).toBeUndefined();
 		} finally {
 			void win.happyDOM?.close();
 		}
