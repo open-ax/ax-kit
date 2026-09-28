@@ -98,6 +98,9 @@ describe("useAxTool composable", () => {
 		await settle();
 		await nextTick();
 		expect(await listedNames()).toContain("vue_mount");
+		apps.pop()?.unmount();
+		await settle();
+		expect(await listedNames()).not.toContain("vue_mount");
 	});
 
 	it("builds only the inert handle in setup without a window", async () => {
@@ -271,6 +274,9 @@ describe("v-ax-tool directive", () => {
 		mountApp(Host);
 		await settle();
 		expect(await listedNames()).toContain("vue_directive");
+		apps.pop()?.unmount();
+		await settle();
+		expect(await listedNames()).not.toContain("vue_directive");
 	});
 
 	it("swaps on value update", async () => {

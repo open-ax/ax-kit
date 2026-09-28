@@ -79,7 +79,7 @@ async function registerElement(
 	if (!hasWindow()) {
 		return;
 	}
-	const surface = surfaceOf(document);
+	const surface = surfaceOf(el.ownerDocument);
 	if (surface === undefined) {
 		return;
 	}

@@ -52,7 +52,14 @@ function safeJson(value: unknown): string {
 }
 
 export function snapshotIdentity(tool: AxToolDefinition): string {
-	return `${tool.name}|${tool.description}|${tool.title ?? ""}|${safeJson(tool.inputSchema)}|${safeJson(tool.annotations ?? null)}|${safeJson(tool.exposedTo ?? null)}`;
+	return safeJson([
+		tool.name,
+		tool.description,
+		tool.title ?? null,
+		safeJson(tool.inputSchema),
+		safeJson(tool.annotations ?? null),
+		safeJson(tool.exposedTo ?? null),
+	]);
 }
 
 function isDuplicateName(error: unknown): boolean {
