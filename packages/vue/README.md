@@ -45,7 +45,9 @@ The registered callback forwards through a latest-handler mailbox, and
 registration versus execution signals stay distinct.
 
 For plain elements, the directive covers the same lifecycle without
-component boilerplate:
+component boilerplate. Handler-only updates forward through the
+latest-handler mailbox without re-registering; identity changes abort then
+register:
 
 ```vue
 <script setup lang="ts">

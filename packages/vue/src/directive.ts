@@ -3,9 +3,19 @@
 
 import type { DirectiveBinding, ObjectDirective } from "vue";
 import { snapshotIdentity } from "./composable.js";
-import type { AxModelContextLike, AxToolDefinition } from "./types.js";
+import type {
+	AxExecuteCallback,
+	AxModelContextLike,
+	AxToolDefinition,
+} from "./types.js";
 
-const controllers = new WeakMap<Element, AbortController>();
+interface ElementRegistration {
+	controller: AbortController;
+	identity: string;
+	latest: AxExecuteCallback;
+}
+
+const registrations = new WeakMap<Element, ElementRegistration>();
 
 function hasWindow(): boolean {
 	return typeof window !== "undefined" && typeof document !== "undefined";
@@ -26,6 +36,15 @@ function surfaceOf(doc: Document): AxModelContextLike | undefined {
 
 function readTool(value: unknown): AxToolDefinition | undefined {
 	if (typeof value !== "object" || value === null) {
+		return undefined;
+	}
+	const candidate = value as Record<string, unknown>;
+	if (
+		typeof candidate.name !== "string" ||
+		typeof candidate.description !== "string" ||
+		typeof candidate.execute !== "function"
+	) {
+		console.warn("[ax-kit/vue] tool binding value has an invalid shape");
 		return undefined;
 	}
 	return value as AxToolDefinition;
@@ -53,6 +72,7 @@ function isDuplicateName(error: unknown): boolean {
 async function registerElement(
 	el: Element,
 	tool: AxToolDefinition,
+	getExecute: () => AxExecuteCallback,
 	signal: AbortSignal,
 	attempt: number,
 ): Promise<void> {
@@ -63,7 +83,8 @@ async function registerElement(
 	if (surface === undefined) {
 		return;
 	}
-	const execute = tool.execute;
+	const stableExecute: AxExecuteCallback = (args, opts) =>
+		getExecute()(args, opts);
 	try {
 		await surface.registerTool(
 			{
@@ -71,7 +92,7 @@ async function registerElement(
 				title: tool.title,
 				description: tool.description,
 				inputSchema: tool.inputSchema,
-				execute,
+				execute: stableExecute,
 				annotations: tool.annotations,
 			},
 			{ exposedTo: tool.exposedTo, signal },
@@ -86,7 +107,7 @@ async function registerElement(
 			if (signal.aborted) {
 				return;
 			}
-			await registerElement(el, tool, signal, 1);
+			await registerElement(el, tool, getExecute, signal, 1);
 			return;
 		}
 		console.warn(`[ax-kit/vue] tool registration failed: ${String(error)}`);
@@ -95,11 +116,12 @@ async function registerElement(
 
 /**
  * Template-authored tools for plain elements only. Registers on mount,
- * aborts on unmount, aborts then registers on value update. Binding
- * arguments are never mutated; per-element state travels in element-attached
- * storage. Component-level tools use the composable instead: directives on
- * components apply root-node only and are ignored with a warning on
- * multi-root components.
+ * aborts on unmount, aborts then registers on identity update while
+ * handler-only updates forward through the latest-handler mailbox without
+ * re-registration churn. Binding arguments are never mutated; per-element
+ * state travels in element-attached storage. Component-level tools use the
+ * composable instead: directives on components apply root-node only and are
+ * ignored with a warning on multi-root components.
  */
 export const vAxTool: ObjectDirective<Element, AxToolDefinition> = {
 	mounted(el, binding: DirectiveBinding<AxToolDefinition>): void {
@@ -107,32 +129,63 @@ export const vAxTool: ObjectDirective<Element, AxToolDefinition> = {
 		if (tool === undefined) {
 			return;
 		}
-		const controller = new AbortController();
-		controllers.set(el, controller);
-		void registerElement(el, tool, controller.signal, 0);
+		const entry: ElementRegistration = {
+			controller: new AbortController(),
+			identity: snapshotIdentity(tool),
+			latest: tool.execute,
+		};
+		registrations.set(el, entry);
+		void registerElement(
+			el,
+			tool,
+			() => entry.latest,
+			entry.controller.signal,
+			0,
+		);
 	},
 	updated(el, binding: DirectiveBinding<AxToolDefinition>): void {
 		const next = readTool(binding.value);
-		const prev = readTool(binding.oldValue);
+		const entry = registrations.get(el);
 		if (next === undefined) {
-			controllers.get(el)?.abort();
-			controllers.delete(el);
+			entry?.controller.abort();
+			registrations.delete(el);
 			return;
 		}
-		if (
-			prev !== undefined &&
-			snapshotIdentity(next) === snapshotIdentity(prev)
-		) {
+		if (entry === undefined) {
+			const fresh: ElementRegistration = {
+				controller: new AbortController(),
+				identity: snapshotIdentity(next),
+				latest: next.execute,
+			};
+			registrations.set(el, fresh);
+			void registerElement(
+				el,
+				next,
+				() => fresh.latest,
+				fresh.controller.signal,
+				0,
+			);
 			return;
 		}
-		controllers.get(el)?.abort();
-		const controller = new AbortController();
-		controllers.set(el, controller);
-		void registerElement(el, next, controller.signal, 0);
+		entry.latest = next.execute;
+		const identity = snapshotIdentity(next);
+		if (identity === entry.identity) {
+			return;
+		}
+		entry.controller.abort();
+		entry.controller = new AbortController();
+		entry.identity = identity;
+		void registerElement(
+			el,
+			next,
+			() => entry.latest,
+			entry.controller.signal,
+			0,
+		);
 	},
 	unmounted(el): void {
-		controllers.get(el)?.abort();
-		controllers.delete(el);
+		registrations.get(el)?.controller.abort();
+		registrations.delete(el);
 	},
 	getSSRProps(
 		_binding: DirectiveBinding<AxToolDefinition>,

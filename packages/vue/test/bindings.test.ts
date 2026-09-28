@@ -303,6 +303,38 @@ describe("v-ax-tool directive", () => {
 		expect(entry?.description).toBe("two");
 	});
 
+	it("forwards execution to the latest handler without re-register churn", async () => {
+		const first = {
+			name: "vue_directive_fresh",
+			description: "fresh",
+			execute: () => Promise.resolve("first"),
+		};
+		const current = ref(first);
+		const Host = defineComponent({
+			setup() {
+				return () =>
+					withDirectives(h("div", "plain"), [[vAxTool, current.value]]);
+			},
+		});
+		mountApp(Host);
+		await settle();
+		current.value = {
+			name: "vue_directive_fresh",
+			description: "fresh",
+			execute: () => Promise.resolve("second"),
+		};
+		await nextTick();
+		await settle();
+		const tool = (await context().getTools()).find(
+			(t) => t.name === "vue_directive_fresh",
+		);
+		expect(tool).toBeDefined();
+		if (tool === undefined) {
+			throw new Error("missing tool");
+		}
+		expect(JSON.parse(await context().executeTool(tool, {}))).toBe("second");
+	});
+
 	it("contributes no tool attributes during server output", async () => {
 		const { getSSRProps } = vAxTool;
 		if (typeof getSSRProps === "function") {
