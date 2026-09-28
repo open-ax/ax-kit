@@ -579,7 +579,7 @@ export class ModelContextImpl extends EventTarget implements ModelContext {
 		return new Promise<string>((resolveCaller, rejectCaller) => {
 			const controller = new AbortController();
 			let onAbort: (() => void) | undefined;
-			const record: PendingExecution = {
+			const tracker: PendingExecution = {
 				callerDocument: caller,
 				targetDocument: target,
 				toolName,
@@ -599,7 +599,7 @@ export class ModelContextImpl extends EventTarget implements ModelContext {
 					}
 				},
 			};
-			pendingExecutions.set(uuid, record);
+			pendingExecutions.set(uuid, tracker);
 
 			if (execSignal !== undefined) {
 				onAbort = (): void => {
@@ -613,9 +613,9 @@ export class ModelContextImpl extends EventTarget implements ModelContext {
 				execSignal.addEventListener("abort", onAbort, { once: true });
 			}
 
-			void runToolCall(invocation, controller.signal, record.complete).catch(
+			void runToolCall(invocation, controller.signal, tracker.complete).catch(
 				() => {
-					record.complete(null);
+					tracker.complete(null);
 				},
 			);
 		});

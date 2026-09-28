@@ -28,6 +28,9 @@ Pinned draft: WebMCP Draft Community Group Report, 26 September 2026
 - Change notification is queued as a task, never fired synchronously, so
   listeners cannot run inside the registering call. Decided 2026-09-28 from
   review: the draft queues one task per target on its task source.
+  `MessageChannel` posts a real task without timers; where the platform hides
+  it, a microtask is the closest ordering available (graceful degradation,
+  still never synchronous).
 - Handler attributes (`ontoolchange` and siblings) follow standard
   `EventHandler` semantics via one internal wrapper per event type:
   non-functions collapse to null, and explicit listeners are never disturbed.
@@ -37,6 +40,9 @@ Pinned draft: WebMCP Draft Community Group Report, 26 September 2026
   review: `allowsFeature` reports false for unknown features too.
 - Allow-list entries that serialize to the opaque origin are rejected with
   `SecurityError`, so a file-scheme entry can never match an opaque caller.
+  Deliberately fail-closed: file and opaque origins are indistinguishable at
+  comparison time, so nothing with a `null` serialization is listable.
+  Same-document tools are unaffected (exposure is skipped for the owner).
   Decided 2026-09-28 from review.
 - Execution re-checks the target document's gates; a target that lost
   eligibility rejects with `UnknownError`. Target-only unload aborts the
