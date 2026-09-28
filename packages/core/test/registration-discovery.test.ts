@@ -5,6 +5,8 @@ import { describe, expect, it } from "vitest";
 import type { ModelContext } from "../src/index.js";
 import { installModelContext } from "../src/index.js";
 
+installModelContext(document);
+
 async function errorOf(promise: Promise<unknown>): Promise<unknown> {
 	try {
 		await promise;

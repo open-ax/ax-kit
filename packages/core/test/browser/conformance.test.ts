@@ -6,10 +6,11 @@
 // isolation. Pure logic stays in the fast layer. No sleeps anywhere.
 
 import { describe, expect, it } from "vitest";
-import "../../src/index.js";
 import { ToolActivatedEvent } from "../../src/events.js";
 import type { ModelContext, RegisteredTool } from "../../src/index.js";
 import { installModelContext } from "../../src/index.js";
+
+installModelContext(document);
 
 async function errorOf(promise: Promise<unknown>): Promise<unknown> {
 	try {
@@ -105,7 +106,7 @@ describe("browser registration and execution", () => {
 		);
 	});
 
-	it("rejects an omitted argument with TypeError", async () => {
+	it("defaults an omitted argument to {}", async () => {
 		const mc = context();
 		const tool = (await mc.getTools()).find(
 			(item) => item.name === "browser_echo",
@@ -113,9 +114,24 @@ describe("browser registration and execution", () => {
 		if (tool === undefined) {
 			throw new Error("tool is not listed");
 		}
-		// The parameter is optional in IDL but the steps reject non-objects,
-		// and absent reads as non-object. Recorded basis, not a guess.
-		expect(errorName(await errorOf(mc.executeTool(tool)))).toBe("TypeError");
+		// Upstream: webmcp/imperative/object-arguments.https.html.
+		const seen: unknown[] = [];
+		await mc.registerTool({
+			name: "browser_omitted",
+			description: "omitted",
+			execute: async (inputObject) => {
+				seen.push(inputObject);
+				return null;
+			},
+		});
+		const omitted = (await mc.getTools()).find(
+			(item) => item.name === "browser_omitted",
+		);
+		if (omitted === undefined) {
+			throw new Error("tool is not listed");
+		}
+		expect(await mc.executeTool(omitted)).toBe("null");
+		expect(seen).toEqual([{}]);
 	});
 });
 

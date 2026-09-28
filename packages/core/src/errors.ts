@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /**
- * Rejection taxonomy, mirrored exactly from the pinned draft (spec.md D7,
- * D12). `TypeError` is a JavaScript error, not a `DOMException`; every other
- * family below is a `DOMException` with the specified name. Callers observe
- * the name, never a generic error.
+ * Rejection taxonomy, mirrored exactly from the pinned draft. `TypeError` is
+ * a JavaScript error, not a `DOMException`; every other family below is a
+ * `DOMException` with the specified name. Callers observe the name, never a
+ * generic error.
  */
 
 export function invalidState(message: string): DOMException {

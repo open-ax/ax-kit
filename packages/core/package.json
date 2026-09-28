@@ -50,6 +50,11 @@
 			"path": "dist/index.mjs",
 			"limit": "5 kB",
 			"gzip": true
+		},
+		{
+			"path": "dist/ax/index.mjs",
+			"limit": "5 kB",
+			"gzip": true
 		}
 	],
 	"devDependencies": {

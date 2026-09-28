@@ -19,6 +19,13 @@ Pinned draft: WebMCP Draft Community Group Report, 26 September 2026
 - Official layer (WPT `/webmcp`): the specification's own suite. The signal is
   the diff against the expected-failure list, not the raw count.
 
+## Decided behaviors
+
+- Omitted `executeTool` arguments default to `{}`. Verified 2026-09-28
+  against upstream `webmcp/imperative/object-arguments.https.html`, which
+  asserts the default alongside array acceptance and `TypeError` for
+  primitives, null, and `toJSON`-yields-undefined objects.
+
 ## Expected failures (seed)
 
 Seeded 2026-09-27 from the Edge 156 experimental/master run set. Run sets are

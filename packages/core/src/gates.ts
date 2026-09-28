@@ -6,7 +6,7 @@ import { securityError } from "./errors.js";
 /**
  * Precondition gates shared by the three methods. The draft states each gate;
  * a polyfill can only honor what the platform exposes, so every check below
- * is best-effort where the platform hides the signal (spec.md D13):
+ * is best-effort where the platform hides the signal:
  *
  * - Fully active: a document with no window proxy has no browsing context.
  * - Origin-keyed: only `document.domain` drift is observable; the

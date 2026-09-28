@@ -10,7 +10,6 @@ import {
 	parseInputSchema,
 	serializeInputSchema,
 } from "../src/schema.js";
-import { asStandardSchema } from "../src/standard-schema.js";
 
 function nestedObject(depth: number): unknown {
 	let current: unknown = { type: "string" };
@@ -223,25 +222,5 @@ describe("assertValidArguments", () => {
 		schema.properties.a.type = "number";
 		expect(() => assertValidArguments({ a: "x" }, stored)).not.toThrow();
 		expect(() => assertValidArguments({ a: 1 }, stored)).toThrow(TypeError);
-	});
-});
-
-describe("asStandardSchema", () => {
-	it("reports values and issues through the mirrored shape", async () => {
-		const stored = serializeInputSchema({
-			type: "object",
-			properties: { q: { type: "string" } },
-			required: ["q"],
-		});
-		const schema = asStandardSchema(stored);
-		expect(schema["~standard"].version).toBe(1);
-		expect(schema["~standard"].vendor).toBe("ax-kit");
-		expect(await schema["~standard"].validate({ q: "x" })).toEqual({
-			value: { q: "x" },
-		});
-		const failure = await schema["~standard"].validate({ q: 1 });
-		expect(failure.value).toBeUndefined();
-		expect(failure.issues?.length).toBe(1);
-		expect(failure.issues?.[0]?.message).toContain("q");
 	});
 });

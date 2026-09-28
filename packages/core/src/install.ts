@@ -9,9 +9,9 @@ import type { ModelContext } from "./types.js";
  * Define `document.modelContext` on one document. The surface stays inert
  * where the platform marks the context non-secure. The property is an own,
  * non-writable, non-configurable data property: hardening against naive
- * shadowing, not a browser-enforced boundary (spec.md D16). Native prototypes
- * are never touched; every document is installed explicitly, so no design
- * depends on script order (spec.md D14).
+ * shadowing, not a browser-enforced boundary. Native prototypes are never
+ * touched, and every document is installed explicitly, so no design depends
+ * on script order: any later-obtained reference wins.
  */
 export function installModelContext(doc: Document): ModelContext | undefined {
 	const existing = (doc as unknown as Record<string, unknown>).modelContext;

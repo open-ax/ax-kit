@@ -4,7 +4,8 @@
 /**
  * Change notification. The draft defines `toolchange` as a plain `Event`
  * with no payload and no interface: listeners re-list instead of reading a
- * detail shape. Activation and cancellation events arrive with ticket 05.
+ * detail shape. Activation and cancellation events are defined below and
+ * fired by the execution path.
  */
 
 export const TOOL_CHANGE = "toolchange";

@@ -2,13 +2,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { describe, expect, it } from "vitest";
-import "../src/index.js";
 import { ToolActivatedEvent, ToolCancelEvent } from "../src/events.js";
 import type {
 	ModelContext,
 	RegisteredTool,
 	ToolExecuteCallbackOptions,
 } from "../src/index.js";
+import { installModelContext } from "../src/index.js";
+
+installModelContext(document);
 
 async function errorOf(promise: Promise<unknown>): Promise<unknown> {
 	try {
@@ -79,15 +81,22 @@ describe("executeTool resolution", () => {
 		expect(seenOptions?.signal.aborted).toBe(false);
 	});
 
-	it("rejects omitted or non-object arguments with TypeError", async () => {
+	it("defaults omitted arguments to {} and rejects non-objects", async () => {
 		const mc = context();
+		let seen: unknown = "unset";
 		await mc.registerTool({
 			name: "exec_args",
 			description: "args",
-			execute: async () => null,
+			execute: async (inputObject) => {
+				seen = inputObject;
+				return null;
+			},
 		});
 		const tool = await listedBy(mc, "exec_args");
-		expect(errorName(await errorOf(mc.executeTool(tool)))).toBe("TypeError");
+		// Omitted arguments default to {}. Upstream:
+		// webmcp/imperative/object-arguments.https.html.
+		expect(await mc.executeTool(tool)).toBe("null");
+		expect(seen).toEqual({});
 		expect(errorName(await errorOf(mc.executeTool(tool, "nope")))).toBe(
 			"TypeError",
 		);

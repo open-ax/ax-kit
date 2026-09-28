@@ -7,7 +7,7 @@
  * Everything in this file is ours, not draft-derived: the draft requires an
  * input schema but does not define how a polyfill validates it. The guards
  * here (dangerous keys, depth/key/size caps, the keyword subset) are our
- * design choices. See the decision log for why each exists.
+ * design choices, recorded in `docs/adr/0002-input-schema-subset.md`.
  *
  * Storage discipline: a schema is serialized to a string at Registration and
  * re-parsed on every read, so no live caller object is ever retained and every

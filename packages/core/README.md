@@ -24,7 +24,9 @@ build fails if it grows past that.
 ## Use
 
 ```js
-import "@ax-kit/core";
+import { installModelContext } from "@ax-kit/core";
+
+installModelContext(document);
 
 await document.modelContext.registerTool({
 	name: "search_products",
@@ -61,10 +63,20 @@ availability, the execution signal cancels one call.
 Notes on scope:
 
 - `document` only. There is no `window` or `navigator` alias on any entry.
+  Installation is explicit per document: call `installModelContext(document)`
+  once setup runs. The entry has no import side effects, so bundlers can
+  tree-shake it honestly.
 - Imperative tools only. The draft's declarative section is a TODO, so there
   is nothing to conform to yet.
 - The context property is defined non-writable and non-configurable as
   hardening against naive shadowing, not as a browser-enforced boundary.
+- The `untrustedContentHint` annotation is stored and surfaced on listing;
+  honoring it in handling belongs to the calling agent. The polyfill delivers
+  the annotation but cannot enforce how a consumer treats output.
+- Opt-out (`Permissions-Policy: tools=()`) is honored whenever observable
+  through the Permissions Policy API: installation refuses and calls reject.
+  Removing the feature before scripts run is enforced by the browser
+  delivering the header, which a polyfill can neither pre-empt nor defeat.
 
 ## Opt-in conveniences
 

@@ -2,15 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /**
- * Table A dictionary shapes, mapped from the pinned draft IDL with the
- * contract corrections applied before code (spec.md D1-D3):
+ * Table A dictionary shapes, mapped from the pinned draft IDL (Draft
+ * Community Group Report, 26 September 2026) with three corrections:
  *
  * - `name`/`description` are `DOMString` on both dictionaries; only the input
  *   `title` member is `USVString`, converted with lone-surrogate replacement.
  * - `execute` is required: registration without a callback is invalid.
  * - Listed `title`/`description` are `DOMString`.
- *
- * Pinned draft: Draft Community Group Report, 26 September 2026.
  */
 
 export interface ToolAnnotations {

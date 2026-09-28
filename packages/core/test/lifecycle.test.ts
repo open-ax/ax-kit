@@ -3,11 +3,12 @@
 
 import { Window } from "happy-dom";
 import { describe, expect, it } from "vitest";
-import "../src/index.js";
 import { ToolActivatedEvent, ToolCancelEvent } from "../src/events.js";
 import type { ModelContext } from "../src/index.js";
 import { installModelContext } from "../src/index.js";
 import { handleDocumentUnload } from "../src/registry.js";
+
+installModelContext(document);
 
 async function errorOf(promise: Promise<unknown>): Promise<unknown> {
 	try {

@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { describe, expect, it } from "vitest";
-import "../src/index.js";
 import type { ToolChangeDiff } from "../src/ax/index.js";
 import {
 	executeToolResult,
@@ -12,6 +11,9 @@ import {
 } from "../src/ax/index.js";
 import type { ModelContext } from "../src/index.js";
 import * as root from "../src/index.js";
+import { installModelContext } from "../src/index.js";
+
+installModelContext(document);
 
 function context(): ModelContext {
 	const installed = (document as unknown as Record<string, unknown>)[
@@ -21,6 +23,25 @@ function context(): ModelContext {
 		throw new Error("document.modelContext is not installed");
 	}
 	return installed;
+}
+
+async function errorOf(promise: Promise<unknown>): Promise<unknown> {
+	try {
+		await promise;
+	} catch (error) {
+		return error;
+	}
+	throw new Error("expected the promise to reject");
+}
+
+function errorName(error: unknown): string {
+	if (error instanceof DOMException) {
+		return error.name;
+	}
+	if (error instanceof TypeError) {
+		return "TypeError";
+	}
+	return `unexpected:${String(error)}`;
 }
 
 describe("ax entry isolation", () => {
@@ -42,6 +63,21 @@ describe("ax entry isolation", () => {
 });
 
 describe("unregisterTool", () => {
+	it("enforces the caller gates with the specified errors", async () => {
+		const detached = document.implementation.createHTMLDocument("detached");
+		installModelContext(detached);
+		let thrown: unknown;
+		try {
+			unregisterTool("whatever", detached);
+		} catch (error) {
+			thrown = error;
+		}
+		expect(errorName(thrown)).toBe("InvalidStateError");
+		expect(errorName(await errorOf(getTool("whatever", detached)))).toBe(
+			"InvalidStateError",
+		);
+	});
+
 	it("removes synchronously and reports whether it removed", async () => {
 		const mc = context();
 		await mc.registerTool({

@@ -9,7 +9,11 @@
  */
 
 import { parseOriginList, warnDiagnostic } from "../gates.js";
-import { collectRegisteredTools, unregisterRecord } from "../registry.js";
+import {
+	checkCallerGates,
+	collectRegisteredTools,
+	unregisterRecord,
+} from "../registry.js";
 import type {
 	ModelContext,
 	ModelContextExecuteToolOptions,
@@ -39,6 +43,7 @@ function defaultDocument(): Document {
  */
 export function unregisterTool(name: string, doc?: Document): boolean {
 	const target = doc ?? defaultDocument();
+	checkCallerGates(target);
 	const { removed } = unregisterRecord(target, String(name));
 	return removed;
 }
@@ -53,6 +58,7 @@ export async function getTool(
 	options?: ModelContextGetToolOptions,
 ): Promise<RegisteredTool | undefined> {
 	const target = doc ?? defaultDocument();
+	checkCallerGates(target);
 	const wanted = String(name);
 	const rawFrom: unknown = options?.fromOrigins;
 	const fromOrigins =

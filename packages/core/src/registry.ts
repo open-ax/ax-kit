@@ -80,6 +80,24 @@ export function ensureState(doc: Document): DocumentState {
 
 const NAME_PATTERN = /^[A-Za-z0-9_.-]+$/;
 
+/**
+ * The precondition triple every entry point enforces, in draft order, with
+ * the specified errors. Shared so the root methods and the opt-in entry
+ * cannot drift apart.
+ */
+export function checkCallerGates(doc: Document): void {
+	if (!isFullyActive(doc)) {
+		throw invalidState("the document is not fully active");
+	}
+	if (!isOriginKeyed(doc)) {
+		warnDiagnostic(originKeyedDiagnostic(doc));
+		throw securityError("the agent cluster is not origin-keyed");
+	}
+	if (!isAllowedToUse(doc)) {
+		throw notAllowed("the tools feature is not allowed");
+	}
+}
+
 interface PendingExecution {
 	readonly callerDocument: Document;
 	readonly targetDocument: Document;
@@ -89,7 +107,14 @@ interface PendingExecution {
 }
 
 const pendingExecutions = new Map<number, PendingExecution>();
-let nextExecutionId = 1;
+
+function allocExecutionId(): number {
+	let id = pendingExecutions.size + 1;
+	while (pendingExecutions.has(id)) {
+		id += 1;
+	}
+	return id;
+}
 
 function cancelExecution(uuid: number, pending: PendingExecution): void {
 	pendingExecutions.delete(uuid);
@@ -338,16 +363,7 @@ export class ModelContextImpl extends EventTarget implements ModelContext {
 		options?: ModelContextRegisterToolOptions | undefined,
 	): Promise<undefined> {
 		const owner = this.#document;
-		if (!isFullyActive(owner)) {
-			throw invalidState("the document is not fully active");
-		}
-		if (!isOriginKeyed(owner)) {
-			warnDiagnostic(originKeyedDiagnostic(owner));
-			throw securityError("the agent cluster is not origin-keyed");
-		}
-		if (!isAllowedToUse(owner)) {
-			throw notAllowed("the tools feature is not allowed");
-		}
+		checkCallerGates(owner);
 
 		const rawTool: unknown = tool;
 		if (typeof rawTool !== "object" || rawTool === null) {
@@ -430,16 +446,7 @@ export class ModelContextImpl extends EventTarget implements ModelContext {
 		options?: ModelContextGetToolOptions | undefined,
 	): Promise<RegisteredTool[]> {
 		const requestor = this.#document;
-		if (!isFullyActive(requestor)) {
-			throw invalidState("the document is not fully active");
-		}
-		if (!isOriginKeyed(requestor)) {
-			warnDiagnostic(originKeyedDiagnostic(requestor));
-			throw securityError("the agent cluster is not origin-keyed");
-		}
-		if (!isAllowedToUse(requestor)) {
-			throw notAllowed("the tools feature is not allowed");
-		}
+		checkCallerGates(requestor);
 
 		const rawOptions: unknown = options ?? {};
 		if (typeof rawOptions !== "object" || rawOptions === null) {
@@ -459,16 +466,7 @@ export class ModelContextImpl extends EventTarget implements ModelContext {
 		options?: ModelContextExecuteToolOptions | undefined,
 	): Promise<string> {
 		const caller = this.#document;
-		if (!isFullyActive(caller)) {
-			throw invalidState("the document is not fully active");
-		}
-		if (!isOriginKeyed(caller)) {
-			warnDiagnostic(originKeyedDiagnostic(caller));
-			throw securityError("the agent cluster is not origin-keyed");
-		}
-		if (!isAllowedToUse(caller)) {
-			throw notAllowed("the tools feature is not allowed");
-		}
+		checkCallerGates(caller);
 
 		const rawTool: unknown = tool;
 		if (typeof rawTool !== "object" || rawTool === null) {
@@ -488,10 +486,13 @@ export class ModelContextImpl extends EventTarget implements ModelContext {
 			throw notSupported("the tool origin is opaque");
 		}
 
-		if (typeof inputObject !== "object" || inputObject === null) {
+		// Omitted arguments default to {}. Upstream:
+		// webmcp/imperative/object-arguments.https.html.
+		const args: unknown = inputObject === undefined ? {} : inputObject;
+		if (typeof args !== "object" || args === null) {
 			throw new TypeError("tool arguments must be an object");
 		}
-		const inputArguments: unknown = JSON.stringify(inputObject);
+		const inputArguments: unknown = JSON.stringify(args);
 		if (typeof inputArguments !== "string") {
 			throw new TypeError("tool arguments cannot be serialized");
 		}
@@ -545,8 +546,7 @@ export class ModelContextImpl extends EventTarget implements ModelContext {
 			throw unknownError("the tool is not exposed to this origin");
 		}
 
-		const uuid = nextExecutionId;
-		nextExecutionId += 1;
+		const uuid = allocExecutionId();
 		const invocation = {
 			arguments: inputArguments,
 			name: toolName,
