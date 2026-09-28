@@ -114,15 +114,75 @@ describe("event shapes", () => {
 		expect(mc.ontoolchange).not.toBeNull();
 		mc.ontoolchange = null;
 		expect(mc.ontoolchange).toBeNull();
-		let misuse: unknown;
-		try {
-			mc.ontoolchange = 42 as unknown as (event: Event) => void;
-		} catch (error) {
-			misuse = error;
-		}
-		expect(errorName(misuse)).toBe("TypeError");
+		// Non-callables collapse to null instead of throwing.
+		mc.ontoolchange = 42 as unknown as (event: Event) => void;
+		expect(mc.ontoolchange).toBeNull();
 		expect(second).toBe(0);
 		expect(first).toBe(1);
+	});
+
+	it("handler attributes leave explicit listeners alone", async () => {
+		const mc = context();
+		const order: string[] = [];
+		const explicit = (): void => {
+			order.push("explicit");
+		};
+		mc.addEventListener("toolchange", explicit);
+		mc.ontoolchange = () => {
+			order.push("handler");
+		};
+		const changed = async (name: string): Promise<void> => {
+			await mc.registerTool({
+				name,
+				description: "handler",
+				execute: async () => null,
+			});
+		};
+		await changed("life_order_one");
+		expect(order.length).toBe(2);
+		const slot = order.indexOf("handler");
+		expect(slot).toBeGreaterThanOrEqual(0);
+		mc.ontoolchange = () => {
+			order.push("handler2");
+		};
+		await changed("life_order_two");
+		expect(order.length).toBe(4);
+		// The replacement reuses the wrapper's slot within each dispatch.
+		expect(order[slot]).toBe("handler");
+		expect(order[slot + 2]).toBe("handler2");
+		mc.ontoolchange = null;
+		await changed("life_order_three");
+		mc.removeEventListener("toolchange", explicit);
+		expect(order.length).toBe(5);
+		// Clearing the handler never removes the explicit listener.
+		expect(order[4]).toBe("explicit");
+	});
+
+	it("a shared handler and listener function fires twice", async () => {
+		const mc = context();
+		let calls = 0;
+		const shared = (): void => {
+			calls += 1;
+		};
+		mc.addEventListener("toolchange", shared);
+		mc.ontoolchange = shared;
+		await mc.registerTool({
+			name: "life_shared",
+			description: "handler",
+			execute: async () => null,
+		});
+		// Direct registration would deduplicate the two into one call.
+		expect(calls).toBe(2);
+		mc.ontoolchange = null;
+		await mc.registerTool({
+			name: "life_shared_two",
+			description: "handler",
+			execute: async () => null,
+		});
+		// Clearing the handler must not remove the explicit listener.
+		expect(calls).toBe(3);
+		mc.removeEventListener("toolchange", shared);
+		mc.ontoolchange = null;
 	});
 });
 

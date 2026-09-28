@@ -381,7 +381,7 @@ export class ModelContextImpl extends EventTarget implements ModelContext {
 		this.#onToolChange = setHandler(
 			this,
 			"toolchange",
-			this.#onToolChange,
+			() => this.#onToolChange,
 			handler,
 		);
 	}
@@ -394,7 +394,7 @@ export class ModelContextImpl extends EventTarget implements ModelContext {
 		this.#onToolActivated = setHandler(
 			this,
 			"toolactivated",
-			this.#onToolActivated,
+			() => this.#onToolActivated,
 			handler,
 		);
 	}
@@ -407,7 +407,7 @@ export class ModelContextImpl extends EventTarget implements ModelContext {
 		this.#onToolCancel = setHandler(
 			this,
 			"toolcancel",
-			this.#onToolCancel,
+			() => this.#onToolCancel,
 			handler,
 		);
 	}
@@ -778,20 +778,41 @@ export function notifyToolChange(
 	}
 }
 
+/**
+ * Attribute-handler storage. Each event type gets one internal wrapper
+ * listener per target, registered on the first non-null assignment. The
+ * wrapper dispatches to the currently stored handler, so non-function values
+ * collapse to null without throwing, a handler never deduplicates or removes
+ * an explicit listener for the same function, and replacement never moves
+ * the handler within the listener list.
+ */
+const handlerWrappers = new WeakMap<
+	EventTarget,
+	Map<string, (event: Event) => void>
+>;
+
 function setHandler(
 	target: EventTarget,
 	type: string,
-	current: ModelEventHandler,
+	read: () => ModelEventHandler,
 	next: ModelEventHandler,
 ): ModelEventHandler {
-	if (next !== null && typeof next !== "function") {
-		throw new TypeError(`on${type} must be a function or null`);
+	const handler = typeof next === "function" ? next : null;
+	let byType = handlerWrappers.get(target);
+	let wrapper = byType?.get(type);
+	if (wrapper === undefined) {
+		wrapper = (event: Event): void => {
+			const live = read();
+			if (live !== null) {
+				live(event);
+			}
+		};
+		if (byType === undefined) {
+			byType = new Map();
+			handlerWrappers.set(target, byType);
+		}
+		byType.set(type, wrapper);
+		target.addEventListener(type, wrapper);
 	}
-	if (current !== null) {
-		target.removeEventListener(type, current);
-	}
-	if (next !== null) {
-		target.addEventListener(type, next);
-	}
-	return next;
+	return handler;
 }
