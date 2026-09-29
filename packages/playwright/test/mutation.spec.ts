@@ -165,3 +165,45 @@ test("the timeout guard follows the in-page clock", async ({ page }) => {
 	const error = await settled;
 	expect(error?.name).toBe("TimeoutError");
 });
+
+test("registers through concurrent churn", async ({ page }) => {
+	await gotoRich(page);
+	const churning = page.evaluate(
+		(arg: unknown): Promise<void> => {
+			const rounds = (arg as { rounds: unknown }).rounds;
+			const total = typeof rounds === "number" ? rounds : 0;
+			async function oneRound(index: number): Promise<void> {
+				const list = document.getElementById("churn-list");
+				if (list !== null) {
+					const items = Array.from(list.children);
+					items.reverse();
+					for (const item of items) {
+						list.appendChild(item);
+					}
+				}
+				document.body.classList.toggle("churn", index % 2 === 0);
+				await new Promise<void>((resolve) => {
+					const channel = new MessageChannel();
+					channel.port1.onmessage = (): void => {
+						channel.port1.close();
+						channel.port2.close();
+						resolve();
+					};
+					channel.port2.postMessage(0);
+				});
+			}
+			async function run(): Promise<void> {
+				for (let index = 0; index < total; index++) {
+					await oneRound(index);
+				}
+			}
+			return run();
+		},
+		{ rounds: 20 },
+	);
+	const registered = registerCounter(page);
+	const out = await page.ax.executeTool<{ clicks: number }>("counter_tool", {});
+	await registered;
+	await churning;
+	expect(out).toEqual({ clicks: 42 });
+});

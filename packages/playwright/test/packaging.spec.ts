@@ -56,6 +56,7 @@ test("records user-visible behavior with its draft date", () => {
 		"expectTool",
 		"getAvailableTools",
 		"executeTool",
+		"AxMissingSurfaceError",
 	]) {
 		expect(docs).toContain(name);
 	}
