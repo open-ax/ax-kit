@@ -18,31 +18,44 @@ interface PageToolRecord {
  * field never crosses the boundary; names cross instead. Sorted ascending
  * by name in code-unit order.
  */
-export async function listToolSummaries(page: Page): Promise<AxToolSummary[]> {
-	const records = await page.evaluate((): Promise<PageToolRecord[]> => {
-		const holder = document as unknown as Record<string, unknown>;
-		const surface = holder.modelContext as unknown as {
-			getTools?: () => Promise<Array<Record<string, unknown>>>;
-		} | null;
-		if (
-			surface === null ||
-			surface === undefined ||
-			typeof surface.getTools !== "function"
-		) {
-			throw new Error("typed surface is missing");
-		}
-		return surface.getTools().then((tools) =>
-			tools.map(
-				(tool): PageToolRecord => ({
-					name: tool.name,
-					description: tool.description,
-					title: tool.title,
-					origin: tool.origin,
-					annotations: tool.annotations,
-				}),
-			),
-		);
-	});
+export async function listToolSummaries(
+	page: Page,
+	fromOrigins?: ReadonlyArray<string> | undefined,
+): Promise<AxToolSummary[]> {
+	const records = await page.evaluate(
+		(arg: unknown): Promise<PageToolRecord[]> => {
+			const payload = arg as { fromOrigins: unknown };
+			const holder = document as unknown as Record<string, unknown>;
+			const surface = holder.modelContext as unknown as {
+				getTools?: (
+					options?: unknown,
+				) => Promise<Array<Record<string, unknown>>>;
+			} | null;
+			if (
+				surface === null ||
+				surface === undefined ||
+				typeof surface.getTools !== "function"
+			) {
+				throw new Error("typed surface is missing");
+			}
+			const origins =
+				payload.fromOrigins === undefined || payload.fromOrigins === null
+					? undefined
+					: { fromOrigins: payload.fromOrigins };
+			return surface.getTools(origins).then((tools) =>
+				tools.map(
+					(tool): PageToolRecord => ({
+						name: tool.name,
+						description: tool.description,
+						title: tool.title,
+						origin: tool.origin,
+						annotations: tool.annotations,
+					}),
+				),
+			);
+		},
+		{ fromOrigins: fromOrigins ?? null },
+	);
 	const summaries: AxToolSummary[] = [];
 	for (const record of records) {
 		if (typeof record.name !== "string") {

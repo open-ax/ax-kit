@@ -11,11 +11,14 @@
 
 export type { AxPage } from "./ax.js";
 export { AxCompanion } from "./ax.js";
+export { AxParseError, executeTool, getAvailableTools } from "./execute.js";
 export { expect, test } from "./fixture.js";
 export { compareToolNames, findToolByName } from "./match.js";
 export { resolveInitScriptPath } from "./paths.js";
 export type {
+	AxExecuteOptions,
 	AxExpectOptions,
+	AxListOptions,
 	AxToolAnnotations,
 	AxToolSummary,
 	AxWaitOptions,

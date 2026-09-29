@@ -2,7 +2,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import type { Page } from "@playwright/test";
-import type { AxExpectOptions, AxToolSummary, AxWaitOptions } from "./types.js";
+import { executeTool, getAvailableTools } from "./execute.js";
+import type {
+	AxExecuteOptions,
+	AxExpectOptions,
+	AxListOptions,
+	AxToolSummary,
+	AxWaitOptions,
+} from "./types.js";
 import { expectTool, waitForTool } from "./wait.js";
 
 /**
@@ -50,6 +57,27 @@ export class AxCompanion {
 		options?: AxExpectOptions,
 	): Promise<AxToolSummary> {
 		return expectTool(this.page, name, options);
+	}
+
+	/**
+	 * Available tools sorted ascending by name in code-unit order, with
+	 * origin scoping preserved from the underlying surface.
+	 */
+	async getAvailableTools(options?: AxListOptions): Promise<AxToolSummary[]> {
+		return getAvailableTools(this.page, options);
+	}
+
+	/**
+	 * Execute a named tool with serializable arguments. The name resolves
+	 * to a fresh handle inside the page on every call; the string result
+	 * parses at this boundary with a typed error on failure.
+	 */
+	async executeTool<T = unknown>(
+		name: string,
+		args?: unknown,
+		options?: AxExecuteOptions,
+	): Promise<T> {
+		return executeTool<T>(this.page, name, args, options);
 	}
 }
 

@@ -30,3 +30,11 @@ export interface AxWaitOptions {
 export interface AxExpectOptions {
 	readonly timeout?: number | undefined;
 }
+
+export interface AxListOptions {
+	readonly fromOrigins?: ReadonlyArray<string> | undefined;
+}
+
+export interface AxExecuteOptions {
+	readonly signal?: AbortSignal | undefined;
+}
