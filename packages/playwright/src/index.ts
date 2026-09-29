@@ -1,0 +1,15 @@
+// Copyright 2026 Utpal Sen
+// SPDX-License-Identifier: Apache-2.0
+
+/**
+ * Runner-side companion for driving the typed page surface in tests.
+ *
+ * The fixture installs the built page-side bundle before application code
+ * runs and attaches a runner-realm companion to the page. Nothing enters
+ * the page namespace besides the typed surface itself.
+ */
+
+export type { AxPage } from "./ax.js";
+export { AxCompanion } from "./ax.js";
+export { expect, test } from "./fixture.js";
+export { resolveInitScriptPath } from "./paths.js";
