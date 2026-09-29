@@ -142,7 +142,8 @@ export async function waitForTool(
 
 /**
  * Assertion flavor over the same listing and matcher, built on the
- * runner's retrying poll with forwarded timeout options.
+ * runner's retrying poll with forwarded timeout options. A miss rejects
+ * with a `TimeoutError` naming the tool, matching `waitForTool`.
  */
 export async function expectTool(
 	page: Page,
@@ -154,15 +155,29 @@ export async function expectTool(
 	}
 	const timeout = readTimeout(options ?? {});
 	await listToolSummaries(page);
-	await expect
-		.poll(
-			async (): Promise<string | null> => {
-				const tools = await listToolSummaries(page);
-				return findToolByName(tools, name)?.name ?? null;
-			},
-			{ timeout },
-		)
-		.toBe(name);
+	try {
+		await expect
+			.poll(
+				async (): Promise<string | null> => {
+					const tools = await listToolSummaries(page);
+					return findToolByName(tools, name)?.name ?? null;
+				},
+				{ timeout },
+			)
+			.toBe(name);
+	} catch (error) {
+		if (error instanceof AxMissingSurfaceError) {
+			throw error;
+		}
+		try {
+			await listToolSummaries(page);
+		} catch (surfaceError) {
+			if (surfaceError instanceof AxMissingSurfaceError) {
+				throw surfaceError;
+			}
+		}
+		throw timeoutError(name, timeout);
+	}
 	const current = findToolByName(await listToolSummaries(page), name);
 	if (current === undefined) {
 		throw timeoutError(name, timeout);
