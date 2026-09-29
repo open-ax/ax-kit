@@ -2,7 +2,7 @@
 
 Runner-side companion for driving `document.modelContext` in tests.
 
-Pinned draft: WebMCP Draft Community Group Report, 26 September 2026, from
+Pinned draft: WebMCP Draft Community Group Report, 29 September 2026, from
 the W3C Web Machine Learning Community Group. The pin is exported as
 `SPEC_VERSION` from `@ax-kit/core` and repeated in every release note.
 

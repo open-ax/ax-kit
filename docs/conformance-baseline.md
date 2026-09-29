@@ -4,8 +4,8 @@ Conformance here means one thing: zero unexpected failures against the pinned
 draft named below. It never means blanket green, because the reference browser
 itself does not pass the whole official suite.
 
-Pinned draft: WebMCP Draft Community Group Report, 26 September 2026
-(upstream `729ae01`), exported as `SPEC_VERSION` from `@ax-kit/core`.
+Pinned draft: WebMCP Draft Community Group Report, 29 September 2026
+(upstream `57d396f`), exported as `SPEC_VERSION` from `@ax-kit/core`.
 
 ## Layers
 

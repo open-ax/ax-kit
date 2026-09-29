@@ -50,7 +50,7 @@ test("keeps the test-only harness out of the published entry", () => {
 
 test("records user-visible behavior with its draft date", () => {
 	const docs = readme();
-	expect(docs).toContain("26 September 2026");
+	expect(docs).toContain("29 September 2026");
 	for (const name of [
 		"waitForTool",
 		"expectTool",
@@ -63,5 +63,5 @@ test("records user-visible behavior with its draft date", () => {
 	expect(docs).not.toContain("chaos");
 	const log = changelog();
 	expect(log).toContain("@ax-kit/playwright");
-	expect(log).toContain("26 September 2026");
+	expect(log).toContain("29 September 2026");
 });

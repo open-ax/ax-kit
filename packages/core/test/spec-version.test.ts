@@ -7,8 +7,8 @@ import { SPEC_VERSION } from "../src/index.js";
 describe("SPEC_VERSION", () => {
 	it("pins the draft the package implements", () => {
 		expect(SPEC_VERSION.draft).toBe(
-			"Draft Community Group Report, 26 September 2026",
+			"Draft Community Group Report, 29 September 2026",
 		);
-		expect(SPEC_VERSION.commit).toBe("729ae01");
+		expect(SPEC_VERSION.commit).toBe("57d396f");
 	});
 });

@@ -27,7 +27,7 @@ Then commit the generated `.changeset/*.md` file.
   discovery, invocation, lifecycle events, and unloading cleanup, plus an
   opt-in `@ax-kit/core/ax` entry with removal, lookup, parsed-result, and
   change-diff conveniences. Pinned draft (`SPEC_VERSION`): Draft Community
-  Group Report, 26 September 2026.
+  Group Report, 29 September 2026.
 - `@ax-kit/react`: `useAxTool` (full definition or name plus handler),
   `AxProvider`, and `isAxSupported` for lifecycle-native tool registration
   with namespacing and execution middleware.
@@ -45,7 +45,7 @@ Then commit the generated `.changeset/*.md` file.
   hint with a bounded guard and match by name in code-unit order; execution
   resolves a fresh handle per call and parses the string result at the
   boundary. Pinned draft (`SPEC_VERSION`): Draft Community Group Report,
-  26 September 2026.
+  29 September 2026.
 
 No published package yet. Entries above describe the in-tree API; versioned
 releases will be cut with Changesets.
