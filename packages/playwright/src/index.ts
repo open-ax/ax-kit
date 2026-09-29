@@ -12,4 +12,12 @@
 export type { AxPage } from "./ax.js";
 export { AxCompanion } from "./ax.js";
 export { expect, test } from "./fixture.js";
+export { compareToolNames, findToolByName } from "./match.js";
 export { resolveInitScriptPath } from "./paths.js";
+export type {
+	AxExpectOptions,
+	AxToolAnnotations,
+	AxToolSummary,
+	AxWaitOptions,
+} from "./types.js";
+export { expectTool, waitForTool } from "./wait.js";
