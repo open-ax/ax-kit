@@ -10,6 +10,10 @@ function fixtureSource(): string {
 	return readFileSync(new URL("../src/fixture.ts", import.meta.url), "utf8");
 }
 
+function axSource(): string {
+	return readFileSync(new URL("../src/ax.ts", import.meta.url), "utf8");
+}
+
 function countHaystack(haystack: string, needle: string): number {
 	return haystack.split(needle).length - 1;
 }
@@ -60,6 +64,13 @@ test("uses exactly one init script", () => {
 	const source = fixtureSource();
 	expect(countHaystack(source, "addInitScript")).toBe(1);
 	expect(countHaystack(source, "{ path")).toBe(1);
+});
+
+test("rejects plain objects without the typed methods", () => {
+	const source = axSource();
+	expect(source).toContain("getTools");
+	expect(source).toContain("registerTool");
+	expect(source).toContain("executeTool");
 });
 
 test("disposes the init-script handle on teardown", () => {

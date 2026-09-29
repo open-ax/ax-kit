@@ -202,6 +202,7 @@ test("registers through concurrent churn", async ({ page }) => {
 		{ rounds: 20 },
 	);
 	const registered = registerCounter(page);
+	await page.ax.waitForTool("counter_tool");
 	const out = await page.ax.executeTool<{ clicks: number }>("counter_tool", {});
 	await registered;
 	await churning;

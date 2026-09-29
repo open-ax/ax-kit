@@ -109,9 +109,13 @@ test("expectTool agrees with waitForTool", async ({ page }) => {
 });
 
 test("expectTool forwards the timeout", async ({ page }) => {
-	await expect(
-		page.ax.expectTool("absent_tool", { timeout: 300 }),
-	).rejects.toThrow();
+	const error = await page.ax.expectTool("absent_tool", { timeout: 300 }).then(
+		() => null,
+		(reason: unknown) => reason as Error,
+	);
+	expect(error).not.toBeNull();
+	expect(error?.name).toBe("TimeoutError");
+	expect(error?.message).toContain("absent_tool");
 });
 
 test("builds the wait on the change hint with a bounded guard", () => {

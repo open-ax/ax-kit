@@ -32,7 +32,15 @@ export class AxCompanion {
 		return this.page.evaluate((): boolean => {
 			const holder = document as unknown as Record<string, unknown>;
 			const candidate = holder.modelContext;
-			return typeof candidate === "object" && candidate !== null;
+			if (typeof candidate !== "object" || candidate === null) {
+				return false;
+			}
+			const surface = candidate as Record<string, unknown>;
+			return (
+				typeof surface.getTools === "function" &&
+				typeof surface.registerTool === "function" &&
+				typeof surface.executeTool === "function"
+			);
 		});
 	}
 
