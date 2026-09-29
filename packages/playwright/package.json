@@ -1,0 +1,49 @@
+{
+	"name": "@ax-kit/playwright",
+	"version": "0.0.0",
+	"description": "Runner-side companion for driving document.modelContext in tests",
+	"license": "Apache-2.0",
+	"engines": {
+		"node": ">=24.19.0 <25"
+	},
+	"type": "module",
+	"main": "./dist/index.cjs",
+	"module": "./dist/index.mjs",
+	"types": "./dist/index.d.mts",
+	"exports": {
+		".": {
+			"import": {
+				"types": "./dist/index.d.mts",
+				"default": "./dist/index.mjs"
+			},
+			"require": {
+				"types": "./dist/index.d.cts",
+				"default": "./dist/index.cjs"
+			}
+		},
+		"./package.json": "./package.json"
+	},
+	"files": [
+		"dist"
+	],
+	"sideEffects": false,
+	"peerDependencies": {
+		"@playwright/test": "^1.63.0"
+	},
+	"scripts": {
+		"build": "tsdown",
+		"typecheck": "tsc --noEmit -p tsconfig.json",
+		"test": "playwright test",
+		"size": "echo \"no size gate for runner adapter\"",
+		"publint": "publint",
+		"attw": "attw --pack . --profile node16"
+	},
+	"devDependencies": {
+		"@ax-kit/core": "workspace:*",
+		"@playwright/test": "1.63.0",
+		"@types/node": "^24.19.0",
+		"playwright": "1.63.0",
+		"tsdown": "0.23.0",
+		"typescript": "6.0.3"
+	}
+}
