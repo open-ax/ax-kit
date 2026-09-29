@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import type { Page } from "@playwright/test";
+import { withSurfaceError } from "./errors.js";
 import { listToolSummaries } from "./listing.js";
 import type {
 	AxExecuteOptions,
@@ -139,7 +140,9 @@ export async function executeTool<T = unknown>(
 		{ name, input },
 	);
 	const text =
-		signal === undefined ? await task : await raceWithSignal(task, signal);
+		signal === undefined
+			? await withSurfaceError(task)
+			: await raceWithSignal(withSurfaceError(task), signal);
 	try {
 		return JSON.parse(text) as T;
 	} catch (cause: unknown) {

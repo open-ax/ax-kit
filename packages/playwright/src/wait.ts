@@ -3,10 +3,14 @@
 
 import type { Page } from "@playwright/test";
 import { expect } from "@playwright/test";
+import { AxMissingSurfaceError } from "./errors.js";
 import { listToolSummaries } from "./listing.js";
 import { findToolByName } from "./match.js";
 import type { AxExpectOptions, AxToolSummary, AxWaitOptions } from "./types.js";
 
+// Matches the runner's documented assertion default of 5 seconds. No public
+// API exposes the configured expect timeout, so per-call override and the
+// runner's own configuration (honored by expectTool's poll) compose instead.
 const DEFAULT_TIMEOUT_MS = 5_000;
 
 function readTimeout(options: AxWaitOptions | AxExpectOptions): number {
@@ -115,6 +119,12 @@ export async function waitForTool(
 				{ ms: remaining, name },
 			);
 		} catch (error) {
+			if (
+				error instanceof Error &&
+				error.message.includes("typed surface is missing")
+			) {
+				throw new AxMissingSurfaceError();
+			}
 			if (
 				error instanceof Error &&
 				error.message.includes("wait guard expired")

@@ -77,8 +77,8 @@ names reject with `InvalidStateError`, non-object arguments with
 `TypeError`, unknown tools at call time with `UnknownError`, and the
 remaining gates (inactive document, origin-keyed cluster, denied feature,
 untrustworthy origin entries, opaque origin) with their specified names.
-A missing installation fails fast with a typed error instead of passing
-silently.
+A missing installation fails fast with a typed `AxMissingSurfaceError`
+instead of passing silently.
 
 ## Notes
 
@@ -88,7 +88,8 @@ silently.
 - The change signal is treated as a re-list hint with no ordering promise;
   consumers re-list on every wake.
 - Listings sort ascending by name in code-unit order and match by name,
-  never by position.
+  never by position. Each frame evaluates its own bundle copy, so listings
+  are frame-local and cross-origin tools never leak into the top document.
 - There is no sleep-based waiting anywhere: bounded waits ride the change
   hint or the retrying assertion, and the DOM-shuffling gate harness that
   proves it lives in `test/` only, never in the published entry.
