@@ -4,11 +4,11 @@
 /**
  * Pinned upstream draft this package implements.
  *
- * WebMCP Draft Community Group Report, 26 September 2026, from the W3C Web
+ * WebMCP Draft Community Group Report, 29 September 2026, from the W3C Web
  * Machine Learning Community Group (https://webmachinelearning.github.io/webmcp/).
  * This is a draft report, not a W3C Standard and not on the Standards Track.
  */
 export const SPEC_VERSION = {
-	draft: "Draft Community Group Report, 26 September 2026",
-	commit: "729ae01",
+	draft: "Draft Community Group Report, 29 September 2026",
+	commit: "57d396f",
 } as const;

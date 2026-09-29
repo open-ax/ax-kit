@@ -3,7 +3,7 @@
 
 /**
  * Table A dictionary shapes, mapped from the pinned draft IDL (Draft
- * Community Group Report, 26 September 2026) with three corrections:
+ * Community Group Report, 29 September 2026) with three corrections:
  *
  * - `name`/`description` are `DOMString` on both dictionaries; only the input
  *   `title` member is `USVString`, converted with lone-surrogate replacement.
