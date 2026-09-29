@@ -38,6 +38,14 @@ Then commit the generated `.changeset/*.md` file.
   teardown.
 - `@ax-kit/react`: `dispatchAxClick` for fallback-wrapped click dispatch
   against React-managed nodes with native bubbling fallback.
+- `@ax-kit/playwright`: overriding `page` fixture installing the page-side
+  bundle through a single init script before any test navigation, with a
+  runner-realm `page.ax` companion offering `getAvailableTools`,
+  `waitForTool`, `expectTool`, and `executeTool`. Waits ride the change
+  hint with a bounded guard and match by name in code-unit order; execution
+  resolves a fresh handle per call and parses the string result at the
+  boundary. Pinned draft (`SPEC_VERSION`): Draft Community Group Report,
+  26 September 2026.
 
 No published package yet. Entries above describe the in-tree API; versioned
 releases will be cut with Changesets.
