@@ -118,6 +118,33 @@ test("expectTool forwards the timeout", async ({ page }) => {
 	expect(error?.message).toContain("absent_tool");
 });
 
+test("expectTool propagates listing failures", async ({ page }) => {
+	await page.evaluate((): void => {
+		const holder = document as unknown as Record<string, unknown>;
+		const surface = holder.modelContext as unknown as {
+			getTools: (...args: unknown[]) => Promise<unknown>;
+		};
+		const original = surface.getTools.bind(surface);
+		let calls = 0;
+		(surface as Record<string, unknown>).getTools = async (
+			...args: unknown[]
+		): Promise<unknown> => {
+			calls += 1;
+			if (calls > 1) {
+				throw new DOMException("tools not allowed", "NotAllowedError");
+			}
+			return original(...args);
+		};
+	});
+	const error = await page.ax.expectTool("absent_tool", { timeout: 300 }).then(
+		() => null,
+		(reason: unknown) => reason as Error,
+	);
+	expect(error).not.toBeNull();
+	expect(error?.name).not.toBe("TimeoutError");
+	expect(error?.message).toContain("tools not allowed");
+});
+
 test("builds the wait on the change hint with a bounded guard", () => {
 	const source = waitSource();
 	expect(source).toContain("toolchange");

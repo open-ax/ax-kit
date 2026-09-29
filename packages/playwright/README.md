@@ -63,7 +63,7 @@ await page.ax.executeTool<T>(name, args?, { signal?: AbortSignal });
 - `expectTool` polls the same listing through the runner's retrying
   primitive with the same matcher, forwarding the given timeout options.
   A miss rejects with a `TimeoutError` naming the tool, matching
-  `waitForTool`.
+  `waitForTool`. Listing failures other than a miss propagate unchanged.
 - `executeTool` resolves the name to a fresh handle inside the page on
   every call, passes arguments as serializable data only, and parses the
   specified string result at the companion boundary. A result outside

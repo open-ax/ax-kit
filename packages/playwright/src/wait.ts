@@ -143,7 +143,8 @@ export async function waitForTool(
 /**
  * Assertion flavor over the same listing and matcher, built on the
  * runner's retrying poll with forwarded timeout options. A miss rejects
- * with a `TimeoutError` naming the tool, matching `waitForTool`.
+ * with a `TimeoutError` naming the tool, matching `waitForTool`. Listing
+ * failures other than a miss propagate unchanged.
  */
 export async function expectTool(
 	page: Page,
@@ -169,14 +170,10 @@ export async function expectTool(
 		if (error instanceof AxMissingSurfaceError) {
 			throw error;
 		}
-		try {
-			await listToolSummaries(page);
-		} catch (surfaceError) {
-			if (surfaceError instanceof AxMissingSurfaceError) {
-				throw surfaceError;
-			}
+		if (error instanceof Error && "matcherResult" in error) {
+			throw timeoutError(name, timeout);
 		}
-		throw timeoutError(name, timeout);
+		throw error;
 	}
 	const current = findToolByName(await listToolSummaries(page), name);
 	if (current === undefined) {
