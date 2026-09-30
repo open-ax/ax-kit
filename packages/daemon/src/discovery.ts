@@ -14,11 +14,16 @@ export interface DiscoveryFile {
 	readonly version: string;
 }
 
+export const DISCOVERY_FILE_NAME = "relay.json" as const;
+
 export function discoveryFileName(): string {
-	return "relay.json";
+	return DISCOVERY_FILE_NAME;
 }
 
-export function resolveDiscoveryDir(env: unknown): string {
+export function resolveDiscoveryDir(
+	env: unknown,
+	onWarn?: (message: string) => void,
+): string {
 	if (typeof env !== "object" || env === null) {
 		throw new TypeError("bad env");
 	}
@@ -29,6 +34,7 @@ export function resolveDiscoveryDir(env: unknown): string {
 	}
 	const home = record.HOME;
 	if (typeof home === "string" && home.length > 0) {
+		onWarn?.("XDG_RUNTIME_DIR unset, falling back to HOME/.ax");
 		return `${home}/.ax`;
 	}
 	throw new TypeError("no discovery directory");
@@ -114,7 +120,14 @@ export function checkBearer(presented: unknown, expected: unknown): void {
 	if (typeof presented !== "string" || typeof expected !== "string") {
 		throw new TypeError("bad bearer");
 	}
-	if (presented.length === 0 || presented !== expected) {
+	if (presented.length === 0 || presented.length !== expected.length) {
+		throw new TypeError("bad bearer");
+	}
+	let diff = 0;
+	for (let i = 0; i < expected.length; i += 1) {
+		diff |= (presented.charCodeAt(i) ^ expected.charCodeAt(i)) & 0xffff;
+	}
+	if (diff !== 0) {
 		throw new TypeError("bad bearer");
 	}
 }
@@ -128,6 +141,9 @@ export function checkUpgradeOrigin(origin: unknown): void {
 		parsed = new URL(origin);
 	} catch {
 		throw new TypeError("bad origin");
+	}
+	if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+		throw new TypeError("non-loopback origin");
 	}
 	if (!isLoopbackHost(parsed.hostname)) {
 		throw new TypeError("non-loopback origin");

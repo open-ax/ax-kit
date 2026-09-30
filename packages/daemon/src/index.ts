@@ -15,6 +15,7 @@ export {
 	checkBearer,
 	checkUpgradeOrigin,
 	createDiscoveryFile,
+	DISCOVERY_FILE_NAME,
 	discoveryFileName,
 	isLoopbackHost,
 	parseDiscoveryFile,

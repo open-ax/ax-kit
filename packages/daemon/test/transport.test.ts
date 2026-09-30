@@ -115,6 +115,7 @@ describe("native host", () => {
 		expect(() => checkMessageSize(2 * 1024 * 1024, "host-to-browser")).toThrow(
 			TypeError,
 		);
+		expect(() => checkMessageSize(10, "sideways")).toThrow(TypeError);
 		expect(() => assertWorkerReachable("service-worker")).not.toThrow();
 		expect(() => assertWorkerReachable("content-script")).toThrow(TypeError);
 	});
@@ -127,5 +128,39 @@ describe("native host", () => {
 		expect(() => sanitizeRendererPayload({ nested: { a: 1 } })).toThrow(
 			TypeError,
 		);
+		expect(() => sanitizeRendererPayload({ a: Number.NaN })).toThrow(TypeError);
+	});
+
+	it("rejects relative paths, interpreters, and non-extension origins", () => {
+		for (const badPath of [
+			"./evil-bridge",
+			"node bridge.js",
+			"/usr/bin/python bridge.py",
+		]) {
+			expect(() =>
+				createNativeHostManifest({
+					name: "com.openax.bridge",
+					description: "x",
+					path: badPath,
+					type: "stdio",
+					allowed_origins: ["chrome-extension://abcdef"],
+				}),
+			).toThrow(TypeError);
+		}
+		expect(() =>
+			createNativeHostManifest({
+				name: "com.openax.bridge",
+				description: "x",
+				path: "/bin/bridge",
+				type: "stdio",
+				allowed_origins: ["https://evil.example"],
+			}),
+		).toThrow(TypeError);
+	});
+
+	it("enforces stdio caps and origin schemes", () => {
+		expect(() => checkUpgradeOrigin("file://127.0.0.1/")).toThrow(TypeError);
+		expect(isStdinClosed(undefined)).toBe(false);
+		expect(() => splitFrames("x".repeat(2 * 1024 * 1024))).toThrow(TypeError);
 	});
 });

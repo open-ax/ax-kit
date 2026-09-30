@@ -75,6 +75,8 @@ describe("stateless protocol", () => {
 			"ping",
 			"roots/list",
 			"sampling/createMessage",
+			"client/registerCapability",
+			"notifications/message",
 		]) {
 			expect(isDeprecatedMethod(method)).toBe(true);
 			const response = dispatchRequest(
@@ -84,6 +86,31 @@ describe("stateless protocol", () => {
 			);
 			expect(response.error?.code).toBe(-32601);
 		}
+	});
+
+	it("validates tool listings and call names", () => {
+		const badTools = dispatchRequest(
+			{
+				jsonrpc: "2.0",
+				id: 5,
+				method: "tools/list",
+				params: meta(),
+			},
+			[{ title: "no-name" }],
+			createDaemonInfo(),
+		);
+		expect(badTools.error?.code).toBe(-32602);
+		const badCall = dispatchRequest(
+			{
+				jsonrpc: "2.0",
+				id: 6,
+				method: "tools/call",
+				params: { ...meta(), call: { name: "" } },
+			},
+			[],
+			createDaemonInfo(),
+		);
+		expect(badCall.error?.code).toBe(-32602);
 	});
 
 	it("frames without embedded newlines", () => {
