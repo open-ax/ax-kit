@@ -2,7 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { describe, expect, it } from "vitest";
-import { createHitlKey } from "../src/hitl.js";
+import {
+	ApprovalStore,
+	canonicalizeArgs,
+	createHitlKey,
+	hashArgs,
+	hitlKeyToString,
+} from "../src/hitl.js";
 import {
 	assertLiveContext,
 	assertManifestPosture,
@@ -90,26 +96,47 @@ describe("trusted tier", () => {
 				"https://b.example",
 			),
 		).toBe(true);
-		const decision = applyArgAllowList({ a: 1, b: 2 }, ["a"]);
-		expect(decision.minimizedArgs).toEqual({ a: 1 });
+		expect(applyArgAllowList({ a: 1, b: 2 }, ["a"])).toEqual({ a: 1 });
 	});
 
 	it("authorizes only bound approvals from live contexts", () => {
+		const argsJson = canonicalizeArgs({ sku: "a" });
+		const argsHash = hashArgs(argsJson);
 		const key = createHitlKey({
 			tabId: 1,
 			documentId: "d",
 			frameId: 0,
 			toolName: "viewCart",
-			argsHash: "abcd",
+			argsHash,
 		});
+		const approvedKey = hitlKeyToString(key);
+		const details = {
+			key,
+			toolName: "viewCart",
+			origin: "https://shop.example",
+			frameOrigin: "https://shop.example",
+			argsJson,
+			consequentialHint: false,
+			readOnlyHint: true,
+			definitionVersion: "v1",
+		};
+		const store = new ApprovalStore();
+		const pendingKey = store.requestApproval(details, true);
+		expect(pendingKey).toBe(approvedKey);
+		store.approveApproval(pendingKey);
 		expect(() =>
 			authorizeExecution({
 				handler: "executeTool",
 				contextLive: true,
 				key,
-				approvedKey: "1|d|0|viewCart|abcd",
+				approvedKey,
+				ownerOrigin: "https://shop.example",
 				callerOrigin: "https://shop.example",
 				allowedOrigins: [],
+				argsJson,
+				liveKey: key,
+				liveDefinitionVersion: "v1",
+				store,
 			}),
 		).not.toThrow();
 		expect(() =>
@@ -117,9 +144,14 @@ describe("trusted tier", () => {
 				handler: "runAnything",
 				contextLive: true,
 				key,
-				approvedKey: "1|d|0|viewCart|abcd",
+				approvedKey,
+				ownerOrigin: "https://shop.example",
 				callerOrigin: "https://shop.example",
 				allowedOrigins: [],
+				argsJson,
+				liveKey: key,
+				liveDefinitionVersion: "v1",
+				store: new ApprovalStore(),
 			}),
 		).toThrow(TypeError);
 		expect(() =>
@@ -127,9 +159,56 @@ describe("trusted tier", () => {
 				handler: "executeTool",
 				contextLive: false,
 				key,
-				approvedKey: "1|d|0|viewCart|abcd",
+				approvedKey,
+				ownerOrigin: "https://shop.example",
 				callerOrigin: "https://shop.example",
 				allowedOrigins: [],
+				argsJson,
+				liveKey: key,
+				liveDefinitionVersion: "v1",
+				store: new ApprovalStore(),
+			}),
+		).toThrow(TypeError);
+	});
+
+	it("rejects cross-origin callers even with a valid approval string", () => {
+		const argsJson = canonicalizeArgs({ sku: "a" });
+		const key = createHitlKey({
+			tabId: 1,
+			documentId: "d",
+			frameId: 0,
+			toolName: "viewCart",
+			argsHash: hashArgs(argsJson),
+		});
+		const approvedKey = hitlKeyToString(key);
+		const store = new ApprovalStore();
+		const pending = store.requestApproval(
+			{
+				key,
+				toolName: "viewCart",
+				origin: "https://shop.example",
+				frameOrigin: "https://shop.example",
+				argsJson,
+				consequentialHint: false,
+				readOnlyHint: true,
+				definitionVersion: "v1",
+			},
+			true,
+		);
+		store.approveApproval(pending);
+		expect(() =>
+			authorizeExecution({
+				handler: "executeTool",
+				contextLive: true,
+				key,
+				approvedKey,
+				ownerOrigin: "https://shop.example",
+				callerOrigin: "https://evil.example",
+				allowedOrigins: [],
+				argsJson,
+				liveKey: key,
+				liveDefinitionVersion: "v1",
+				store,
 			}),
 		).toThrow(TypeError);
 	});

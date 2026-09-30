@@ -36,16 +36,17 @@ describe("hitl binding", () => {
 		expect(canonicalizeArgs({ b: 1, a: 2 })).toBe(
 			canonicalizeArgs({ a: 2, b: 1 }),
 		);
-		expect(hashArgs("x")).toHaveLength(8);
+		expect(hashArgs("x")).toHaveLength(64);
 	});
 
 	it("compares all five key parts", () => {
+		const argsHash = hashArgs(canonicalizeArgs({ a: 1 }));
 		const base = createHitlKey({
 			tabId: 1,
 			documentId: "d",
 			frameId: 0,
 			toolName: "viewCart",
-			argsHash: "abcd",
+			argsHash,
 		});
 		expect(hitlKeysEqual(base, { ...base })).toBe(true);
 		expect(hitlKeysEqual(base, { ...base, tabId: 2 })).toBe(false);
@@ -99,5 +100,46 @@ describe("hitl binding", () => {
 
 	it("uses the side panel only", () => {
 		expect(CONFIRMATION_SURFACE).toBe("side-panel");
+	});
+
+	it("binds args hash and rejects malformed key parts", () => {
+		const good = details();
+		expect(() =>
+			new ApprovalStore().requestApproval(
+				{ ...good, argsJson: canonicalizeArgs({ sku: "b" }) },
+				true,
+			),
+		).toThrow(TypeError);
+		expect(() =>
+			createHitlKey({ ...good.key, frameId: -1 }),
+		).toThrow(TypeError);
+		expect(() =>
+			createHitlKey({ ...good.key, documentId: "" }),
+		).toThrow(TypeError);
+		expect(() => createHitlKey({ ...good.key, argsHash: "abcd" })).toThrow(
+			TypeError,
+		);
+	});
+
+	it("uses an unambiguous key encoding", () => {
+		const a = hitlKeyToString(
+			createHitlKey({
+				tabId: 1,
+				documentId: "x",
+				frameId: 0,
+				toolName: "t",
+				argsHash: hashArgs("a"),
+			}),
+		);
+		const b = hitlKeyToString(
+			createHitlKey({
+				tabId: 1,
+				documentId: "x|0|t",
+				frameId: 0,
+				toolName: "t",
+				argsHash: hashArgs("a"),
+			}),
+		);
+		expect(a).not.toBe(b);
 	});
 });

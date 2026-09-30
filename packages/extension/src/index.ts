@@ -31,6 +31,7 @@ export type {
 export {
 	ApprovalStore,
 	CONFIRMATION_SURFACE,
+	assertToolName,
 	canonicalizeArgs,
 	createHitlKey,
 	hashArgs,
@@ -45,7 +46,6 @@ export {
 	firefoxManifestPosture,
 } from "./manifest.js";
 export type {
-	AllowListDecision,
 	AuditEntry,
 	AuthorizationInput,
 	FrameToolView,
