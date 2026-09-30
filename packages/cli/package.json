@@ -1,0 +1,48 @@
+{
+	"name": "@ax-kit/cli",
+	"version": "0.0.0",
+	"description": "In-page contract audit for document.modelContext under headless Chromium",
+	"license": "Apache-2.0",
+	"engines": {
+		"node": ">=24.19.0 <25"
+	},
+	"type": "module",
+	"main": "./dist/index.cjs",
+	"module": "./dist/index.mjs",
+	"types": "./dist/index.d.mts",
+	"bin": {
+		"ax-kit": "./bin/ax-kit.cjs"
+	},
+	"exports": {
+		".": {
+			"import": {
+				"types": "./dist/index.d.mts",
+				"default": "./dist/index.mjs"
+			},
+			"require": {
+				"types": "./dist/index.d.cts",
+				"default": "./dist/index.cjs"
+			}
+		},
+		"./package.json": "./package.json"
+	},
+	"files": [
+		"dist",
+		"bin"
+	],
+	"sideEffects": false,
+	"scripts": {
+		"build": "tsdown",
+		"typecheck": "tsc --noEmit -p tsconfig.json",
+		"test": "vitest run",
+		"size": "echo \"no size gate for audit cli\"",
+		"publint": "publint",
+		"attw": "attw --pack . --profile node16"
+	},
+	"devDependencies": {
+		"@types/node": "^24.19.0",
+		"tsdown": "0.23.0",
+		"typescript": "6.0.3",
+		"vitest": "5.0.2"
+	}
+}

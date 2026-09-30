@@ -54,6 +54,8 @@ Then commit the generated `.changeset/*.md` file.
 - `@ax-kit/daemon`: stateless MCP `2026-07-28` bridge over byte-clean stdio
   with mandatory discovery, ephemeral loopback transport plus bearer, and
   a native-messaging host manifest.
+- `@ax-kit/cli`: `ax-kit audit <url>` scoring the in-page tool contract
+  under headless Chromium with explicit lane naming.
 
 No published package yet. Entries above describe the in-tree API; versioned
 releases will be cut with Changesets.
