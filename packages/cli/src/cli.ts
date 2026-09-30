@@ -1,16 +1,21 @@
 // Copyright 2026 Utpal Sen
 // SPDX-License-Identifier: Apache-2.0
 
+import { parseAuditTarget } from "./args.js";
 import { auditSnapshot } from "./audit.js";
 import type { AuditContextInput } from "./scoring.js";
 import { countFailures, scoreAudit } from "./scoring.js";
 
-const args: string[] = process.argv.slice(2);
-const target: string | undefined = args[0];
-if (typeof target !== "string" || target.length === 0) {
-	console.error("usage: ax-kit audit <url>");
-	process.exit(1);
+function readTarget(): string {
+	try {
+		return parseAuditTarget(process.argv.slice(2));
+	} catch {
+		console.error("usage: ax-kit audit <url>");
+		process.exit(1);
+	}
 }
+
+const target: string = readTarget();
 const snapshot: AuditContextInput = {
 	tools: [],
 	policyAllowsTools: true,

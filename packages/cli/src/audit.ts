@@ -254,8 +254,8 @@ export async function auditUrl(
 	if (typeof url !== "string" || url.length === 0) {
 		throw new TypeError("bad url");
 	}
-	const page = await browser.newPage();
 	try {
+		const page = await browser.newPage();
 		await page.goto(url);
 		const context = await collectContext(page);
 		return auditSnapshot(url, context);
