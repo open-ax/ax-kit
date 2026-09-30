@@ -21,9 +21,14 @@ const DEPRECATED_METHODS: ReadonlySet<string> = new Set([
 	"notifications/initialized",
 	"ping",
 	"logging/setLevel",
+	"logging/getLevel",
+	"notifications/message",
 	"notifications/roots/list_changed",
 	"roots/list",
 	"sampling/createMessage",
+	"client/registerCapability",
+	"client/unregisterCapability",
+	"notifications/tools/list_changed",
 	"experimental/tasks",
 ]);
 
@@ -117,7 +122,7 @@ export function serializeFrame(response: JsonRpcResponse): string {
 	if (typeof text !== "string") {
 		throw new TypeError("unserializable response");
 	}
-	if (text.includes("\n")) {
+	if (text.includes("\n") || text.includes("\r")) {
 		throw new TypeError("embedded newline");
 	}
 	return text;
@@ -150,14 +155,16 @@ export function completeResult(
 	return { resultType: "complete", ...data };
 }
 
-function versionMismatch(
+function fail(
+	id: string | number | null,
+	code: number,
 	message: string,
-): JsonRpcResponse & { id: string | number | null } {
-	return {
-		jsonrpc: "2.0",
-		id: null,
-		error: { code: -32000, message },
-	};
+): JsonRpcResponse {
+	return { jsonrpc: "2.0", id, error: { code, message } };
+}
+
+function ok(id: string | number | null, result: unknown): JsonRpcResponse {
+	return { jsonrpc: "2.0", id, result };
 }
 
 /**
@@ -183,65 +190,47 @@ export function dispatchRequest(
 			: null;
 	const method = record.method;
 	if (isDeprecatedMethod(method)) {
-		return {
-			jsonrpc: "2.0",
-			id,
-			error: { code: -32601, message: `unsupported method ${method}` },
-		};
+		return fail(id, -32601, `unsupported method ${method}`);
 	}
 	let meta: RequestMeta;
 	try {
 		meta = readMeta(record.params as unknown);
-	} catch {
-		return {
-			jsonrpc: "2.0",
-			id,
-			error: { code: -32602, message: "missing _meta" },
-		};
+	} catch (error: unknown) {
+		const detail = error instanceof TypeError ? `: ${error.message}` : "";
+		return fail(id, -32602, `missing _meta${detail}`);
 	}
 	if (meta.protocolVersion !== PROTOCOL_VERSION) {
-		const mismatch = versionMismatch(
-			`unsupported protocol version ${meta.protocolVersion}`,
-		);
-		return { ...mismatch, id };
+		return fail(id, -32000, `unsupported protocol version ${meta.protocolVersion}`);
 	}
 	if (method === "server/discover") {
-		return { jsonrpc: "2.0", id, result: discoveryResult(info) };
+		return ok(id, discoveryResult(info));
 	}
 	if (method === "tools/list") {
-		return { jsonrpc: "2.0", id, result: completeResult({ tools }) };
+		for (const tool of tools) {
+			if (typeof tool.name !== "string") {
+				return fail(id, -32602, "bad tool listing");
+			}
+		}
+		return ok(id, completeResult({ tools }));
 	}
 	if (method === "tools/call") {
 		const params = record.params as Record<string, unknown>;
 		const call = params.call;
 		if (typeof call !== "object" || call === null) {
-			return {
-				jsonrpc: "2.0",
-				id,
-				error: { code: -32602, message: "missing call" },
-			};
+			return fail(id, -32602, "missing call");
 		}
 		const callRecord = call as Record<string, unknown>;
-		if (typeof callRecord.name !== "string") {
-			return {
-				jsonrpc: "2.0",
-				id,
-				error: { code: -32602, message: "missing tool name" },
-			};
+		if (typeof callRecord.name !== "string" || callRecord.name.length === 0) {
+			return fail(id, -32602, "missing tool name");
 		}
-		return {
-			jsonrpc: "2.0",
+		return ok(
 			id,
-			result: completeResult({
+			completeResult({
 				deferred: true,
 				name: callRecord.name,
 				note: "execution resolves through the trusted tier",
 			}),
-		};
+		);
 	}
-	return {
-		jsonrpc: "2.0",
-		id,
-		error: { code: -32601, message: `unknown method ${method}` },
-	};
+	return fail(id, -32601, `unknown method ${method}`);
 }

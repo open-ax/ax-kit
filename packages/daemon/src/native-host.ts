@@ -16,9 +16,45 @@ export interface NativeHostManifest {
 }
 
 export const HOST_TO_BROWSER_MAX_BYTES: number = 1024 * 1024;
-export const BROWSER_TO_HOST_MAX_BYTES: number = 64 * 1024 * 1024;
+export const BROWSER_TO_HOST_MAX_BYTES: number = 1024 * 1024;
 
 const NAME_PATTERN = /^[a-z0-9_.]+$/;
+
+function isAbsolutePath(path: string): boolean {
+	return (
+		path.startsWith("/") ||
+		/^[A-Za-z]:[\\/]/.test(path) ||
+		path.startsWith("\\\\")
+	);
+}
+
+function isBareInterpreter(path: string): boolean {
+	const first = path.trim().split(/\s+/)[0] ?? "";
+	const lower = first.toLowerCase();
+	const base = lower.split(/[\\/]/).pop() ?? lower;
+	if (
+		base === "node" ||
+		base === "node.exe" ||
+		base === "python" ||
+		base === "python3" ||
+		base === "sh" ||
+		base === "bash" ||
+		base === "cmd" ||
+		base === "powershell"
+	) {
+		return true;
+	}
+	const target = first.split(/[\\/]/).pop() ?? first;
+	if (
+		target.toLowerCase().endsWith(".js") ||
+		target.toLowerCase().endsWith(".ts") ||
+		target.toLowerCase().endsWith(".py") ||
+		target.toLowerCase().endsWith(".sh")
+	) {
+		return true;
+	}
+	return false;
+}
 
 export function createNativeHostManifest(parts: unknown): NativeHostManifest {
 	if (typeof parts !== "object" || parts === null) {
@@ -38,7 +74,10 @@ export function createNativeHostManifest(parts: unknown): NativeHostManifest {
 	if (typeof path !== "string" || path.length === 0) {
 		throw new TypeError("bad host path");
 	}
-	if (path === "node src/index.js") {
+	if (!isAbsolutePath(path)) {
+		throw new TypeError("host path must be absolute");
+	}
+	if (isBareInterpreter(path)) {
 		throw new TypeError("bare interpreter invocation");
 	}
 	if (type !== "stdio") {
@@ -48,8 +87,14 @@ export function createNativeHostManifest(parts: unknown): NativeHostManifest {
 		throw new TypeError("bad allowed origins");
 	}
 	for (const entry of allowed_origins) {
-		if (typeof entry !== "string" || entry.includes("*")) {
+		if (typeof entry !== "string") {
 			throw new TypeError("wildcard origins are forbidden");
+		}
+		if (entry.includes("*")) {
+			throw new TypeError("wildcard origins are forbidden");
+		}
+		if (!entry.startsWith("chrome-extension://") || entry.length <= 21) {
+			throw new TypeError("allowed origin must be chrome-extension://<id>");
 		}
 	}
 	return {
@@ -73,6 +118,9 @@ export function windowsRegistryValue(manifestPath: unknown): string {
 }
 
 export function checkMessageSize(bytes: unknown, direction: unknown): void {
+	if (direction !== "host-to-browser" && direction !== "browser-to-host") {
+		throw new TypeError("bad direction");
+	}
 	if (typeof bytes !== "number" || !Number.isInteger(bytes) || bytes < 0) {
 		throw new TypeError("bad message size");
 	}
@@ -81,9 +129,6 @@ export function checkMessageSize(bytes: unknown, direction: unknown): void {
 	}
 	if (direction === "browser-to-host" && bytes > BROWSER_TO_HOST_MAX_BYTES) {
 		throw new TypeError("browser message too large");
-	}
-	if (direction !== "host-to-browser" && direction !== "browser-to-host") {
-		throw new TypeError("bad direction");
 	}
 }
 
@@ -111,12 +156,12 @@ export function sanitizeRendererPayload(
 		if (key === "__proto__" || key === "constructor" || key === "prototype") {
 			throw new TypeError(`forbidden key: ${key}`);
 		}
-		if (
-			value === null ||
-			typeof value === "string" ||
-			typeof value === "number" ||
-			typeof value === "boolean"
-		) {
+		if (value === null || typeof value === "string" || typeof value === "boolean") {
+			clean[key] = value;
+		} else if (typeof value === "number") {
+			if (!Number.isFinite(value)) {
+				throw new TypeError("non-finite number");
+			}
 			clean[key] = value;
 		} else {
 			throw new TypeError("renderer payload must be flat JSON scalars");

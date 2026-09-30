@@ -10,9 +10,6 @@
 export const MAX_FRAME_BYTES: number = 1024 * 1024;
 
 export function assertStdoutClean(text: string): void {
-	if (text.includes("\n") && text.trim() !== text.trimEnd()) {
-		throw new TypeError("stdout must carry one frame per line");
-	}
 	for (const line of text.split("\n")) {
 		if (line === "") {
 			continue;
@@ -31,15 +28,18 @@ export function assertStdoutClean(text: string): void {
 
 /** Split buffered stdin bytes into complete lines, keeping the remainder. */
 export function splitFrames(buffer: string): { lines: string[]; rest: string } {
+	if (buffer.length > MAX_FRAME_BYTES) {
+		throw new TypeError("frame too large");
+	}
 	const parts = buffer.split("\n");
-	const rest = parts.pop() as string;
+	const rest = parts.pop() ?? "";
 	const lines = parts.map((line) => line.replace(/\r$/, ""));
 	return { lines, rest };
 }
 
 /** True when the stdin side closed: the only portable shutdown signal. */
 export function isStdinClosed(chunk: unknown): boolean {
-	return chunk === null || chunk === undefined;
+	return chunk === null;
 }
 
 /** Write diagnostics to stderr only; never to stdout. */
