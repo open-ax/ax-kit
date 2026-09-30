@@ -30,8 +30,8 @@ export type {
 } from "./hitl.js";
 export {
 	ApprovalStore,
-	CONFIRMATION_SURFACE,
 	assertToolName,
+	CONFIRMATION_SURFACE,
 	canonicalizeArgs,
 	createHitlKey,
 	hashArgs,

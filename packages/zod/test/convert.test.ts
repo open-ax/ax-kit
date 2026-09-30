@@ -79,7 +79,10 @@ describe("validation-library adapter", () => {
 			convertToInputSchema({ type: "object", required: "sku" }),
 		).toThrow(TypeError);
 		expect(() =>
-			convertToInputSchema({ type: "string", description: { ["__proto__"]: 1 } }),
+			convertToInputSchema({
+				type: "string",
+				description: { ["__proto__"]: 1 },
+			}),
 		).toThrow(TypeError);
 	});
 

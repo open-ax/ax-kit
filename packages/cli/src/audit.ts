@@ -53,9 +53,7 @@ export async function collectContext(
 			return { tools: [], policyAllowsTools: true, originKeyed: true };
 		}
 		try {
-			const listed: unknown = (
-				surface.getTools as () => unknown
-			)();
+			const listed: unknown = (surface.getTools as () => unknown)();
 			if (!Array.isArray(listed)) {
 				return { tools: [], policyAllowsTools: true, originKeyed: true };
 			}
