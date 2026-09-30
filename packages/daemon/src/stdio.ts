@@ -28,12 +28,17 @@ export function assertStdoutClean(text: string): void {
 
 /** Split buffered stdin bytes into complete lines, keeping the remainder. */
 export function splitFrames(buffer: string): { lines: string[]; rest: string } {
-	if (buffer.length > MAX_FRAME_BYTES) {
-		throw new TypeError("frame too large");
-	}
 	const parts = buffer.split("\n");
 	const rest = parts.pop() ?? "";
 	const lines = parts.map((line) => line.replace(/\r$/, ""));
+	for (const frame of [...lines, rest]) {
+		if (frame.length === 0) {
+			continue;
+		}
+		if (Buffer.byteLength(frame, "utf8") > MAX_FRAME_BYTES) {
+			throw new TypeError("frame too large");
+		}
+	}
 	return { lines, rest };
 }
 

@@ -39,10 +39,11 @@ describe("cli audit", () => {
 	});
 
 	it("flags budget, exposure, policy, and cluster findings", () => {
+		const overName = "x".repeat(BUDGETS.toolName + 1);
 		const findings = scoreAudit({
 			tools: [
 				tool({
-					name: "x".repeat(BUDGETS.toolName + 1),
+					name: overName,
 					description: "y".repeat(BUDGETS.toolDescription + 1),
 					outputLength: BUDGETS.toolOutput + 1,
 					exposedOrigins: [
@@ -58,14 +59,19 @@ describe("cli audit", () => {
 			policyAllowsTools: false,
 			originKeyed: false,
 		});
-		const byCheck = new Map(findings.map((entry) => [entry.check, entry]));
-		expect(byCheck.get("naming-budget")?.pass).toBe(false);
-		expect(byCheck.get("description-budget")?.pass).toBe(false);
-		expect(byCheck.get("output-budget")?.pass).toBe(false);
-		expect(byCheck.get("exposure")?.pass).toBe(false);
-		expect(byCheck.get("read-only-sanity")?.pass).toBe(false);
-		expect(byCheck.get("policy")?.pass).toBe(false);
-		expect(byCheck.get("cluster")?.pass).toBe(false);
+		const byCheck = new Map(
+			findings.map((entry) => [
+				`${entry.check}:${entry.tool ?? "site"}`,
+				entry,
+			]),
+		);
+		expect(byCheck.get(`naming-budget:${overName}`)?.pass).toBe(false);
+		expect(byCheck.get(`description-budget:${overName}`)?.pass).toBe(false);
+		expect(byCheck.get(`output-budget:${overName}`)?.pass).toBe(false);
+		expect(byCheck.get(`exposure:${overName}`)?.pass).toBe(false);
+		expect(byCheck.get(`read-only-sanity:${overName}`)?.pass).toBe(false);
+		expect(byCheck.get("policy:site")?.pass).toBe(false);
+		expect(byCheck.get("cluster:site")?.pass).toBe(false);
 	});
 
 	it("names its lane explicitly and never an unqualified score", () => {
@@ -89,8 +95,8 @@ describe("cli audit", () => {
 						async goto(url: string): Promise<void> {
 							calls.push(url);
 						},
-						async evaluate<T>(fn: () => T): Promise<T> {
-							return fn();
+						async evaluate<T>(fn: () => T): Promise<Awaited<T>> {
+							return await fn();
 						},
 					};
 				},
@@ -134,8 +140,8 @@ describe("cli audit", () => {
 			async goto(url: string): Promise<void> {
 				calls.push(url);
 			},
-			async evaluate<T>(fn: () => T): Promise<T> {
-				return fn();
+			async evaluate<T>(fn: () => T): Promise<Awaited<T>> {
+				return await fn();
 			},
 		});
 		expect(calls).toHaveLength(0);

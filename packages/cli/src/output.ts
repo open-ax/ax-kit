@@ -60,13 +60,7 @@ export function createReport(url: unknown, findings: unknown): AuditReport {
 }
 
 function sanitizeLine(value: string): string {
-	return value
-		.split("")
-		.map((char) =>
-			char === "\r" || char === "\n" || char === "\u001b" ? "?" : char,
-		)
-		.join("")
-		.slice(0, 500);
+	return value.replace(/\p{Cc}/gu, "?").slice(0, 500);
 }
 
 export function formatReport(report: AuditReport): string {

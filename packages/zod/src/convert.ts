@@ -209,16 +209,27 @@ export interface LibrarySchemaLike {
 
 /**
  * Extract the raw JSON-Schema document from a library schema. Supports the
- * first-party conversion (`toJSONSchema()`) and plain schema objects.
+ * first-party conversion (`toJSONSchema(options)`) and plain schema objects.
+ * Input mode is selected so tool arguments reflect the validator's input.
  */
-export function extractJsonSchema(schema: unknown): Record<string, unknown> {
+export function extractJsonSchema(
+	schema: unknown,
+	io: "input" | "output" = "input",
+	target?: string | undefined,
+): Record<string, unknown> {
 	if (typeof schema !== "object" || schema === null) {
 		throw new TypeError("bad library schema");
 	}
 	const record = schema as Record<string, unknown>;
 	const converter = record.toJSONSchema;
 	if (typeof converter === "function") {
-		const produced: unknown = (converter as () => unknown).call(schema);
+		const args: Record<string, unknown> = { io };
+		if (target !== undefined) {
+			args.target = target;
+		}
+		const produced: unknown = (
+			converter as (options?: unknown) => unknown
+		).call(schema, args);
 		if (
 			typeof produced !== "object" ||
 			produced === null ||
@@ -243,13 +254,23 @@ export function extractJsonSchema(schema: unknown): Record<string, unknown> {
 /**
  * Convert a library schema to the specified input-schema shape. Emits the
  * JSON-Schema-subset object and stringifies at the boundary; serializer
- * errors propagate as `TypeError`.
+ * errors propagate as `TypeError`. Conversion selects the library's
+ * input representation so coerced and piped schemas advertise arguments.
  */
 export function convertToInputSchema(
 	schema: unknown,
 	options?: ConvertOptions | undefined,
 ): Record<string, unknown> {
-	const raw = extractJsonSchema(schema);
+	return convertWithIo(schema, "input", undefined, options);
+}
+
+function convertWithIo(
+	schema: unknown,
+	io: "input" | "output",
+	target: string | undefined,
+	options: ConvertOptions | undefined,
+): Record<string, unknown> {
+	const raw = extractJsonSchema(schema, io, target);
 	const allowAdditional = options?.allowAdditionalProperties === true;
 	const envelope: Record<string, unknown> = {};
 	for (const [key, value] of Object.entries(raw)) {
@@ -272,14 +293,48 @@ export function convertToInputSchema(
 		}
 		throw new TypeError("serializer error");
 	}
-	if (json.length > MAX_CONVERT_BYTES) {
+	if (new TextEncoder().encode(json).length > MAX_CONVERT_BYTES) {
 		throw new TypeError("schema too large");
 	}
 	return JSON.parse(json) as Record<string, unknown>;
 }
 
+const SUPPORTED_TARGETS: ReadonlySet<string> = new Set([
+	"draft-2020-12",
+	"draft-07",
+	"draft-7",
+	"draft-04",
+	"draft-4",
+	"openapi-3.0",
+]);
+
+function readTarget(options: unknown): string | undefined {
+	if (options === undefined) {
+		return undefined;
+	}
+	if (typeof options !== "object" || options === null) {
+		throw new TypeError("bad converter options");
+	}
+	const target = (options as Record<string, unknown>).target;
+	if (target === undefined) {
+		return undefined;
+	}
+	if (typeof target !== "string" || !SUPPORTED_TARGETS.has(target)) {
+		throw new TypeError(`unsupported target: ${String(target)}`);
+	}
+	return target;
+}
+
 /** Standard JSON-Schema converter shape, exposed alongside raw emission. */
 export interface StandardJsonSchemaConverter {
+	readonly "~standard": {
+		readonly version: 1;
+		readonly vendor: string;
+		readonly jsonSchema: {
+			readonly input: (options?: unknown) => Record<string, unknown>;
+			readonly output: (options?: unknown) => Record<string, unknown>;
+		};
+	};
 	readonly jsonSchema: {
 		readonly input: (options?: unknown) => Record<string, unknown>;
 		readonly output: (options?: unknown) => Record<string, unknown>;
@@ -290,13 +345,13 @@ export function asStandardConverter(
 	schema: unknown,
 	options?: ConvertOptions | undefined,
 ): StandardJsonSchemaConverter {
-	const converted = convertToInputSchema(schema, options);
-	const snapshot = (): Record<string, unknown> =>
-		JSON.parse(JSON.stringify(converted)) as Record<string, unknown>;
+	const input = (converterOptions?: unknown): Record<string, unknown> =>
+		convertWithIo(schema, "input", readTarget(converterOptions), options);
+	const output = (converterOptions?: unknown): Record<string, unknown> =>
+		convertWithIo(schema, "output", readTarget(converterOptions), options);
+	const methods = { input, output };
 	return {
-		jsonSchema: {
-			input: (_ignored?: unknown): Record<string, unknown> => snapshot(),
-			output: (_ignored?: unknown): Record<string, unknown> => snapshot(),
-		},
+		"~standard": { version: 1, vendor: "zod", jsonSchema: methods },
+		jsonSchema: methods,
 	};
 }

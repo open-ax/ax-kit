@@ -20,12 +20,6 @@ const DEPRECATED_METHODS: ReadonlySet<string> = new Set([
 	"initialize",
 	"notifications/initialized",
 	"ping",
-	"logging/setLevel",
-	"logging/getLevel",
-	"notifications/message",
-	"notifications/roots/list_changed",
-	"roots/list",
-	"sampling/createMessage",
 	"client/registerCapability",
 	"client/unregisterCapability",
 	"notifications/tools/list_changed",
@@ -66,8 +60,9 @@ function readMeta(params: unknown): RequestMeta {
 		throw new TypeError("missing _meta");
 	}
 	const metaRecord = meta as Record<string, unknown>;
-	const protocolVersion = metaRecord.protocolVersion;
-	const clientCapabilities = metaRecord.clientCapabilities;
+	const protocolVersion = metaRecord["io.modelcontextprotocol/protocolVersion"];
+	const clientCapabilities =
+		metaRecord["io.modelcontextprotocol/clientCapabilities"];
 	if (typeof protocolVersion !== "string") {
 		throw new TypeError("missing protocolVersion");
 	}
@@ -77,7 +72,7 @@ function readMeta(params: unknown): RequestMeta {
 	return {
 		protocolVersion,
 		clientCapabilities,
-		clientInfo: metaRecord.clientInfo as unknown,
+		clientInfo: metaRecord["io.modelcontextprotocol/clientInfo"] as unknown,
 	};
 }
 
@@ -178,11 +173,11 @@ export function dispatchRequest(
 	info: DaemonInfo,
 ): JsonRpcResponse {
 	if (typeof request !== "object" || request === null) {
-		throw new TypeError("bad request");
+		return fail(null, -32600, "invalid request");
 	}
 	const record = request as Record<string, unknown>;
 	if (typeof record.method !== "string") {
-		throw new TypeError("bad method");
+		return fail(null, -32600, "invalid request");
 	}
 	const id =
 		typeof record.id === "string" || typeof record.id === "number"
@@ -202,7 +197,7 @@ export function dispatchRequest(
 	if (meta.protocolVersion !== PROTOCOL_VERSION) {
 		return fail(
 			id,
-			-32000,
+			-32022,
 			`unsupported protocol version ${meta.protocolVersion}`,
 		);
 	}
