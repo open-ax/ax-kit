@@ -156,6 +156,14 @@ describe("cli audit", () => {
 		expect(() => parseAuditTarget([])).toThrow(TypeError);
 		expect(() => parseAuditTarget(["https://shop.example"])).toThrow(TypeError);
 		expect(() => parseAuditTarget(["audit", ""])).toThrow(TypeError);
+		expect(() => parseAuditTarget(["audit", "--help"])).toThrow(TypeError);
+		expect(() => parseAuditTarget(["audit", "not-a-url"])).toThrow(TypeError);
+		expect(() =>
+			parseAuditTarget(["audit", "https://shop.example", "extra"]),
+		).toThrow(TypeError);
+		expect(() =>
+			parseAuditTarget(["audit", "https://shop.example"]),
+		).not.toThrow();
 	});
 
 	it("closes the browser when page creation fails", async () => {
