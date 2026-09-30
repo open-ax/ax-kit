@@ -56,6 +56,8 @@ Then commit the generated `.changeset/*.md` file.
   a native-messaging host manifest.
 - `@ax-kit/cli`: `ax-kit audit <url>` scoring the in-page tool contract
   under headless Chromium with explicit lane naming.
+- `@ax-kit/zod`: validation-library to input-schema conversion over the
+  first-party JSON-Schema output with subset caps and boundary stringify.
 
 No published package yet. Entries above describe the in-tree API; versioned
 releases will be cut with Changesets.
