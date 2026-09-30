@@ -45,6 +45,21 @@ importers:
         specifier: 5.0.2
         version: 5.0.2(@types/node@26.6.3)(@vitest/browser-playwright@5.0.2)(@vitest/ui@5.0.2)(happy-dom@20.14.5)(vite@8.3.1(@types/node@26.6.3))
 
+  packages/cli:
+    devDependencies:
+      '@types/node':
+        specifier: ^24.19.0
+        version: 24.19.0
+      tsdown:
+        specifier: 0.23.0
+        version: 0.23.0(@arethetypeswrong/core@0.18.5)(@volar/typescript@2.4.15)(publint@0.3.24)(typescript@6.0.3)(vue-tsc@2.2.12(typescript@6.0.3))
+      typescript:
+        specifier: 6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: 5.0.2
+        version: 5.0.2(@types/node@24.19.0)(@vitest/browser-playwright@5.0.2)(@vitest/ui@5.0.2)(happy-dom@20.14.5)(vite@8.3.1(@types/node@24.19.0))
+
   packages/core:
     devDependencies:
       '@size-limit/file':
@@ -59,6 +74,33 @@ importers:
       size-limit:
         specifier: 14.0.1
         version: 14.0.1
+      tsdown:
+        specifier: 0.23.0
+        version: 0.23.0(@arethetypeswrong/core@0.18.5)(@volar/typescript@2.4.15)(publint@0.3.24)(typescript@6.0.3)(vue-tsc@2.2.12(typescript@6.0.3))
+      typescript:
+        specifier: 6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: 5.0.2
+        version: 5.0.2(@types/node@26.6.3)(@vitest/browser-playwright@5.0.2)(@vitest/ui@5.0.2)(happy-dom@20.14.5)(vite@8.3.1(@types/node@26.6.3))
+
+  packages/daemon:
+    devDependencies:
+      '@types/node':
+        specifier: ^24.19.0
+        version: 24.19.0
+      tsdown:
+        specifier: 0.23.0
+        version: 0.23.0(@arethetypeswrong/core@0.18.5)(@volar/typescript@2.4.15)(publint@0.3.24)(typescript@6.0.3)(vue-tsc@2.2.12(typescript@6.0.3))
+      typescript:
+        specifier: 6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: 5.0.2
+        version: 5.0.2(@types/node@24.19.0)(@vitest/browser-playwright@5.0.2)(@vitest/ui@5.0.2)(happy-dom@20.14.5)(vite@8.3.1(@types/node@24.19.0))
+
+  packages/extension:
+    devDependencies:
       tsdown:
         specifier: 0.23.0
         version: 0.23.0(@arethetypeswrong/core@0.18.5)(@volar/typescript@2.4.15)(publint@0.3.24)(typescript@6.0.3)(vue-tsc@2.2.12(typescript@6.0.3))
@@ -196,6 +238,25 @@ importers:
       vue-tsc:
         specifier: 2.2.12
         version: 2.2.12(typescript@6.0.3)
+
+  packages/zod:
+    dependencies:
+      zod:
+        specifier: 4.6.5
+        version: 4.6.5
+    devDependencies:
+      '@types/node':
+        specifier: ^24.19.0
+        version: 24.19.0
+      tsdown:
+        specifier: 0.23.0
+        version: 0.23.0(@arethetypeswrong/core@0.18.5)(@volar/typescript@2.4.15)(publint@0.3.24)(typescript@6.0.3)(vue-tsc@2.2.12(typescript@6.0.3))
+      typescript:
+        specifier: 6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: 5.0.2
+        version: 5.0.2(@types/node@24.19.0)(@vitest/browser-playwright@5.0.2)(@vitest/ui@5.0.2)(happy-dom@20.14.5)(vite@8.3.1(@types/node@24.19.0))
 
 packages:
 
@@ -1487,6 +1548,9 @@ packages:
   zimmerframe@1.1.5:
     resolution: {integrity: sha512-msJxIvYDYcoNL+PJsu+7qmpDWsYmAxTY+2TNYXXF0hzBzBk0BMecOqDOG/EckUoKCuKwObfbugIl8QpqHDXeFA==}
 
+  zod@4.6.5:
+    resolution: {integrity: sha512-v5l/aFXZQeai4awLbOpSoHecE9UiMrnfx75tEXLjNonXVARxQ5mOeipTjROUchszUNCqnE+hqAMujRsRHsut2Q==}
+
 snapshots:
 
   '@andrewbranch/untar.js@1.0.4': {}
@@ -1809,7 +1873,7 @@ snapshots:
       pathe: 2.0.3
       sirv: 3.0.2
       tinyrainbow: 3.1.1
-      vitest: 5.0.2(@types/node@26.6.3)(@vitest/browser-playwright@5.0.2)(@vitest/ui@5.0.2)(happy-dom@20.14.5)(vite@8.3.1(@types/node@26.6.3))
+      vitest: 5.0.2(@types/node@24.19.0)(@vitest/browser-playwright@5.0.2)(@vitest/ui@5.0.2)(happy-dom@20.14.5)(vite@8.3.1(@types/node@24.19.0))
 
   '@vitest/utils@5.0.2':
     dependencies:
@@ -2661,3 +2725,5 @@ snapshots:
       '@yuku-parser/binding-win32-x64': 0.10.2
 
   zimmerframe@1.1.5: {}
+
+  zod@4.6.5: {}
