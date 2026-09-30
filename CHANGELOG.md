@@ -46,6 +46,11 @@ Then commit the generated `.changeset/*.md` file.
   resolves a fresh handle per call and parses the string result at the
   boundary. Pinned draft (`SPEC_VERSION`): Draft Community Group Report,
   29 September 2026.
+- `@ax-kit/extension`: worker-side bridge driving `document.modelContext`
+  from a service worker over injection-only transport with enumerated
+  handlers, side-panel confirmation bound to tab, document, frame, tool
+  name, and argument hash, default-deny manifest posture, and a
+  worker-held audit trail.
 
 No published package yet. Entries above describe the in-tree API; versioned
 releases will be cut with Changesets.
