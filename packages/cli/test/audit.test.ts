@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { describe, expect, it } from "vitest";
+import { parseAuditTarget } from "../src/args.js";
 import { auditSnapshot, auditUrl } from "../src/audit.js";
 import { formatReport, LANE_STATEMENT } from "../src/output.js";
 import { BUDGETS, countFailures, scoreAudit } from "../src/scoring.js";
@@ -145,5 +146,33 @@ describe("cli audit", () => {
 			},
 		});
 		expect(calls).toHaveLength(0);
+	});
+
+	it("parses the audit subcommand separately from its url", () => {
+		expect(parseAuditTarget(["audit", "https://shop.example"])).toBe(
+			"https://shop.example",
+		);
+		expect(() => parseAuditTarget(["audit"])).toThrow(TypeError);
+		expect(() => parseAuditTarget([])).toThrow(TypeError);
+		expect(() => parseAuditTarget(["https://shop.example"])).toThrow(TypeError);
+		expect(() => parseAuditTarget(["audit", ""])).toThrow(TypeError);
+	});
+
+	it("closes the browser when page creation fails", async () => {
+		const closed: string[] = [];
+		await expect(
+			auditUrl(
+				{
+					async newPage() {
+						throw new TypeError("no page");
+					},
+					async close(): Promise<void> {
+						closed.push("close");
+					},
+				},
+				"https://shop.example",
+			),
+		).rejects.toThrow(TypeError);
+		expect(closed).toEqual(["close"]);
 	});
 });
