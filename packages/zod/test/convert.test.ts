@@ -138,4 +138,33 @@ describe("validation-library adapter", () => {
 			converter.jsonSchema.input({ target: "draft-2020-12" }),
 		).not.toThrow();
 	});
+
+	it("forwards targets to the underlying converter", () => {
+		const seen: unknown[] = [];
+		const source = {
+			toJSONSchema: (options?: unknown) => {
+				seen.push(options);
+				return z.toJSONSchema(
+					z.string(),
+					options as { io?: "input" | "output"; target?: string } | undefined,
+				);
+			},
+		};
+		const converter = asStandardConverter(source);
+		for (const target of [
+			"draft-2020-12",
+			"draft-07",
+			"draft-7",
+			"draft-04",
+			"draft-4",
+			"openapi-3.0",
+		]) {
+			seen.length = 0;
+			converter.jsonSchema.input({ target });
+			expect(seen).toHaveLength(1);
+			const forwarded = seen[0] as Record<string, unknown>;
+			expect(forwarded.target).toBe(target);
+			expect(forwarded.io).toBe("input");
+		}
+	});
 });
