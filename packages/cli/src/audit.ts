@@ -31,6 +31,12 @@ export type BrowserLike = {
  * Collect the audit context inside the page. Never navigates: the caller
  * owns navigation. Every page function is self-contained with no closed-over
  * state; only serializable data crosses the boundary.
+ *
+ * Fail-closed: the page realm is hostile and may subvert in-page guards
+ * (for example poisoned `Array.isArray` or `Object.entries`), so shaped
+ * values are revalidated Node-side by `scoreAudit`. Malformed tool data
+ * throws instead of scoring the remaining tools; no filtering or
+ * normalization is applied before scoring.
  */
 export async function collectContext(
 	page: BrowserPageLike,
