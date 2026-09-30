@@ -103,5 +103,39 @@ describe("cli audit", () => {
 		expect(calls).toContain("https://shop.example");
 		expect(calls).toContain("close");
 		expect(text).toContain(LANE_STATEMENT);
+		expect(calls.filter((call) => call === "about:blank")).toHaveLength(0);
+	});
+
+	it("scores param budgets, wildcard exposure, and empty coverage", async () => {
+		const { collectContext } = await import("../src/audit.js");
+		const over = scoreAudit({
+			tools: [
+				tool({ maxParamDescription: BUDGETS.paramDescription + 1 }),
+				tool({ name: "wild", exposedOrigins: ["*"] }),
+			],
+			policyAllowsTools: true,
+			originKeyed: true,
+		});
+		const byCheck = new Map(over.map((entry) => [`${entry.check}:${entry.tool}`, entry]));
+		expect(byCheck.get("param-description-budget:viewCart")?.pass).toBe(false);
+		expect(byCheck.get("exposure:wild")?.pass).toBe(false);
+		const empty = scoreAudit({
+			tools: [],
+			policyAllowsTools: true,
+			originKeyed: true,
+		});
+		expect(empty.find((entry) => entry.check === "consequential-coverage")?.pass).toBe(
+			false,
+		);
+		const calls: string[] = [];
+		await collectContext({
+			async goto(url: string): Promise<void> {
+				calls.push(url);
+			},
+			async evaluate<T>(fn: () => T): Promise<T> {
+				return fn();
+			},
+		});
+		expect(calls).toHaveLength(0);
 	});
 });

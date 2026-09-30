@@ -28,25 +28,50 @@ export function createReport(url: unknown, findings: unknown): AuditReport {
 	if (!Array.isArray(findings)) {
 		throw new TypeError("bad findings");
 	}
-	const typed = findings as ReadonlyArray<AuditFinding>;
+	const clean: AuditFinding[] = [];
+	for (const entry of findings) {
+		if (typeof entry !== "object" || entry === null) {
+			throw new TypeError("bad finding");
+		}
+		const record = entry as Record<string, unknown>;
+		if (typeof record.check !== "string" || typeof record.detail !== "string") {
+			throw new TypeError("bad finding");
+		}
+		if (typeof record.pass !== "boolean") {
+			throw new TypeError("bad finding");
+		}
+		if (record.tool !== null && typeof record.tool !== "string") {
+			throw new TypeError("bad finding");
+		}
+		clean.push({
+			check: record.check,
+			tool: record.tool as string | null,
+			pass: record.pass,
+			detail: record.detail,
+		});
+	}
 	return {
 		url,
 		lane: LANE_STATEMENT,
-		failures: countFailures(typed),
-		total: typed.length,
-		findings: [...typed],
+		failures: countFailures(clean),
+		total: clean.length,
+		findings: clean,
 	};
+}
+
+function sanitizeLine(value: string): string {
+	return value.replace(/[\r\n\x1b]/g, "?").slice(0, 500);
 }
 
 export function formatReport(report: AuditReport): string {
 	const lines: string[] = [];
-	lines.push(`audit ${report.url}`);
+	lines.push(`audit ${sanitizeLine(report.url)}`);
 	lines.push(report.lane);
 	lines.push(`${report.failures}/${report.total} failing`);
 	for (const finding of report.findings) {
 		const target = finding.tool ?? "site";
 		lines.push(
-			`${finding.pass ? "pass" : "fail"} ${finding.check} ${target}: ${finding.detail}`,
+			`${finding.pass ? "pass" : "fail"} ${sanitizeLine(finding.check)} ${sanitizeLine(target)}: ${sanitizeLine(finding.detail)}`,
 		);
 	}
 	return lines.join("\n");
