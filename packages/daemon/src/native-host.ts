@@ -20,6 +20,8 @@ export const BROWSER_TO_HOST_MAX_BYTES: number = 1024 * 1024;
 
 const NAME_PATTERN = /^[a-z0-9_.]+$/;
 
+const EXTENSION_ORIGIN_PATTERN = /^chrome-extension:\/\/[a-p]{32}\/$/;
+
 function isAbsolutePath(path: string): boolean {
 	return (
 		path.startsWith("/") ||
@@ -93,7 +95,7 @@ export function createNativeHostManifest(parts: unknown): NativeHostManifest {
 		if (entry.includes("*")) {
 			throw new TypeError("wildcard origins are forbidden");
 		}
-		if (!entry.startsWith("chrome-extension://") || entry.length <= 21) {
+		if (!EXTENSION_ORIGIN_PATTERN.test(entry)) {
 			throw new TypeError("allowed origin must be chrome-extension://<id>");
 		}
 	}

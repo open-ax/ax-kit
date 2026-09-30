@@ -126,13 +126,22 @@ export function applyArgAllowList(
 	}
 	const allowed = new Set<string>();
 	for (const key of allowedKeys) {
-		if (typeof key !== "string" || key.length === 0) {
+		if (
+			typeof key !== "string" ||
+			key.length === 0 ||
+			key === "__proto__" ||
+			key === "constructor" ||
+			key === "prototype"
+		) {
 			throw new TypeError("bad allow-list");
 		}
 		allowed.add(key);
 	}
 	const source = args as Record<string, unknown>;
-	const minimized: Record<string, unknown> = {};
+	const minimized: Record<string, unknown> = Object.create(null) as Record<
+		string,
+		unknown
+	>;
 	for (const key of allowed) {
 		if (Object.hasOwn(source, key)) {
 			const value: unknown = source[key];

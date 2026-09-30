@@ -19,7 +19,7 @@ export function auditSnapshot(url: string, context: AuditContextInput): string {
 
 export type BrowserPageLike = {
 	goto(url: string): Promise<void>;
-	evaluate<T>(fn: () => T): Promise<T>;
+	evaluate<T>(fn: () => T): Promise<Awaited<T>>;
 };
 
 export type BrowserLike = {
@@ -35,11 +35,74 @@ export type BrowserLike = {
 export async function collectContext(
 	page: BrowserPageLike,
 ): Promise<AuditContextInput> {
-	const raw = await page.evaluate((): unknown => {
-		if (typeof document === "undefined") {
+	const evaluated = await page.evaluate((): unknown => {
+		const doc = (typeof document === "undefined"
+			? undefined
+			: document) as unknown as Record<string, unknown> | undefined;
+		if (doc === undefined) {
 			return { tools: [], policyAllowsTools: true, originKeyed: true };
 		}
-		const holder = document as unknown as Record<string, unknown>;
+		let policyAllowsTools = true;
+		try {
+			const policy = doc.permissionsPolicy as
+				| {
+						allowsFeature?: unknown;
+						features?: unknown;
+				  }
+				| undefined;
+			if (
+				typeof policy === "object" &&
+				policy !== null &&
+				typeof policy.allowsFeature === "function"
+			) {
+				let knownIncludesTools = false;
+				const known = policy.features;
+				if (typeof known === "function") {
+					try {
+						const names = (known as () => unknown).call(policy);
+						if (Array.isArray(names)) {
+							knownIncludesTools = names.includes("tools");
+						}
+					} catch {
+						knownIncludesTools = false;
+					}
+				}
+				if (knownIncludesTools) {
+					policyAllowsTools =
+						(policy.allowsFeature as (feature: string) => unknown).call(
+							policy,
+							"tools",
+						) !== false;
+				}
+			}
+		} catch {
+			policyAllowsTools = true;
+		}
+		let originKeyed = true;
+		try {
+			const location = doc.location as
+				| { protocol?: unknown; hostname?: unknown }
+				| undefined;
+			const protocol =
+				typeof location?.protocol === "string" ? location.protocol : "";
+			const hostname =
+				typeof location?.hostname === "string" ? location.hostname : "";
+			if (protocol === "file:") {
+				originKeyed = true;
+			} else if (hostname === "") {
+				originKeyed = true;
+			} else {
+				try {
+					const domain = doc.domain as unknown;
+					originKeyed = typeof domain !== "string" || domain === hostname;
+				} catch {
+					originKeyed = false;
+				}
+			}
+		} catch {
+			originKeyed = true;
+		}
+		const holder = doc;
 		const surface = holder.modelContext as unknown as
 			| {
 					getTools?: unknown;
@@ -50,12 +113,18 @@ export async function collectContext(
 			surface === null ||
 			typeof surface.getTools !== "function"
 		) {
-			return { tools: [], policyAllowsTools: true, originKeyed: true };
+			return { tools: [], policyAllowsTools, originKeyed };
 		}
-		try {
-			const listed: unknown = (surface.getTools as () => unknown)();
+		const pending: unknown = (
+			surface.getTools as (...args: unknown[]) => unknown
+		).call(surface);
+		const isThenable =
+			typeof pending === "object" &&
+			pending !== null &&
+			typeof (pending as { then?: unknown }).then === "function";
+		const finish = (listed: unknown): unknown => {
 			if (!Array.isArray(listed)) {
-				return { tools: [], policyAllowsTools: true, originKeyed: true };
+				return { tools: [], policyAllowsTools, originKeyed };
 			}
 			const tools: Record<string, unknown>[] = [];
 			for (const entry of listed) {
@@ -63,30 +132,108 @@ export async function collectContext(
 					continue;
 				}
 				const record = entry as Record<string, unknown>;
+				const inputSchema: unknown = (record as { inputSchema?: unknown })
+					.inputSchema;
+				const hasInputSchema = inputSchema !== undefined;
+				const schemaValid =
+					typeof inputSchema === "object" &&
+					inputSchema !== null &&
+					!Array.isArray(inputSchema) &&
+					(inputSchema as Record<string, unknown>).type === "object";
+				const annotations = record.annotations as
+					| Record<string, unknown>
+					| undefined;
+				const consequentialHint =
+					(record.consequentialHint === true ||
+						(typeof annotations === "object" &&
+							annotations !== null &&
+							annotations.consequentialHint === true)) === true;
+				const readOnlyHint =
+					(record.readOnlyHint === true ||
+						(typeof annotations === "object" &&
+							annotations !== null &&
+							annotations.readOnlyHint === true)) === true;
+				let paramCount = 0;
+				let maxParamDescription = 0;
+				if (
+					typeof inputSchema === "object" &&
+					inputSchema !== null &&
+					!Array.isArray(inputSchema)
+				) {
+					const properties = (inputSchema as Record<string, unknown>)
+						.properties;
+					if (
+						typeof properties === "object" &&
+						properties !== null &&
+						!Array.isArray(properties)
+					) {
+						const entries = Object.entries(
+							properties as Record<string, unknown>,
+						);
+						paramCount = entries.length;
+						for (const [, prop] of entries) {
+							if (
+								typeof prop === "object" &&
+								prop !== null &&
+								!Array.isArray(prop)
+							) {
+								const description = (prop as Record<string, unknown>)
+									.description;
+								if (typeof description === "string") {
+									if (description.length > maxParamDescription) {
+										maxParamDescription = description.length;
+									}
+								}
+							}
+						}
+					}
+				}
+				const rawLength = (record as { outputLength?: unknown }).outputLength;
+				const outputLength =
+					typeof rawLength === "number" &&
+					Number.isFinite(rawLength) &&
+					rawLength >= 0
+						? rawLength
+						: 0;
 				tools.push({
 					name: typeof record.name === "string" ? record.name : "unknown",
 					description:
 						typeof record.description === "string" ? record.description : "",
-					hasInputSchema: record.inputSchema !== undefined,
-					schemaValid: record.inputSchema !== undefined,
-					consequentialHint: record.consequentialHint === true,
-					readOnlyHint: record.readOnlyHint === true,
+					hasInputSchema,
+					schemaValid,
+					consequentialHint,
+					readOnlyHint,
 					exposedOrigins: Array.isArray(record.exposedOrigins)
 						? record.exposedOrigins.filter(
 								(origin): origin is string => typeof origin === "string",
 							)
 						: [],
-					outputLength:
-						typeof record.outputLength === "number" ? record.outputLength : 0,
-					paramCount: 0,
-					maxParamDescription: 0,
+					outputLength,
+					paramCount,
+					maxParamDescription,
 				});
 			}
-			return { tools, policyAllowsTools: true, originKeyed: true };
+			return { tools, policyAllowsTools, originKeyed };
+		};
+		if (isThenable) {
+			return (pending as Promise<unknown>).then(finish, () => ({
+				tools: [],
+				policyAllowsTools,
+				originKeyed,
+			}));
+		}
+		try {
+			return finish(pending);
 		} catch {
-			return { tools: [], policyAllowsTools: true, originKeyed: true };
+			return { tools: [], policyAllowsTools, originKeyed };
 		}
 	});
+	const raw: unknown =
+		typeof evaluated === "object" &&
+		evaluated !== null &&
+		typeof (evaluated as { then?: unknown }).then === "function"
+			? await (evaluated as Promise<unknown>)
+			: evaluated;
 	if (typeof raw !== "object" || raw === null) {
 		throw new TypeError("bad audit context");
 	}

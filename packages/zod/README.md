@@ -17,8 +17,9 @@ import { z } from "zod";
 import { convertToInputSchema } from "@ax-kit/zod";
 
 const inputSchema = convertToInputSchema({
-	toJSONSchema: () => z.toJSONSchema(
+	toJSONSchema: (options?: unknown) => z.toJSONSchema(
 		z.object({ query: z.string(), maxPrice: z.number().optional() }),
+		{ io: "input", ...(options as Record<string, unknown> | undefined) },
 	),
 });
 

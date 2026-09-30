@@ -97,6 +97,13 @@ describe("trusted tier", () => {
 			),
 		).toBe(true);
 		expect(applyArgAllowList({ a: 1, b: 2 }, ["a"])).toEqual({ a: 1 });
+		expect(() => applyArgAllowList({ a: 1 }, ["__proto__"])).toThrow(TypeError);
+		expect(() => applyArgAllowList({ a: 1 }, ["constructor"])).toThrow(
+			TypeError,
+		);
+		const minimized = applyArgAllowList({ a: 1 }, ["a"]);
+		expect(Object.getPrototypeOf(minimized)).toBe(null);
+		expect(Object.hasOwn(minimized, "a")).toBe(true);
 	});
 
 	it("authorizes only bound approvals from live contexts", () => {

@@ -93,7 +93,8 @@ function readTools(value: unknown): ReadonlyArray<AuditToolInput> {
 		}
 		if (
 			typeof tool.outputLength !== "number" ||
-			!Number.isFinite(tool.outputLength)
+			!Number.isFinite(tool.outputLength) ||
+			tool.outputLength < 0
 		) {
 			throw new TypeError("bad tool");
 		}

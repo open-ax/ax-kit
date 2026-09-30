@@ -14,9 +14,12 @@ import {
 function meta(version: string = PROTOCOL_VERSION): Record<string, unknown> {
 	return {
 		_meta: {
-			protocolVersion: version,
-			clientCapabilities: {},
-			clientInfo: { name: "test-client", version: "0.0.0" },
+			"io.modelcontextprotocol/protocolVersion": version,
+			"io.modelcontextprotocol/clientCapabilities": {},
+			"io.modelcontextprotocol/clientInfo": {
+				name: "test-client",
+				version: "0.0.0",
+			},
 		},
 	};
 }
@@ -66,18 +69,31 @@ describe("stateless protocol", () => {
 			[],
 			createDaemonInfo(),
 		);
-		expect(response.error?.code).toBe(-32000);
+		expect(response.error?.code).toBe(-32022);
+	});
+
+	it("returns invalid request instead of throwing on bad frames", () => {
+		expect(dispatchRequest(null, [], createDaemonInfo()).error?.code).toBe(
+			-32600,
+		);
+		expect(
+			dispatchRequest({ jsonrpc: "2.0", id: 1 }, [], createDaemonInfo()).error
+				?.code,
+		).toBe(-32600);
+	});
+
+	it("keeps deprecated roots, sampling, and logging usable", () => {
+		for (const method of [
+			"roots/list",
+			"sampling/createMessage",
+			"notifications/message",
+		]) {
+			expect(isDeprecatedMethod(method)).toBe(false);
+		}
 	});
 
 	it("treats deprecated capabilities as absent", () => {
-		for (const method of [
-			"initialize",
-			"ping",
-			"roots/list",
-			"sampling/createMessage",
-			"client/registerCapability",
-			"notifications/message",
-		]) {
+		for (const method of ["initialize", "ping", "client/registerCapability"]) {
 			expect(isDeprecatedMethod(method)).toBe(true);
 			const response = dispatchRequest(
 				{ jsonrpc: "2.0", id: 4, method, params: meta() },

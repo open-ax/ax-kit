@@ -15,6 +15,10 @@ surface, while this command grades how well one page uses it.
 ax-kit audit https://shop.example
 ```
 
+Experimental stub: the `ax-kit audit` command currently scores a fixed
+empty snapshot and exits non-zero, it does not drive a live page yet.
+Live results require `auditUrl()` with a headless browser.
+
 Scores typed tools, schema validity, consequential coverage, read-only
 sanity, exposure discipline, character budgets (500/150/30/1.5K),
 feature-policy posture, and the origin-keyed cluster precondition.

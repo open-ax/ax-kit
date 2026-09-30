@@ -85,7 +85,7 @@ describe("native host", () => {
 			description: "ax-kit bridge",
 			path: "/usr/local/bin/ax-bridge",
 			type: "stdio",
-			allowed_origins: ["chrome-extension://abcdef"],
+			allowed_origins: ["chrome-extension://knldjmfmopnpolahpmmgbagdohdnhkik/"],
 		});
 		expect(manifest.type).toBe("stdio");
 		expect(windowsRegistryValue("/host/bridge.json")).toBe("/host/bridge.json");
@@ -143,7 +143,9 @@ describe("native host", () => {
 					description: "x",
 					path: badPath,
 					type: "stdio",
-					allowed_origins: ["chrome-extension://abcdef"],
+					allowed_origins: [
+						"chrome-extension://knldjmfmopnpolahpmmgbagdohdnhkik/",
+					],
 				}),
 			).toThrow(TypeError);
 		}
@@ -156,11 +158,30 @@ describe("native host", () => {
 				allowed_origins: ["https://evil.example"],
 			}),
 		).toThrow(TypeError);
+		for (const badOrigin of [
+			"chrome-extension://x/../",
+			"chrome-extension://abcdef",
+			"chrome-extension://knldjmfmopnpolahpmmgbagdohdnhkik",
+		]) {
+			expect(() =>
+				createNativeHostManifest({
+					name: "com.openax.bridge",
+					description: "x",
+					path: "/bin/bridge",
+					type: "stdio",
+					allowed_origins: [badOrigin],
+				}),
+			).toThrow(TypeError);
+		}
 	});
 
 	it("enforces stdio caps and origin schemes", () => {
 		expect(() => checkUpgradeOrigin("file://127.0.0.1/")).toThrow(TypeError);
 		expect(isStdinClosed(undefined)).toBe(false);
 		expect(() => splitFrames("x".repeat(2 * 1024 * 1024))).toThrow(TypeError);
+		expect(() => splitFrames("界".repeat(400_000))).toThrow(TypeError);
+		const many = splitFrames(`${"a".repeat(100)}\n${"b".repeat(100)}\nrest`);
+		expect(many.lines).toEqual(["a".repeat(100), "b".repeat(100)]);
+		expect(many.rest).toBe("rest");
 	});
 });

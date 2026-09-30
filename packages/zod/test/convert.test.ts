@@ -95,4 +95,47 @@ describe("validation-library adapter", () => {
 		(first.properties as Record<string, unknown>).a = { type: "eviltype" };
 		expect(converter.jsonSchema.input()).not.toEqual(first);
 	});
+
+	it("selects input mode and separates output", () => {
+		const piped = z
+			.string()
+			.transform((value) => value.length)
+			.pipe(z.number());
+		const converted = convertToInputSchema({
+			toJSONSchema: (options?: unknown) =>
+				z.toJSONSchema(
+					piped,
+					options as { io?: "input" | "output" } | undefined,
+				),
+		});
+		expect(converted.type).toBe("string");
+		const converter = asStandardConverter({
+			toJSONSchema: (options?: unknown) =>
+				z.toJSONSchema(
+					piped,
+					options as { io?: "input" | "output" } | undefined,
+				),
+		});
+		expect(converter.jsonSchema.input().type).toBe("string");
+		expect(converter.jsonSchema.output().type).toBe("number");
+	});
+
+	it("measures bytes and exposes the standard envelope", () => {
+		expect(() =>
+			convertToInputSchema({
+				type: "string",
+				description: "界".repeat(30_000),
+			}),
+		).toThrow(TypeError);
+		const converter = asStandardConverter({ type: "string" });
+		expect(converter["~standard"].version).toBe(1);
+		expect(typeof converter["~standard"].vendor).toBe("string");
+		expect(converter["~standard"].jsonSchema.input().type).toBe("string");
+		expect(() =>
+			converter.jsonSchema.input({ target: "unsupported-draft" }),
+		).toThrow(TypeError);
+		expect(() =>
+			converter.jsonSchema.input({ target: "draft-2020-12" }),
+		).not.toThrow();
+	});
 });
