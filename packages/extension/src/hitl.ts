@@ -131,7 +131,11 @@ function encodeUtf8(text: string): number[] {
 		} else if (code < 0x800) {
 			out.push(0xc0 | (code >> 6), 0x80 | (code & 0x3f));
 		} else if (code < 0x10000) {
-			out.push(0xe0 | (code >> 12), 0x80 | ((code >> 6) & 0x3f), 0x80 | (code & 0x3f));
+			out.push(
+				0xe0 | (code >> 12),
+				0x80 | ((code >> 6) & 0x3f),
+				0x80 | (code & 0x3f),
+			);
 		} else {
 			out.push(
 				0xf0 | (code >> 18),
@@ -213,11 +217,15 @@ function sha256Hex(bytes: number[]): string {
 		let h = h7;
 		for (let i = 0; i < 64; i += 1) {
 			const s1 =
-				((e >>> 6) | (e << 26)) ^ ((e >>> 11) | (e << 21)) ^ ((e >>> 25) | (e << 7));
+				((e >>> 6) | (e << 26)) ^
+				((e >>> 11) | (e << 21)) ^
+				((e >>> 25) | (e << 7));
 			const ch = (e & f) ^ (~e & g);
 			const t1 = (h + s1 + ch + (k[i] ?? 0) + (w[i] ?? 0)) | 0;
 			const s0 =
-				((a >>> 2) | (a << 30)) ^ ((a >>> 13) | (a << 19)) ^ ((a >>> 22) | (a << 10));
+				((a >>> 2) | (a << 30)) ^
+				((a >>> 13) | (a << 19)) ^
+				((a >>> 22) | (a << 10));
 			const maj = (a & b) ^ (a & c) ^ (b & c);
 			const t2 = (s0 + maj) | 0;
 			h = g;
@@ -271,10 +279,7 @@ export function createHitlKey(parts: unknown): HitlKey {
 		throw new TypeError("bad tool name");
 	}
 	checkToolName(toolName);
-	if (
-		typeof argsHash !== "string" ||
-		!/^[0-9a-f]{64}$/.test(argsHash)
-	) {
+	if (typeof argsHash !== "string" || !/^[0-9a-f]{64}$/.test(argsHash)) {
 		throw new TypeError("bad argsHash");
 	}
 	return { tabId, documentId, frameId, toolName, argsHash };

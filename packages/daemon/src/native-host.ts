@@ -156,7 +156,11 @@ export function sanitizeRendererPayload(
 		if (key === "__proto__" || key === "constructor" || key === "prototype") {
 			throw new TypeError(`forbidden key: ${key}`);
 		}
-		if (value === null || typeof value === "string" || typeof value === "boolean") {
+		if (
+			value === null ||
+			typeof value === "string" ||
+			typeof value === "boolean"
+		) {
 			clean[key] = value;
 		} else if (typeof value === "number") {
 			if (!Number.isFinite(value)) {

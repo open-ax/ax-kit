@@ -116,7 +116,9 @@ describe("cli audit", () => {
 			policyAllowsTools: true,
 			originKeyed: true,
 		});
-		const byCheck = new Map(over.map((entry) => [`${entry.check}:${entry.tool}`, entry]));
+		const byCheck = new Map(
+			over.map((entry) => [`${entry.check}:${entry.tool}`, entry]),
+		);
 		expect(byCheck.get("param-description-budget:viewCart")?.pass).toBe(false);
 		expect(byCheck.get("exposure:wild")?.pass).toBe(false);
 		const empty = scoreAudit({
@@ -124,9 +126,9 @@ describe("cli audit", () => {
 			policyAllowsTools: true,
 			originKeyed: true,
 		});
-		expect(empty.find((entry) => entry.check === "consequential-coverage")?.pass).toBe(
-			false,
-		);
+		expect(
+			empty.find((entry) => entry.check === "consequential-coverage")?.pass,
+		).toBe(false);
 		const calls: string[] = [];
 		await collectContext({
 			async goto(url: string): Promise<void> {

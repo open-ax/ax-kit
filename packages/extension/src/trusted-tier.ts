@@ -3,7 +3,12 @@
 
 import { assertHandlerName } from "./handlers.js";
 import type { ApprovalStore, HitlKey } from "./hitl.js";
-import { assertToolName, hashArgs, hitlKeysEqual, hitlKeyToString } from "./hitl.js";
+import {
+	assertToolName,
+	hashArgs,
+	hitlKeysEqual,
+	hitlKeyToString,
+} from "./hitl.js";
 import { assertLiveContext } from "./manifest.js";
 
 /**
@@ -218,7 +223,13 @@ export interface AuthorizationInput {
 export function authorizeExecution(input: AuthorizationInput): string {
 	assertHandlerName(input.handler);
 	assertLiveContext(input.contextLive);
-	if (!isExposedToCaller(input.ownerOrigin, input.allowedOrigins, input.callerOrigin)) {
+	if (
+		!isExposedToCaller(
+			input.ownerOrigin,
+			input.allowedOrigins,
+			input.callerOrigin,
+		)
+	) {
 		throw new TypeError("tool not exposed");
 	}
 	if (typeof input.argsJson !== "string") {
@@ -233,6 +244,10 @@ export function authorizeExecution(input: AuthorizationInput): string {
 	if (hitlKeyToString(input.key) !== input.approvedKey) {
 		throw new TypeError("approval target changed");
 	}
-	input.store.verifyAndConsume(input.approvedKey, input.liveKey, input.liveDefinitionVersion);
+	input.store.verifyAndConsume(
+		input.approvedKey,
+		input.liveKey,
+		input.liveDefinitionVersion,
+	);
 	return input.approvedKey;
 }

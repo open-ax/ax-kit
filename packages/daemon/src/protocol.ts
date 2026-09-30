@@ -200,7 +200,11 @@ export function dispatchRequest(
 		return fail(id, -32602, `missing _meta${detail}`);
 	}
 	if (meta.protocolVersion !== PROTOCOL_VERSION) {
-		return fail(id, -32000, `unsupported protocol version ${meta.protocolVersion}`);
+		return fail(
+			id,
+			-32000,
+			`unsupported protocol version ${meta.protocolVersion}`,
+		);
 	}
 	if (method === "server/discover") {
 		return ok(id, discoveryResult(info));

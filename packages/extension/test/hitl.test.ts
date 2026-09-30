@@ -110,12 +110,12 @@ describe("hitl binding", () => {
 				true,
 			),
 		).toThrow(TypeError);
-		expect(() =>
-			createHitlKey({ ...good.key, frameId: -1 }),
-		).toThrow(TypeError);
-		expect(() =>
-			createHitlKey({ ...good.key, documentId: "" }),
-		).toThrow(TypeError);
+		expect(() => createHitlKey({ ...good.key, frameId: -1 })).toThrow(
+			TypeError,
+		);
+		expect(() => createHitlKey({ ...good.key, documentId: "" })).toThrow(
+			TypeError,
+		);
 		expect(() => createHitlKey({ ...good.key, argsHash: "abcd" })).toThrow(
 			TypeError,
 		);

@@ -194,8 +194,7 @@ export function scoreAudit(context: unknown): AuditFinding[] {
 		const allValid = tool.exposedOrigins.every(isValidOrigin);
 		// Heuristic budget (not spec): narrow means valid origins, no
 		// wildcards, and at most three entries. Discipline first, count second.
-		const narrow =
-			!hasWildcard && allValid && tool.exposedOrigins.length <= 3;
+		const narrow = !hasWildcard && allValid && tool.exposedOrigins.length <= 3;
 		findings.push({
 			check: "exposure",
 			tool: tool.name,
