@@ -1,0 +1,47 @@
+{
+	"name": "@ax-kit/zod",
+	"version": "0.0.0",
+	"description": "Validation-library to input-schema conversion for document.modelContext tools",
+	"license": "Apache-2.0",
+	"engines": {
+		"node": ">=24.19.0 <25"
+	},
+	"type": "module",
+	"main": "./dist/index.cjs",
+	"module": "./dist/index.mjs",
+	"types": "./dist/index.d.mts",
+	"exports": {
+		".": {
+			"import": {
+				"types": "./dist/index.d.mts",
+				"default": "./dist/index.mjs"
+			},
+			"require": {
+				"types": "./dist/index.d.cts",
+				"default": "./dist/index.cjs"
+			}
+		},
+		"./package.json": "./package.json"
+	},
+	"files": [
+		"dist"
+	],
+	"sideEffects": false,
+	"scripts": {
+		"build": "tsdown",
+		"typecheck": "tsc --noEmit -p tsconfig.json",
+		"test": "vitest run",
+		"size": "echo \"no size gate for zod adapter\"",
+		"publint": "publint",
+		"attw": "attw --pack . --profile node16"
+	},
+	"dependencies": {
+		"zod": "4.6.5"
+	},
+	"devDependencies": {
+		"@types/node": "^24.19.0",
+		"tsdown": "0.23.0",
+		"typescript": "6.0.3",
+		"vitest": "5.0.2"
+	}
+}
