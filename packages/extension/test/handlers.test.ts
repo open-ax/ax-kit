@@ -44,6 +44,21 @@ describe("enumerated handlers", () => {
 		);
 	});
 
+	it("reads each arg property once", () => {
+		let reads = 0;
+		const args: Record<string, unknown> = {};
+		Object.defineProperty(args, "tabId", {
+			enumerable: true,
+			get: () => {
+				reads += 1;
+				return reads === 1 ? 1 : 2;
+			},
+		});
+		const request = createInjectionRequest("listTools", args);
+		expect(reads).toBe(1);
+		expect(request.args).toEqual({ tabId: 1 });
+	});
+
 	it("exposes exactly one transport with no page-visible channel", async () => {
 		expect(TRANSPORT_KIND).toBe("injection-only");
 		const entry = await import("../src/index.js");

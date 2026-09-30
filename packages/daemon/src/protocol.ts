@@ -213,12 +213,10 @@ export function dispatchRequest(
 		return ok(id, completeResult({ tools }));
 	}
 	if (method === "tools/call") {
-		const params = record.params as Record<string, unknown>;
-		const call = params.call;
-		if (typeof call !== "object" || call === null) {
-			return fail(id, -32602, "missing call");
-		}
-		const callRecord = call as Record<string, unknown>;
+		const callRecord =
+			typeof record.params === "object" && record.params !== null
+				? (record.params as Record<string, unknown>)
+				: {};
 		if (typeof callRecord.name !== "string" || callRecord.name.length === 0) {
 			return fail(id, -32602, "missing tool name");
 		}
