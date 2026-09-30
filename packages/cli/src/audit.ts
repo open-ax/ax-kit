@@ -28,15 +28,14 @@ export type BrowserLike = {
 };
 
 /**
- * Collect the audit context inside the page. Every page function is
- * self-contained with no closed-over state; only serializable data
- * crosses the boundary.
+ * Collect the audit context inside the page. Never navigates: the caller
+ * owns navigation. Every page function is self-contained with no closed-over
+ * state; only serializable data crosses the boundary.
  */
 export async function collectContext(
 	page: BrowserPageLike,
 ): Promise<AuditContextInput> {
-	await page.goto("about:blank");
-	return page.evaluate((): AuditContextInput => {
+	const raw = await page.evaluate((): unknown => {
 		if (typeof document === "undefined") {
 			return { tools: [], policyAllowsTools: true, originKeyed: true };
 		}
@@ -53,8 +52,47 @@ export async function collectContext(
 		) {
 			return { tools: [], policyAllowsTools: true, originKeyed: true };
 		}
-		return { tools: [], policyAllowsTools: true, originKeyed: true };
+		try {
+			const listed: unknown = (
+				surface.getTools as () => unknown
+			)();
+			if (!Array.isArray(listed)) {
+				return { tools: [], policyAllowsTools: true, originKeyed: true };
+			}
+			const tools: Record<string, unknown>[] = [];
+			for (const entry of listed) {
+				if (typeof entry !== "object" || entry === null) {
+					continue;
+				}
+				const record = entry as Record<string, unknown>;
+				tools.push({
+					name: typeof record.name === "string" ? record.name : "unknown",
+					description:
+						typeof record.description === "string" ? record.description : "",
+					hasInputSchema: record.inputSchema !== undefined,
+					schemaValid: record.inputSchema !== undefined,
+					consequentialHint: record.consequentialHint === true,
+					readOnlyHint: record.readOnlyHint === true,
+					exposedOrigins: Array.isArray(record.exposedOrigins)
+						? record.exposedOrigins.filter(
+								(origin): origin is string => typeof origin === "string",
+							)
+						: [],
+					outputLength:
+						typeof record.outputLength === "number" ? record.outputLength : 0,
+					paramCount: 0,
+					maxParamDescription: 0,
+				});
+			}
+			return { tools, policyAllowsTools: true, originKeyed: true };
+		} catch {
+			return { tools: [], policyAllowsTools: true, originKeyed: true };
+		}
 	});
+	if (typeof raw !== "object" || raw === null) {
+		throw new TypeError("bad audit context");
+	}
+	return raw as AuditContextInput;
 }
 
 /** Drive a headless browser, collect, score, and format. */

@@ -45,6 +45,18 @@ export const BUDGETS = {
 	toolOutput: 1536,
 } as const;
 
+function isValidOrigin(value: unknown): boolean {
+	if (typeof value !== "string") {
+		return false;
+	}
+	try {
+		const parsed = new URL(value);
+		return parsed.origin !== "null";
+	} catch {
+		return false;
+	}
+}
+
 function readTools(value: unknown): ReadonlyArray<AuditToolInput> {
 	if (typeof value !== "object" || value === null) {
 		throw new TypeError("bad audit input");
@@ -54,6 +66,7 @@ function readTools(value: unknown): ReadonlyArray<AuditToolInput> {
 	if (!Array.isArray(tools)) {
 		throw new TypeError("bad tools");
 	}
+	const clean: AuditToolInput[] = [];
 	for (const entry of tools) {
 		if (typeof entry !== "object" || entry === null) {
 			throw new TypeError("bad tool");
@@ -70,18 +83,60 @@ function readTools(value: unknown): ReadonlyArray<AuditToolInput> {
 		) {
 			throw new TypeError("bad tool flags");
 		}
+		if (!Array.isArray(tool.exposedOrigins)) {
+			throw new TypeError("bad tool");
+		}
+		for (const origin of tool.exposedOrigins) {
+			if (typeof origin !== "string") {
+				throw new TypeError("bad tool");
+			}
+		}
 		if (
-			!Array.isArray(tool.exposedOrigins) ||
-			typeof tool.outputLength !== "number"
+			typeof tool.outputLength !== "number" ||
+			!Number.isFinite(tool.outputLength)
 		) {
 			throw new TypeError("bad tool");
 		}
+		if (
+			typeof tool.paramCount !== "number" ||
+			!Number.isInteger(tool.paramCount) ||
+			tool.paramCount < 0
+		) {
+			throw new TypeError("bad tool");
+		}
+		if (
+			typeof tool.maxParamDescription !== "number" ||
+			!Number.isFinite(tool.maxParamDescription) ||
+			tool.maxParamDescription < 0
+		) {
+			throw new TypeError("bad tool");
+		}
+		const title: unknown = tool.title;
+		if (title !== undefined && typeof title !== "string") {
+			throw new TypeError("bad tool");
+		}
+		clean.push({
+			name: tool.name,
+			description: tool.description,
+			title: typeof title === "string" ? title : undefined,
+			hasInputSchema: tool.hasInputSchema,
+			schemaValid: tool.schemaValid,
+			consequentialHint: tool.consequentialHint,
+			readOnlyHint: tool.readOnlyHint,
+			exposedOrigins: [...(tool.exposedOrigins as string[])],
+			outputLength: tool.outputLength,
+			paramCount: tool.paramCount,
+			maxParamDescription: tool.maxParamDescription,
+		});
 	}
-	return tools as ReadonlyArray<AuditToolInput>;
+	return clean;
 }
 
-/** Score one audited URL snapshot. Deterministic and side-effect free. */
-export function scoreAudit(context: unknown): AuditFinding[] {
+function readContext(context: unknown): {
+	tools: ReadonlyArray<AuditToolInput>;
+	policyAllowsTools: boolean;
+	originKeyed: boolean;
+} {
 	const tools = readTools(context);
 	const record = context as Record<string, unknown>;
 	const policyAllowsTools = record.policyAllowsTools;
@@ -92,6 +147,12 @@ export function scoreAudit(context: unknown): AuditFinding[] {
 	) {
 		throw new TypeError("bad audit context");
 	}
+	return { tools, policyAllowsTools, originKeyed };
+}
+
+/** Score one audited URL snapshot. Deterministic and side-effect free. */
+export function scoreAudit(context: unknown): AuditFinding[] {
+	const { tools, policyAllowsTools, originKeyed } = readContext(context);
 	const findings: AuditFinding[] = [];
 	for (const tool of tools) {
 		findings.push({
@@ -116,19 +177,36 @@ export function scoreAudit(context: unknown): AuditFinding[] {
 			detail: `description ${tool.description.length}/${BUDGETS.toolDescription}`,
 		});
 		findings.push({
+			check: "param-description-budget",
+			tool: tool.name,
+			pass: tool.maxParamDescription <= BUDGETS.paramDescription,
+			detail: `max param description ${tool.maxParamDescription}/${BUDGETS.paramDescription}`,
+		});
+		findings.push({
 			check: "output-budget",
 			tool: tool.name,
 			pass: tool.outputLength <= BUDGETS.toolOutput,
 			detail: `output ${tool.outputLength}/${BUDGETS.toolOutput}`,
 		});
+		const hasWildcard = tool.exposedOrigins.some(
+			(origin) => origin === "*" || origin === "<all_urls>",
+		);
+		const allValid = tool.exposedOrigins.every(isValidOrigin);
+		// Heuristic budget (not spec): narrow means valid origins, no
+		// wildcards, and at most three entries. Discipline first, count second.
+		const narrow =
+			!hasWildcard && allValid && tool.exposedOrigins.length <= 3;
 		findings.push({
 			check: "exposure",
 			tool: tool.name,
-			pass: tool.exposedOrigins.length <= 3,
-			detail:
-				tool.exposedOrigins.length <= 3
-					? "exposure narrow"
-					: "exposure over-broad",
+			pass: narrow,
+			detail: hasWildcard
+				? "exposure over-broad: wildcard"
+				: !allValid
+					? "exposure has invalid origin"
+					: tool.exposedOrigins.length <= 3
+						? "exposure narrow"
+						: "exposure over-broad",
 		});
 		if (tool.consequentialHint) {
 			findings.push({
@@ -160,7 +238,7 @@ export function scoreAudit(context: unknown): AuditFinding[] {
 	findings.push({
 		check: "consequential-coverage",
 		tool: null,
-		pass: consequentialTotal > 0 || tools.length === 0,
+		pass: consequentialTotal > 0,
 		detail:
 			tools.length === 0
 				? "no tools to annotate"
