@@ -22,6 +22,33 @@ export interface ConvertOptions {
 	readonly allowAdditionalProperties?: boolean | undefined;
 }
 
+const DANGEROUS_KEYS: ReadonlySet<string> = new Set([
+	"__proto__",
+	"constructor",
+	"prototype",
+]);
+
+const KNOWN_TYPES: ReadonlySet<string> = new Set([
+	"object",
+	"array",
+	"string",
+	"number",
+	"integer",
+	"boolean",
+	"null",
+]);
+
+const SCANNED_KEYWORDS: ReadonlySet<string> = new Set([
+	"type",
+	"properties",
+	"required",
+	"items",
+	"enum",
+	"additionalProperties",
+	"description",
+	"title",
+]);
+
 interface WalkState {
 	keys: number;
 }
@@ -36,7 +63,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function checkKeys(node: Record<string, unknown>, state: WalkState): void {
 	for (const key of Object.keys(node)) {
-		if (key === "__proto__" || key === "constructor" || key === "prototype") {
+		if (DANGEROUS_KEYS.has(key)) {
 			throw new TypeError(`forbidden key: ${key}`);
 		}
 	}
@@ -46,7 +73,12 @@ function checkKeys(node: Record<string, unknown>, state: WalkState): void {
 	}
 }
 
-function checkJsonValue(value: unknown, depth: number, state: WalkState): void {
+function checkJsonValue(
+	value: unknown,
+	depth: number,
+	state: WalkState,
+	seen: Set<object>,
+): void {
 	if (value === null) {
 		return;
 	}
@@ -60,22 +92,27 @@ function checkJsonValue(value: unknown, depth: number, state: WalkState): void {
 		}
 		return;
 	}
-	if (Array.isArray(value)) {
+	if (Array.isArray(value) || isRecord(value)) {
 		if (depth > MAX_CONVERT_DEPTH) {
 			throw new TypeError("too deep");
 		}
-		for (const entry of value) {
-			checkJsonValue(entry, depth + 1, state);
+		if (seen.has(value)) {
+			throw new TypeError("circular schema");
 		}
-		return;
-	}
-	if (isRecord(value)) {
-		if (depth > MAX_CONVERT_DEPTH) {
-			throw new TypeError("too deep");
-		}
-		checkKeys(value, state);
-		for (const entry of Object.values(value)) {
-			checkJsonValue(entry, depth + 1, state);
+		seen.add(value);
+		try {
+			if (Array.isArray(value)) {
+				for (const entry of value) {
+					checkJsonValue(entry, depth + 1, state, seen);
+				}
+			} else {
+				checkKeys(value, state);
+				for (const entry of Object.values(value)) {
+					checkJsonValue(entry, depth + 1, state, seen);
+				}
+			}
+		} finally {
+			seen.delete(value);
 		}
 		return;
 	}
@@ -86,6 +123,7 @@ function checkSchemaNode(
 	node: unknown,
 	depth: number,
 	state: WalkState,
+	seen: Set<object>,
 	allowAdditional: boolean,
 ): void {
 	if (!isRecord(node)) {
@@ -94,57 +132,72 @@ function checkSchemaNode(
 	if (depth > MAX_CONVERT_DEPTH) {
 		throw new TypeError("too deep");
 	}
-	checkKeys(node, state);
-	const allowed = new Set([
-		"type",
-		"properties",
-		"required",
-		"items",
-		"enum",
-		"additionalProperties",
-		"description",
-		"title",
-	]);
-	for (const key of Object.keys(node)) {
-		if (!allowed.has(key) && allowAdditional !== true) {
-			throw new TypeError(`unexpected property: ${key}`);
-		}
+	if (seen.has(node)) {
+		throw new TypeError("circular schema");
 	}
-	const nodeType: unknown = node.type;
-	if (nodeType !== undefined && typeof nodeType !== "string") {
-		throw new TypeError("unsupported type");
-	}
-	const properties: unknown = node.properties;
-	if (properties !== undefined) {
-		if (!isRecord(properties)) {
-			throw new TypeError("bad properties");
+	seen.add(node);
+	try {
+		checkKeys(node, state);
+		for (const key of Object.keys(node)) {
+			if (!SCANNED_KEYWORDS.has(key) && allowAdditional !== true) {
+				throw new TypeError(`unexpected property: ${key}`);
+			}
 		}
-		checkKeys(properties, state);
-		for (const child of Object.values(properties)) {
-			checkSchemaNode(child, depth + 1, state, allowAdditional);
+		const nodeType: unknown = node.type;
+		if (nodeType !== undefined) {
+			if (typeof nodeType !== "string" || !KNOWN_TYPES.has(nodeType)) {
+				throw new TypeError("unsupported type");
+			}
 		}
-	}
-	const items: unknown = node.items;
-	if (items !== undefined) {
-		checkSchemaNode(items, depth + 1, state, allowAdditional);
-	}
-	const enumValues: unknown = node.enum;
-	if (enumValues !== undefined) {
-		if (!Array.isArray(enumValues)) {
-			throw new TypeError("bad enum");
+		const properties: unknown = node.properties;
+		if (properties !== undefined) {
+			if (!isRecord(properties)) {
+				throw new TypeError("bad properties");
+			}
+			checkKeys(properties, state);
+			for (const child of Object.values(properties)) {
+				checkSchemaNode(child, depth + 1, state, seen, allowAdditional);
+			}
 		}
-		for (const entry of enumValues) {
-			checkJsonValue(entry, depth + 1, state);
+		const required: unknown = node.required;
+		if (required !== undefined) {
+			if (
+				!Array.isArray(required) ||
+				required.some((entry) => typeof entry !== "string")
+			) {
+				throw new TypeError("bad required");
+			}
 		}
-	}
-	const additional: unknown = node.additionalProperties;
-	if (additional !== undefined && typeof additional !== "boolean") {
-		throw new TypeError("bad additionalProperties");
-	}
-	for (const key of Object.keys(node)) {
-		if (!allowed.has(key)) {
-			checkJsonValue(node[key] as unknown, depth + 1, state);
+		const items: unknown = node.items;
+		if (items !== undefined) {
+			checkSchemaNode(items, depth + 1, state, seen, allowAdditional);
 		}
+		const enumValues: unknown = node.enum;
+		if (enumValues !== undefined) {
+			if (!Array.isArray(enumValues)) {
+				throw new TypeError("bad enum");
+			}
+			for (const entry of enumValues) {
+				checkJsonValue(entry, depth + 1, state, seen);
+			}
+		}
+		const additional: unknown = node.additionalProperties;
+		if (additional !== undefined && typeof additional !== "boolean") {
+			throw new TypeError("bad additionalProperties");
+		}
+		for (const key of ["description", "title"] as const) {
+			const hint: unknown = node[key];
+			if (hint !== undefined && typeof hint !== "string") {
+				throw new TypeError(`bad ${key}`);
+			}
+		}
+		for (const [key, child] of Object.entries(node)) {
+			if (!SCANNED_KEYWORDS.has(key)) {
+				checkJsonValue(child, depth + 1, state, seen);
+			}
+		}
+	} finally {
+		seen.delete(node);
 	}
 }
 
@@ -198,13 +251,14 @@ export function convertToInputSchema(
 ): Record<string, unknown> {
 	const raw = extractJsonSchema(schema);
 	const allowAdditional = options?.allowAdditionalProperties === true;
-	// Envelope metadata from the first-party conversion carries no
-	// validation meaning, so it is dropped before subset checks.
-	const { $schema: _dropped, ...envelope } = raw as Record<string, unknown> & {
-		$schema?: unknown;
-	};
-	void _dropped;
-	checkSchemaNode(envelope, 0, { keys: 0 }, allowAdditional);
+	const envelope: Record<string, unknown> = {};
+	for (const [key, value] of Object.entries(raw)) {
+		if (key === "$schema") {
+			continue;
+		}
+		envelope[key] = value;
+	}
+	checkSchemaNode(envelope, 0, { keys: 0 }, new Set(), allowAdditional);
 	let json: string;
 	try {
 		const text: unknown = JSON.stringify(envelope);
@@ -237,10 +291,12 @@ export function asStandardConverter(
 	options?: ConvertOptions | undefined,
 ): StandardJsonSchemaConverter {
 	const converted = convertToInputSchema(schema, options);
+	const snapshot = (): Record<string, unknown> =>
+		JSON.parse(JSON.stringify(converted)) as Record<string, unknown>;
 	return {
 		jsonSchema: {
-			input: (): Record<string, unknown> => ({ ...converted }),
-			output: (): Record<string, unknown> => ({ ...converted }),
+			input: (_ignored?: unknown): Record<string, unknown> => snapshot(),
+			output: (_ignored?: unknown): Record<string, unknown> => snapshot(),
 		},
 	};
 }

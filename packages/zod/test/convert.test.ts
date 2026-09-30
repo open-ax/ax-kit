@@ -72,4 +72,24 @@ describe("validation-library adapter", () => {
 		expect(converter.jsonSchema.input().type).toBe("string");
 		expect(converter.jsonSchema.output().type).toBe("string");
 	});
+
+	it("validates types, required, and hint shapes at any depth", () => {
+		expect(() => convertToInputSchema({ type: "eviltype" })).toThrow(TypeError);
+		expect(() =>
+			convertToInputSchema({ type: "object", required: "sku" }),
+		).toThrow(TypeError);
+		expect(() =>
+			convertToInputSchema({ type: "string", description: { ["__proto__"]: 1 } }),
+		).toThrow(TypeError);
+	});
+
+	it("isolates converter snapshots", () => {
+		const converter = asStandardConverter({
+			type: "object",
+			properties: { a: { type: "string" } },
+		});
+		const first = converter.jsonSchema.input();
+		(first.properties as Record<string, unknown>).a = { type: "eviltype" };
+		expect(converter.jsonSchema.input()).not.toEqual(first);
+	});
 });
