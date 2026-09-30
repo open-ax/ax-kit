@@ -3,6 +3,9 @@
 
 /** Parse `ax-kit audit <url>` args. Throws on any other invocation. */
 export function parseAuditTarget(args: readonly string[]): string {
+	if (args.length !== 2) {
+		throw new TypeError("usage: ax-kit audit <url>");
+	}
 	const command = args[0];
 	const target = args[1];
 	if (
@@ -10,6 +13,11 @@ export function parseAuditTarget(args: readonly string[]): string {
 		typeof target !== "string" ||
 		target.length === 0
 	) {
+		throw new TypeError("usage: ax-kit audit <url>");
+	}
+	try {
+		new URL(target);
+	} catch {
 		throw new TypeError("usage: ax-kit audit <url>");
 	}
 	return target;
