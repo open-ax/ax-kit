@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { assertHandlerName } from "./handlers.js";
-import type { HitlKey } from "./hitl.js";
-import { hitlKeyToString } from "./hitl.js";
+import type { ApprovalStore, HitlKey } from "./hitl.js";
+import { assertToolName, hashArgs, hitlKeysEqual, hitlKeyToString } from "./hitl.js";
 import { assertLiveContext } from "./manifest.js";
 
 /**
@@ -25,14 +25,6 @@ export interface FrameToolView {
 	readonly consequentialHint: boolean;
 	readonly readOnlyHint: boolean;
 	readonly definitionVersion: string;
-}
-
-const TOOL_NAME_PATTERN = /^[A-Za-z0-9_.-]+$/;
-
-function checkName(name: string): void {
-	if (name.length < 1 || name.length > 128 || !TOOL_NAME_PATTERN.test(name)) {
-		throw new TypeError("bad tool name");
-	}
 }
 
 function checkOrigin(origin: string): void {
@@ -57,7 +49,7 @@ export function validateFrameTool(value: unknown): FrameToolView {
 	if (typeof name !== "string") {
 		throw new TypeError("bad tool name");
 	}
-	checkName(name);
+	assertToolName(name);
 	if (typeof origin !== "string" || typeof frameOrigin !== "string") {
 		throw new TypeError("bad origin");
 	}
@@ -112,20 +104,15 @@ export function isExposedToCaller(
 	return allowedOrigins.includes(callerOrigin);
 }
 
-export interface AllowListDecision {
-	readonly allowed: boolean;
-	readonly minimizedArgs: Record<string, unknown>;
-}
-
 /**
  * Caller-controlled argument allow-list with data minimization: only keys
  * the caller explicitly allows cross into the invocation; anything else is
- * dropped rather than forwarded.
+ * dropped rather than forwarded. Returns the minimized record directly.
  */
 export function applyArgAllowList(
 	args: unknown,
 	allowedKeys: unknown,
-): AllowListDecision {
+): Record<string, unknown> {
 	if (typeof args !== "object" || args === null || Array.isArray(args)) {
 		throw new TypeError("bad arguments");
 	}
@@ -143,10 +130,14 @@ export function applyArgAllowList(
 	const minimized: Record<string, unknown> = {};
 	for (const key of allowed) {
 		if (Object.hasOwn(source, key)) {
-			minimized[key] = source[key] as unknown;
+			const value: unknown = source[key];
+			if (value === undefined) {
+				continue;
+			}
+			minimized[key] = value;
 		}
 	}
-	return { allowed: true, minimizedArgs: minimized };
+	return minimized;
 }
 
 /** Local trail disclaimer: page-unreachable does not mean tamper-proof. */
@@ -195,6 +186,9 @@ export class WorkerAuditTrail {
 			decision: record.decision,
 			at: Date.now(),
 		});
+		if (this.entries.length > 1000) {
+			this.entries.splice(0, this.entries.length - 1000);
+		}
 	}
 
 	list(): AuditEntry[] {
@@ -207,28 +201,38 @@ export interface AuthorizationInput {
 	readonly contextLive: unknown;
 	readonly key: HitlKey;
 	readonly approvedKey: string;
+	readonly ownerOrigin: string;
 	readonly callerOrigin: string;
 	readonly allowedOrigins: ReadonlyArray<string>;
+	readonly argsJson: string;
+	readonly liveKey: HitlKey;
+	readonly liveDefinitionVersion: string;
+	readonly store: ApprovalStore;
 }
 
 /**
  * Single authorization point. Validates the handler name, the context
- * liveness, the HITL binding, and the exposure gate before execution.
+ * liveness, the HITL binding (args hash + five key parts + definition
+ * version via the store), and the exposure gate before execution.
  */
 export function authorizeExecution(input: AuthorizationInput): string {
 	assertHandlerName(input.handler);
 	assertLiveContext(input.contextLive);
+	if (!isExposedToCaller(input.ownerOrigin, input.allowedOrigins, input.callerOrigin)) {
+		throw new TypeError("tool not exposed");
+	}
+	if (typeof input.argsJson !== "string") {
+		throw new TypeError("bad arguments");
+	}
+	if (hashArgs(input.argsJson) !== input.key.argsHash) {
+		throw new TypeError("approval args mismatch");
+	}
+	if (!hitlKeysEqual(input.key, input.liveKey)) {
+		throw new TypeError("approval target changed");
+	}
 	if (hitlKeyToString(input.key) !== input.approvedKey) {
 		throw new TypeError("approval target changed");
 	}
-	if (
-		!isExposedToCaller(
-			input.callerOrigin,
-			input.allowedOrigins,
-			input.callerOrigin,
-		)
-	) {
-		throw new TypeError("tool not exposed");
-	}
+	input.store.verifyAndConsume(input.approvedKey, input.liveKey, input.liveDefinitionVersion);
 	return input.approvedKey;
 }

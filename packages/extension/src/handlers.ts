@@ -11,6 +11,8 @@
  * names are unreachable.
  */
 
+import { canonicalizeArgs } from "./hitl.js";
+
 export const HANDLER_NAMES = ["listTools", "getTool", "executeTool"] as const;
 
 export type HandlerName = (typeof HANDLER_NAMES)[number];
@@ -33,80 +35,19 @@ export interface InjectionRequest {
 	readonly args: unknown;
 }
 
-function isJsonSerializable(value: unknown, seen: Set<object>): void {
-	if (value === null) {
-		return;
-	}
-	const kind: string = typeof value;
-	if (kind === "string" || kind === "boolean") {
-		return;
-	}
-	if (kind === "number") {
-		if (!Number.isFinite(value)) {
-			throw new TypeError("non-finite number");
-		}
-		return;
-	}
-	if (kind === "undefined") {
-		throw new TypeError("unserializable argument");
-	}
-	if (kind === "function" || kind === "symbol" || kind === "bigint") {
-		throw new TypeError("unserializable argument");
-	}
-	if (Array.isArray(value)) {
-		if (seen.has(value)) {
-			throw new TypeError("circular argument");
-		}
-		seen.add(value);
-		try {
-			for (const entry of value) {
-				isJsonSerializable(entry, seen);
-			}
-		} finally {
-			seen.delete(value);
-		}
-		return;
-	}
-	if (kind === "object") {
-		const record = value as Record<string, unknown>;
-		const proto: unknown = Object.getPrototypeOf(record);
-		if (proto !== Object.prototype && proto !== null) {
-			throw new TypeError("unserializable argument");
-		}
-		if (seen.has(record)) {
-			throw new TypeError("circular argument");
-		}
-		seen.add(record);
-		try {
-			for (const key of Object.keys(record)) {
-				if (
-					key === "__proto__" ||
-					key === "constructor" ||
-					key === "prototype"
-				) {
-					throw new TypeError(`forbidden key: ${key}`);
-				}
-				isJsonSerializable(record[key] as unknown, seen);
-			}
-		} finally {
-			seen.delete(record);
-		}
-		return;
-	}
-	throw new TypeError("unserializable argument");
-}
-
 /**
  * Build one injection request. The handler must be enumerated and the args
  * must survive a JSON round-trip; anything else rejects with `TypeError`
- * before reaching the worker.
+ * before reaching the worker. Validation reuses the HITL canonicalizer so
+ * both paths enforce one JSON rule (finite numbers, proto-guard, no
+ * cycles, no functions).
  */
 export function createInjectionRequest(
 	handler: unknown,
 	args: unknown,
 ): InjectionRequest {
 	const name = assertHandlerName(handler);
-	isJsonSerializable(args, new Set());
+	canonicalizeArgs(args);
 	const roundTrip: unknown = JSON.parse(JSON.stringify(args)) as unknown;
 	return { handler: name, args: roundTrip };
 }

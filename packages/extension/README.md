@@ -18,15 +18,18 @@ import {
 	ApprovalStore,
 	TRANSPORT_KIND,
 	authorizeExecution,
+	canonicalizeArgs,
 	createHitlKey,
 	createInjectionRequest,
 	defaultManifestPosture,
+	hashArgs,
 } from "@ax-kit/extension";
 
 const request = createInjectionRequest("executeTool", { sku: "lamp-01" });
 console.log(TRANSPORT_KIND, request.handler);
 
 const store = new ApprovalStore();
+const argsJson = canonicalizeArgs({ sku: "lamp-01" });
 const key = store.requestApproval(
 	{
 		key: createHitlKey({
@@ -34,12 +37,12 @@ const key = store.requestApproval(
 			documentId: "doc-1",
 			frameId: 0,
 			toolName: "proceedToCheckout",
-			argsHash: "9f2ab410",
+			argsHash: hashArgs(argsJson),
 		}),
 		toolName: "proceedToCheckout",
 		origin: "https://shop.example",
 		frameOrigin: "https://shop.example",
-		argsJson: "{\"sku\":\"lamp-01\"}",
+		argsJson,
 		consequentialHint: true,
 		readOnlyHint: false,
 		definitionVersion: "v1",

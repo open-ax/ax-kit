@@ -92,7 +92,18 @@ export function assertManifestPosture(value: unknown): ManifestPosture {
 	) {
 		throw new TypeError("bad background kind");
 	}
-	return value as ManifestPosture;
+	const extGate = ext as Record<string, unknown>;
+	return {
+		incognito: "not_allowed",
+		externallyConnectable: {
+			ids: [...(extGate.ids as string[])],
+			matches: [...(extGate.matches as string[])],
+		},
+		hostMatches: [...(record.hostMatches as string[])],
+		allFrames: record.allFrames as boolean,
+		hostScopeJustification: record.hostScopeJustification as string,
+		backgroundKind: record.backgroundKind as "service-worker" | "event-page",
+	};
 }
 
 /**
