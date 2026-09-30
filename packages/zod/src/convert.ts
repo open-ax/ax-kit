@@ -163,7 +163,8 @@ function checkSchemaNode(
 		if (required !== undefined) {
 			if (
 				!Array.isArray(required) ||
-				required.some((entry) => typeof entry !== "string")
+				required.some((entry) => typeof entry !== "string") ||
+				new Set(required).size !== required.length
 			) {
 				throw new TypeError("bad required");
 			}
@@ -276,6 +277,9 @@ function convertWithIo(
 	for (const [key, value] of Object.entries(raw)) {
 		if (key === "$schema") {
 			continue;
+		}
+		if (DANGEROUS_KEYS.has(key)) {
+			throw new TypeError(`forbidden key: ${key}`);
 		}
 		envelope[key] = value;
 	}

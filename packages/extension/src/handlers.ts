@@ -47,8 +47,7 @@ export function createInjectionRequest(
 	args: unknown,
 ): InjectionRequest {
 	const name = assertHandlerName(handler);
-	canonicalizeArgs(args);
-	const roundTrip: unknown = JSON.parse(JSON.stringify(args)) as unknown;
+	const roundTrip: unknown = JSON.parse(canonicalizeArgs(args)) as unknown;
 	return { handler: name, args: roundTrip };
 }
 

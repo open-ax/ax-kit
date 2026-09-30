@@ -31,8 +31,9 @@ Rules enforced by this package and its tests:
   version and capabilities in `_meta`; mismatches return the version
   error. Discovery (`server/discover`) is mandatory to implement and
   every result carries the completion marker.
-- No deprecated capabilities: directory roots, sampling, logging, and
-  dynamic registration are absent and reject as unknown methods.
+- Removed methods (`initialize`, `ping`, dynamic registration) reject as
+  unknown methods. Deprecated roots, sampling, and logging stay usable
+  during the deprecation window.
 - Stdio stays byte-clean: only protocol messages reach stdout, all logs
   go to stderr, frames are newline-delimited with no embedded newlines,
   stdin close is the shutdown signal, and the daemon never initiates a

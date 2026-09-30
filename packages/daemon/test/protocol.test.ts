@@ -121,12 +121,39 @@ describe("stateless protocol", () => {
 				jsonrpc: "2.0",
 				id: 6,
 				method: "tools/call",
-				params: { ...meta(), call: { name: "" } },
+				params: { ...meta(), name: "", arguments: {} },
 			},
 			[],
 			createDaemonInfo(),
 		);
 		expect(badCall.error?.code).toBe(-32602);
+		const legacyWrapper = dispatchRequest(
+			{
+				jsonrpc: "2.0",
+				id: 7,
+				method: "tools/call",
+				params: { ...meta(), call: { name: "viewCart" } },
+			},
+			[],
+			createDaemonInfo(),
+		);
+		expect(legacyWrapper.error?.code).toBe(-32602);
+	});
+
+	it("calls tools with the spec parameter shape", () => {
+		const response = dispatchRequest(
+			{
+				jsonrpc: "2.0",
+				id: 8,
+				method: "tools/call",
+				params: { ...meta(), name: "viewCart", arguments: { sku: "a" } },
+			},
+			[],
+			createDaemonInfo(),
+		);
+		const result = response.result as Record<string, unknown>;
+		expect(result.resultType).toBe("complete");
+		expect(result.name).toBe("viewCart");
 	});
 
 	it("frames without embedded newlines", () => {
