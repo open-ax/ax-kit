@@ -17,6 +17,7 @@
 
 import type { InjectionRequest } from "./handlers.js";
 import { assertHandlerName, createInjectionRequest } from "./handlers.js";
+import type { HitlKey } from "./hitl.js";
 import {
 	ApprovalStore,
 	canonicalizeArgs,
@@ -24,12 +25,14 @@ import {
 	hashArgs,
 	hitlKeyToString,
 } from "./hitl.js";
+import { assertLiveContext } from "./manifest.js";
 import {
+	AUDIT_TRAIL_DISCLAIMER,
 	applyArgAllowList,
 	isExposedToCaller,
 	validateFrameTool,
+	WorkerAuditTrail,
 } from "./trusted-tier.js";
-import { assertLiveContext } from "./manifest.js";
 
 /**
  * Enumerate the page's tools. Self-contained: the platform serializes this and
@@ -124,7 +127,8 @@ async function getToolInPage(arg: unknown): Promise<unknown> {
 		const origin =
 			typeof record["origin"] === "string" ? (record["origin"] as string) : "";
 		const schemaJson =
-			typeof record["inputSchema"] === "object" && record["inputSchema"] !== null
+			typeof record["inputSchema"] === "object" &&
+			record["inputSchema"] !== null
 				? JSON.stringify(record["inputSchema"])
 				: "{}";
 		return {
@@ -211,6 +215,13 @@ async function inject(
 
 const approvals = new ApprovalStore();
 
+/**
+ * The local audit trail. Held outside any page lifetime and labelled as such:
+ * page-unreachable is not tamper-proof, and `AUDIT_TRAIL_DISCLAIMER` says so
+ * wherever it is presented.
+ */
+const trail = new WorkerAuditTrail();
+
 /** Validate a Main-world listing into the worker's own view. */
 function readToolViews(payload: unknown): Array<Record<string, unknown>> {
 	if (typeof payload !== "object" || payload === null) {
@@ -269,7 +280,6 @@ async function handle(request: InjectionRequest): Promise<unknown> {
 		throw new TypeError("bad tool name");
 	}
 	const callArgs = args["args"] ?? {};
-	const argsJson = canonicalizeArgs(callArgs);
 	const views = readToolViews({
 		tools: [await inject(tabId, frameId, "getTool", { name })],
 	});
@@ -305,15 +315,51 @@ async function handle(request: InjectionRequest): Promise<unknown> {
 	});
 	if (view["consequentialHint"] === true) {
 		// A Consequential tool never runs on the strength of the caller's claim.
-		// It returns the pending binding and waits for a person.
+		const binding = hitlKeyToString(key);
+		const pending = approvals.pendingKeys();
+
+		// A person was asked about *this tool on this tab*, and the invocation
+		// now in hand is not the one they saw. That is a moved binding, and the
+		// answer is refusal. Falling through to ask again would train a person to
+		// click through, which defeats the control entirely — so it throws
+		// rather than re-prompting.
+		const moved = pending.find(
+			(candidate) => candidate !== binding && sameTarget(candidate, key),
+		);
+		if (moved !== undefined) {
+			approvals.rejectApproval(moved);
+			filed.delete(moved);
+			throw new TypeError("approval target changed");
+		}
+
+		const alreadyApproved = pending.includes(binding);
+		if (alreadyApproved) {
+			// The person has already been asked about this exact invocation. The
+			// binding is re-verified against live values here, not at the moment
+			// of the click, because the page has had time to move underneath it.
+			approvals.verifyAndConsume(binding, key, definitionVersion);
+			trail.append({
+				key: binding,
+				toolName: name,
+				origin: ownerOrigin,
+				decision: "executed",
+			});
+			return inject(tabId, frameId, "executeTool", { name, args: minimised });
+		}
+		// Not yet approved: return what a person needs in order to decide, and
+		// do not execute. The caller is expected to come back after approval.
 		return {
-			pendingApproval: hitlKeyToString(key),
+			pendingApproval: binding,
 			requiresConfirmation: true,
 			toolName: name,
 			description: String(view["description"]),
 			argsJson: canonicalizeArgs(minimised),
 			definitionVersion,
 			origin: ownerOrigin,
+			callerOrigin,
+			allowedOrigins: allowed,
+			consequentialHint: true,
+			readOnlyHint: view["readOnlyHint"] === true,
 		};
 	}
 	// Non-consequential: the handler, the context, and the exposure gate are
@@ -325,6 +371,103 @@ async function handle(request: InjectionRequest): Promise<unknown> {
 		throw new TypeError("tool not exposed");
 	}
 	return inject(tabId, frameId, "executeTool", { name, args: minimised });
+}
+
+/** What the panel shows, and what a person's click decides on. */
+export interface PanelApproval {
+	readonly key: string;
+	readonly toolName: string;
+	readonly description: string;
+	readonly argsJson: string;
+	readonly origin: string;
+}
+
+/**
+ * What each pending approval was filed for.
+ *
+ * Held here rather than read back out of the store: the panel must render the
+ * exact text the person approved, and a hash is not renderable. The binding is
+ * still the store's; this is only the display copy.
+ */
+const filed = new Map<string, PanelApproval>();
+
+/**
+ * Tell an open panel the pending set changed.
+ *
+ * The panel has no subscription of its own worth trusting, so it re-reads the
+ * worker rather than trusting a pushed payload. The notification carries no
+ * approval data at all — it is a hint to look again.
+ */
+function announceChange(): void {
+	void chrome.runtime.sendMessage({ handler: "pendingChanged" }).catch(() => {
+		// No panel is open. That is the common case, not a failure.
+	});
+}
+
+/**
+ * File a pending approval on a person's gesture.
+ *
+ * Gesture-initiated by construction: the store itself rejects a non-gesture
+ * request, so a daemon cannot manufacture an approval by asking twice.
+ */
+function requestApproval(details: unknown, gesture: unknown): PanelApproval {
+	const record = details as Record<string, unknown>;
+	const binding = approvals.requestApproval(details, gesture);
+	const entry: PanelApproval = {
+		key: binding,
+		toolName: String(record["toolName"]),
+		description: String(record["description"]),
+		argsJson: String(record["argsJson"]),
+		origin: String(record["origin"]),
+	};
+	filed.set(binding, entry);
+	trail.append({
+		key: binding,
+		toolName: entry.toolName,
+		origin: entry.origin,
+		decision: "requested",
+	});
+	announceChange();
+	return entry;
+}
+
+/** Approve a filed approval. A person's click, never the daemon's word. */
+function approveApproval(key: unknown): void {
+	approvals.approveApproval(key);
+	const entry = filed.get(String(key));
+	if (entry !== undefined) {
+		trail.append({
+			key: entry.key,
+			toolName: entry.toolName,
+			origin: entry.origin,
+			decision: "approved",
+		});
+	}
+	announceChange();
+}
+
+/** Reject a filed approval. */
+function rejectApproval(key: unknown): void {
+	const entry = filed.get(String(key));
+	approvals.rejectApproval(key);
+	filed.delete(String(key));
+	if (entry !== undefined) {
+		trail.append({
+			key: entry.key,
+			toolName: entry.toolName,
+			origin: entry.origin,
+			decision: "rejected",
+		});
+	}
+	announceChange();
+}
+
+/** Pending approvals, for the panel to render. */
+function pendingApprovals(): PanelApproval[] {
+	return approvals
+		.pendingKeys()
+		.map((key) => filed.get(key))
+		.filter((entry): entry is PanelApproval => entry !== undefined);
 }
 
 /**
@@ -346,15 +489,95 @@ function allowedArgKeys(args: Record<string, unknown>): string[] {
 	return Object.keys(callArgs as Record<string, unknown>);
 }
 
+/**
+ * True when two bindings name the same target — tab, document, frame, and
+ * tool — and differ only in what is being asked for.
+ *
+ * The binding's string form is a five-element JSON array, so the identity is
+ * the first three elements plus the tool name at the fourth.
+ */
+function sameTarget(binding: string, key: HitlKey): boolean {
+	try {
+		const parts: unknown = JSON.parse(binding);
+		if (!Array.isArray(parts) || parts.length !== 5) {
+			return false;
+		}
+		return (
+			parts[0] === key.tabId &&
+			parts[1] === key.documentId &&
+			parts[2] === key.frameId &&
+			parts[3] === key.toolName
+		);
+	} catch {
+		return false;
+	}
+}
+
+/**
+ * The confirmation surface, as the panel drives it.
+ *
+ * Four enumerated operations, no dispatch. `request` requires a gesture and the
+ * store enforces it, so the daemon cannot reach any of this by asking.
+ */
+export const PANEL_OPERATIONS = [
+	"request",
+	"approve",
+	"reject",
+	"list",
+] as const;
+
+export type PanelOperation = (typeof PANEL_OPERATIONS)[number];
+
+/** Run one panel operation. Arguments are validated before use. */
+function panel(op: unknown, args: unknown): unknown {
+	if (typeof op !== "string") {
+		throw new TypeError("bad panel operation");
+	}
+	if (!PANEL_OPERATIONS.includes(op as PanelOperation)) {
+		throw new TypeError("unknown panel operation");
+	}
+	const record =
+		typeof args === "object" && args !== null
+			? (args as Record<string, unknown>)
+			: {};
+	if (op === "request") {
+		return requestApproval(record["approval"], record["gesture"]);
+	}
+	if (op === "list") {
+		return { pending: pendingApprovals(), disclaimer: AUDIT_TRAIL_DISCLAIMER };
+	}
+	if (op === "approve") {
+		approveApproval(record["key"]);
+		return { ok: true };
+	}
+	rejectApproval(record["key"]);
+	return { ok: true };
+}
+
 chrome.runtime.onMessage.addListener(
 	(
 		message: unknown,
 		_sender: unknown,
 		sendResponse: (value: unknown) => void,
 	) => {
+		const record = (message ?? {}) as Record<string, unknown>;
+		// The panel's operations are a separate, closed set. They are not
+		// reachable by naming an injection handler, and an injection handler is
+		// not reachable by naming a panel operation.
+		const panelOp = record["panel"];
+		if (typeof panelOp === "string") {
+			try {
+				sendResponse({ ok: true, result: panel(panelOp, record["args"]) });
+			} catch (error: unknown) {
+				sendResponse({
+					ok: false,
+					error: error instanceof Error ? error.message : "panel failed",
+				});
+			}
+			return false;
+		}
 		let request: InjectionRequest;
 		try {
-			const record = (message ?? {}) as Record<string, unknown>;
 			request = createInjectionRequest(record["handler"], record["args"]);
 		} catch (error: unknown) {
 			sendResponse({
@@ -382,4 +605,10 @@ chrome.runtime.onMessage.addListener(
 Object.assign(globalThis as unknown as Record<string, unknown>, {
 	__axHandle: handle,
 	__axApprovals: approvals,
+	__axPanel: panel,
+	__axTrail: trail,
+	// The canonicaliser and hasher, so a caller filing an approval derives the
+	// same binding the worker will check rather than reimplementing the rule.
+	__axHash: (text: string) =>
+		hashArgs(canonicalizeArgs(JSON.parse(text) as unknown)),
 });

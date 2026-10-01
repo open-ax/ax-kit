@@ -57,11 +57,51 @@ DOM event bus, no page-visible channel, and no handshake event. Handlers
 are enumerated (`listTools`, `getTool`, `executeTool`) and self-contained;
 unknown names are unreachable by construction.
 
+## Loading it
+
+The policy functions below are worth consuming directly, and the package is
+also loadable as an extension.
+
+The package emits a loadable unpacked directory:
+
+```sh
+pnpm --filter @ax-kit/extension build
+```
+
+That writes `dist/unpacked/` — `manifest.json`, `sw.js`, `panel.html`,
+`panel.js`. Load it in Chrome with "Load unpacked", or point a browser at it
+directly:
+
+```sh
+chromium --load-extension=packages/extension/dist/unpacked
+```
+
+The manifest is written by the same posture function the assertions read, so the
+emitted file cannot describe an intention the code does not hold. Note that
+headless Chrome resolves to a shell that loads no extension; use the full
+browser binary.
+
+## Confirmation
+
 Confirmation renders in the side panel only, bound to tab, document,
 frame, tool name, and argument hash, with all five re-verified at
 execution. Approvals are single-use and gesture-initiated; a definition
-change invalidates the pending entry. The manifest defaults deny external
-connections, keep private browsing closed, and flag broad host scope with
-a review justification. The audit trail is written by the worker into
-page-unreachable storage: local log only, with no integrity guarantee
-until shipped off-machine.
+change invalidates the pending entry.
+
+The panel shows the tool name, its description, and the exact arguments, so
+the click is informed. It holds no state of its own: every value it renders
+comes from the worker, so the panel and the thing that will execute cannot
+disagree.
+
+If a person was asked about one invocation and a different one arrives for
+the same tool on the same tab, the answer is **refusal**. Re-prompting would
+train a person to click through, which defeats the control.
+
+The manifest defaults deny external connections, keep private browsing
+closed, and flag broad host scope with a review justification. The audit
+trail is written by the worker into page-unreachable storage: local log only,
+with no integrity guarantee until shipped off-machine.
+
+## To consume the policy helpers
+
+The library entry point is unchanged and additive:

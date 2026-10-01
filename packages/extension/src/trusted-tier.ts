@@ -162,7 +162,12 @@ export interface AuditEntry {
 	readonly key: string;
 	readonly toolName: string;
 	readonly origin: string;
-	readonly decision: "approved" | "rejected" | "executed";
+	/**
+	 * `requested` is recorded when a confirmation is first raised. Without it
+	 * the trail shows only outcomes, and an approval that was asked for and then
+	 * dropped — the tab closed, the call abandoned — leaves no trace at all.
+	 */
+	readonly decision: "requested" | "approved" | "rejected" | "executed";
 	readonly at: number;
 }
 
@@ -187,6 +192,7 @@ export class WorkerAuditTrail {
 			throw new TypeError("bad audit entry");
 		}
 		if (
+			record.decision !== "requested" &&
 			record.decision !== "approved" &&
 			record.decision !== "rejected" &&
 			record.decision !== "executed"
