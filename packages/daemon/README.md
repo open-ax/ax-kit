@@ -9,6 +9,36 @@ Everything here is ours, not the WebMCP draft's: the draft defines the
 page surface, while this entry speaks the client protocol on the other
 side of the bridge.
 
+## Local transport
+
+The daemon can also serve a loopback listener, so a client finds it through a
+discovery file rather than a hard-coded port:
+
+```ts
+import { startTransport } from "@ax-kit/daemon";
+
+const transport = await startTransport({ discoveryDir: "/run/user/1000/ax" });
+// transport.discoveryPath now holds { port, pid, token, version }
+await transport.close(); // removes the file, then stops listening
+```
+
+The listener binds loopback only — a non-loopback bind is refused, not warned
+about. Every request must carry the bearer from the file in `x-ax-bearer`, and
+its `Origin` must be a loopback http(s) origin. A request without either is
+refused with 403.
+
+Read the file back the way a client does:
+
+```ts
+import { readDiscoveryFile } from "@ax-kit/daemon";
+
+const file = readDiscoveryFile("/run/user/1000/ax");
+```
+
+`writeNativeHostManifest` writes the manifest a browser launches, pointing at
+the binary's own path rather than an assumed one. On Windows the registry entry
+is the manifest document, never the binary.
+
 ## Use
 
 Run it as a process. It speaks the client protocol on standard input and

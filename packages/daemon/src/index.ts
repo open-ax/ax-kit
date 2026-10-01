@@ -22,6 +22,15 @@ export {
 	resolveDiscoveryDir,
 	serializeDiscoveryFile,
 } from "./discovery.js";
+export type { Transport, TransportOptions } from "./lifecycle.js";
+export {
+	assertLoopbackBind,
+	createBearer,
+	discoveryDirectory,
+	readDiscoveryFile,
+	startTransport,
+	writeNativeHostManifest,
+} from "./lifecycle.js";
 export type { NativeHostManifest } from "./native-host.js";
 export {
 	assertWorkerReachable,
