@@ -362,14 +362,12 @@ async function handle(request: InjectionRequest): Promise<unknown> {
 			readOnlyHint: view["readOnlyHint"] === true,
 		};
 	}
-	// Non-consequential: the handler, the context, and the exposure gate are
-	// checked against validated values. The approval store is deliberately not
-	// consulted — there is nothing to approve.
+	// Non-consequential: the handler and the context are checked against
+	// validated values. Exposure was already decided above, before the two paths
+	// diverged, so it is not re-decided here. The approval store is
+	// deliberately not consulted — there is nothing to approve.
 	assertHandlerName(handler);
 	assertLiveContext(true);
-	if (!isExposedToCaller(ownerOrigin, allowed, callerOrigin)) {
-		throw new TypeError("tool not exposed");
-	}
 	return inject(tabId, frameId, "executeTool", { name, args: minimised });
 }
 
