@@ -11,6 +11,19 @@ side of the bridge.
 
 ## Use
 
+Run it as a process. It speaks the client protocol on standard input and
+output, so any MCP client that can spawn a stdio server can drive it:
+
+```sh
+ax-kit-daemon
+```
+
+Frames go in one per line and come out one per line. There is no handshake:
+the first frame you send is answered. Diagnostics go to standard error, and
+closing standard input is how you stop it.
+
+To consume the policy helpers directly, import them:
+
 ```ts
 import {
 	createDaemonInfo,
@@ -23,6 +36,13 @@ const info = createDaemonInfo();
 const request = parseFrame(process.argv[2] as string);
 const response = dispatchRequest(request, [], info);
 process.stdout.write(`${serializeFrame(response)}\n`);
+```
+
+Run from source, with a built package:
+
+```sh
+pnpm --filter @ax-kit/daemon build
+node packages/daemon/bin/ax-kit-daemon.mjs
 ```
 
 Rules enforced by this package and its tests:

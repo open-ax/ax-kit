@@ -10,6 +10,9 @@
 	"main": "./dist/index.cjs",
 	"module": "./dist/index.mjs",
 	"types": "./dist/index.d.mts",
+	"bin": {
+		"ax-kit-daemon": "./bin/ax-kit-daemon.mjs"
+	},
 	"exports": {
 		".": {
 			"import": {
@@ -24,6 +27,7 @@
 		"./package.json": "./package.json"
 	},
 	"files": [
+		"bin",
 		"dist"
 	],
 	"sideEffects": false,
