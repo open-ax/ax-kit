@@ -24,18 +24,21 @@
 		"./package.json": "./package.json"
 	},
 	"files": [
-		"dist"
+		"dist",
+		"panel"
 	],
 	"sideEffects": false,
 	"scripts": {
-		"build": "tsdown",
-		"typecheck": "tsc --noEmit -p tsconfig.json",
+		"build": "tsdown && node scripts/emit-manifest.mjs",
+		"typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.test.json",
 		"test": "vitest run",
 		"size": "echo \"no size gate for extension bridge\"",
 		"publint": "publint",
 		"attw": "attw --pack . --profile node16"
 	},
 	"devDependencies": {
+		"@types/node": "^24.19.0",
+		"playwright": "1.63.0",
 		"tsdown": "0.23.0",
 		"typescript": "6.0.3",
 		"vitest": "5.0.2"

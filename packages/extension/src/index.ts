@@ -45,6 +45,11 @@ export {
 	defaultManifestPosture,
 	firefoxManifestPosture,
 } from "./manifest.js";
+export type { ManifestDocument } from "./manifest-document.js";
+export {
+	createManifestDocument,
+	defaultManifestDocument,
+} from "./manifest-document.js";
 export type {
 	AuditEntry,
 	AuthorizationInput,
