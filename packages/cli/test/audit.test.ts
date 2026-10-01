@@ -87,7 +87,12 @@ describe("cli audit", () => {
 		expect(formatReport).toBeDefined();
 	});
 
-	it("drives the browser without sleeps", async () => {
+	it("closes the browser and reports the lane through the injected browser", async () => {
+		// Browser lifecycle stays covered here as a unit because it needs no
+		// browser. Browser *behaviour* is covered against real Chromium in
+		// browser-audit.test.ts; this fake cannot observe a page's tools, which
+		// is exactly why the old version of this case was deleted rather than
+		// repaired.
 		const calls: string[] = [];
 		const text = await auditUrl(
 			{
@@ -114,7 +119,6 @@ describe("cli audit", () => {
 	});
 
 	it("scores param budgets, wildcard exposure, and empty coverage", async () => {
-		const { collectContext } = await import("../src/audit.js");
 		const over = scoreAudit({
 			tools: [
 				tool({ maxParamDescription: BUDGETS.paramDescription + 1 }),
@@ -136,6 +140,12 @@ describe("cli audit", () => {
 		expect(
 			empty.find((entry) => entry.check === "consequential-coverage")?.pass,
 		).toBe(false);
+	});
+
+	it("never navigates from inside the collector", async () => {
+		// Navigation belongs to the caller. A collector that navigated would be
+		// unable to answer "what did this page look like when I looked at it".
+		const { collectContext } = await import("../src/audit.js");
 		const calls: string[] = [];
 		await collectContext({
 			async goto(url: string): Promise<void> {

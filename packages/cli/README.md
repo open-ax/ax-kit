@@ -15,9 +15,15 @@ surface, while this command grades how well one page uses it.
 ax-kit audit https://shop.example
 ```
 
-Experimental stub: the `ax-kit audit` command currently scores a fixed
-empty snapshot and exits non-zero, it does not drive a live page yet.
-Live results require `auditUrl()` with a headless browser.
+The command launches a real headless Chromium, navigates to the URL, collects
+the page's actual registered tools from its `document.modelContext`, scores
+them, and prints the report. Diagnostics go to standard error, so the report on
+standard output stays machine-readable.
+
+Exit code: `0` when nothing failed, `2` when the findings include a failure, `1`
+when the command could not run. A page with no tools at all is reported
+distinctly from a page whose tools are undiscoverable, so you can tell which
+problem you have.
 
 Scores typed tools, schema validity, consequential coverage, read-only
 sanity, exposure discipline, character budgets (500/150/30/1.5K),
@@ -26,3 +32,19 @@ feature-policy posture, and the origin-keyed cluster precondition.
 In-page contract audit: edge sees discoverability, journey agents see
 behavior, this audit sees the in-page contract. Never an unqualified
 readiness score.
+
+## Programmatic use
+
+The driver is exported so a caller can audit with its own browser options, and
+the pure scorer stays separately importable:
+
+```ts
+import { auditLiveUrl, exitCodeFor, scoreAudit } from "@ax-kit/cli";
+
+const { report, context } = await auditLiveUrl(
+  { headless: true },
+  "https://shop.example",
+);
+process.stdout.write(report);
+process.exitCode = exitCodeFor(context);
+```

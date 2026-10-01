@@ -2,27 +2,47 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { parseAuditTarget } from "./args.js";
-import { auditSnapshot } from "./audit.js";
-import type { AuditContextInput } from "./scoring.js";
-import { countFailures, scoreAudit } from "./scoring.js";
+import { auditLiveUrlFindings, exitCodeFor } from "./driver.js";
 
-function readTarget(): string {
+/**
+ * The audit command. It drives a real browser against the given URL, prints the
+ * report, and exits with a code that follows the findings.
+ *
+ * Diagnostics go to standard error so the report on standard output stays
+ * machine-readable.
+ */
+
+async function main(): Promise<number> {
+	let target: string;
 	try {
-		return parseAuditTarget(process.argv.slice(2));
+		target = parseAuditTarget(process.argv.slice(2));
 	} catch {
-		console.error("usage: ax-kit audit <url>");
-		process.exit(1);
+		process.stderr.write("usage: ax-kit audit <url>\n");
+		return 1;
+	}
+	try {
+		const { report, context } = await auditLiveUrlFindings(
+			{ headless: true },
+			target,
+		);
+		process.stdout.write(`${report}\n`);
+		return exitCodeFor(context);
+	} catch (error: unknown) {
+		process.stderr.write(
+			`audit failed: ${error instanceof Error ? error.message : String(error)}\n`,
+		);
+		return 1;
 	}
 }
 
-const target: string = readTarget();
-const snapshot: AuditContextInput = {
-	tools: [],
-	policyAllowsTools: true,
-	originKeyed: true,
-};
-console.error(
-	"experimental stub: no Chromium driver wired yet; scoring an empty snapshot, not the live page. Use auditUrl() with a headless browser for real results.",
+main().then(
+	(code: number) => {
+		process.exitCode = code;
+	},
+	(error: unknown) => {
+		process.stderr.write(
+			`audit failed: ${error instanceof Error ? error.message : String(error)}\n`,
+		);
+		process.exitCode = 1;
+	},
 );
-console.log(auditSnapshot(target, snapshot));
-process.exitCode = countFailures(scoreAudit(snapshot)) > 0 ? 2 : 0;

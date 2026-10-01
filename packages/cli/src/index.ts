@@ -3,6 +3,20 @@
 
 export type { BrowserLike, BrowserPageLike } from "./audit.js";
 export { auditSnapshot, auditUrl, collectContext } from "./audit.js";
+export type {
+	DrivenBrowser,
+	DrivenPage,
+	DrivenSession,
+	LaunchOptions,
+} from "./driver.js";
+export {
+	auditLiveUrl,
+	auditLiveUrlFindings,
+	collectSettled,
+	exitCodeFor,
+	launchBrowser,
+	launchDrivenBrowser,
+} from "./driver.js";
 export type { AuditReport } from "./output.js";
 export { createReport, formatReport, LANE_STATEMENT } from "./output.js";
 export type {
