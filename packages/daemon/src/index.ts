@@ -10,6 +10,18 @@
  * handshake, no session header, and no deprecated capabilities.
  */
 
+export type {
+	BridgeEndpoint,
+	BridgeRequest,
+} from "./bridge.js";
+export {
+	BRIDGE_ERRORS,
+	BridgeClient,
+	BridgeRefusal,
+	PageBridge,
+	readEnvelope,
+	readResponse,
+} from "./bridge.js";
 export type { DiscoveryFile } from "./discovery.js";
 export {
 	checkBearer,
@@ -22,7 +34,7 @@ export {
 	resolveDiscoveryDir,
 	serializeDiscoveryFile,
 } from "./discovery.js";
-export type { Transport, TransportOptions } from "./lifecycle.js";
+export type { BridgeRoutes, Transport, TransportOptions } from "./lifecycle.js";
 export {
 	assertLoopbackBind,
 	createBearer,

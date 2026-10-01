@@ -9,6 +9,26 @@ Everything here is ours, not the WebMCP draft's: the draft defines the
 page surface, while this entry speaks the client protocol on the other
 side of the bridge.
 
+## The page bridge
+
+The daemon reaches an extension over the loopback listener. A browser cannot
+open a TCP socket, so the extension dials *out*: it reads the discovery file,
+pulls a request, executes it in the Trusted tier, and posts the result back.
+
+```ts
+import { PageBridge, createDaemonInfo, startTransport } from "@ax-kit/daemon";
+
+const bridge = new PageBridge(createDaemonInfo());
+const transport = await startTransport({ discoveryDir, bridge });
+
+const tools = await bridge.listTools(tabId);
+const result = await bridge.callTool("viewCart", { detailed: true }, tabId, origin, []);
+```
+
+A refusal arrives as a `BridgeRefusal` carrying the worker's own error code, so
+a client can tell "not permitted" from "malformed" rather than reading prose.
+The tab is always named by the caller; the bridge never guesses one.
+
 ## Local transport
 
 The daemon can also serve a loopback listener, so a client finds it through a

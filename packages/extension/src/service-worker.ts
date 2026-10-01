@@ -25,10 +25,11 @@ import {
 	hitlKeyToString,
 } from "./hitl.js";
 import {
-	authorizeExecution,
+	applyArgAllowList,
 	isExposedToCaller,
 	validateFrameTool,
 } from "./trusted-tier.js";
+import { assertLiveContext } from "./manifest.js";
 
 /**
  * Enumerate the page's tools. Self-contained: the platform serializes this and
@@ -84,7 +85,14 @@ async function listToolsInPage(_arg: unknown): Promise<unknown> {
 	return { tools };
 }
 
-/** Fetch one tool's definition by name. Self-contained. */
+/**
+ * Fetch one tool's definition by name. Self-contained.
+ *
+ * Returns the same projection `listToolsInPage` builds, not the raw entry: a
+ * registered tool carries a live `window` reference, which cannot cross back
+ * through injection and would leave the worker holding something it cannot
+ * validate.
+ */
 async function getToolInPage(arg: unknown): Promise<unknown> {
 	const wanted = (arg as { name?: unknown } | null)?.name;
 	const doc = document as unknown as Record<string, unknown>;
@@ -106,9 +114,28 @@ async function getToolInPage(arg: unknown): Promise<unknown> {
 		if (typeof entry !== "object" || entry === null) {
 			continue;
 		}
-		if ((entry as Record<string, unknown>)["name"] === wanted) {
-			return entry;
+		const record = entry as Record<string, unknown>;
+		if (record["name"] !== wanted) {
+			continue;
 		}
+		const annotations = record["annotations"] as
+			| Record<string, unknown>
+			| undefined;
+		const origin =
+			typeof record["origin"] === "string" ? (record["origin"] as string) : "";
+		const schemaJson =
+			typeof record["inputSchema"] === "object" && record["inputSchema"] !== null
+				? JSON.stringify(record["inputSchema"])
+				: "{}";
+		return {
+			name: record["name"],
+			description: record["description"],
+			origin,
+			frameOrigin: String(location.origin),
+			consequentialHint: annotations?.["consequentialHint"] === true,
+			readOnlyHint: annotations?.["readOnlyHint"] === true,
+			definitionVersion: schemaJson,
+		};
 	}
 	return null;
 }
@@ -264,6 +291,9 @@ async function handle(request: InjectionRequest): Promise<unknown> {
 		throw new TypeError("tool not exposed");
 	}
 	const definitionVersion = String(view["definitionVersion"]);
+	// Only allow-listed keys cross into the page. Anything the caller sent that
+	// was not asked for is dropped rather than forwarded.
+	const minimised = applyArgAllowList(callArgs, allowedArgKeys(args));
 	// Built through the validating constructor rather than by literal, so a
 	// malformed part rejects here instead of reaching the store.
 	const key = createHitlKey({
@@ -271,33 +301,49 @@ async function handle(request: InjectionRequest): Promise<unknown> {
 		documentId: String(args["documentId"] ?? ""),
 		frameId,
 		toolName: name,
-		argsHash: hashArgs(argsJson),
+		argsHash: hashArgs(canonicalizeArgs(minimised)),
 	});
-	const approvalKey = hitlKeyToString(key);
 	if (view["consequentialHint"] === true) {
+		// A Consequential tool never runs on the strength of the caller's claim.
+		// It returns the pending binding and waits for a person.
 		return {
-			pendingApproval: approvalKey,
+			pendingApproval: hitlKeyToString(key),
 			requiresConfirmation: true,
 			toolName: name,
 			description: String(view["description"]),
-			argsJson,
+			argsJson: canonicalizeArgs(minimised),
+			definitionVersion,
 			origin: ownerOrigin,
 		};
 	}
-	authorizeExecution({
-		handler,
-		contextLive: true,
-		key,
-		approvedKey: approvalKey,
-		ownerOrigin,
-		callerOrigin,
-		allowedOrigins: allowed,
-		argsJson,
-		liveKey: key,
-		liveDefinitionVersion: definitionVersion,
-		store: approvals,
-	});
-	return inject(tabId, frameId, "executeTool", { name, args: callArgs });
+	// Non-consequential: the handler, the context, and the exposure gate are
+	// checked against validated values. The approval store is deliberately not
+	// consulted — there is nothing to approve.
+	assertHandlerName(handler);
+	assertLiveContext(true);
+	if (!isExposedToCaller(ownerOrigin, allowed, callerOrigin)) {
+		throw new TypeError("tool not exposed");
+	}
+	return inject(tabId, frameId, "executeTool", { name, args: minimised });
+}
+
+/**
+ * The keys the caller is asking to cross into the page.
+ *
+ * Absent a list, the caller's own keys are taken as the request — but they are
+ * still filtered through the allow-list, so the shape the page receives is
+ * always one the worker chose.
+ */
+function allowedArgKeys(args: Record<string, unknown>): string[] {
+	const declared = args["allowedKeys"];
+	if (Array.isArray(declared)) {
+		return declared.filter((key): key is string => typeof key === "string");
+	}
+	const callArgs = args["args"];
+	if (typeof callArgs !== "object" || callArgs === null) {
+		return [];
+	}
+	return Object.keys(callArgs as Record<string, unknown>);
 }
 
 chrome.runtime.onMessage.addListener(

@@ -24,7 +24,7 @@ import { mkdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import type { IncomingMessage, Server, ServerResponse } from "node:http";
 import { createServer } from "node:http";
 import { join } from "node:path";
-
+import { readBody, sendJson } from "./bridge.js";
 import type { DiscoveryFile } from "./discovery.js";
 import {
 	checkBearer,
@@ -38,18 +38,32 @@ import {
 } from "./discovery.js";
 import { createNativeHostManifest } from "./native-host.js";
 
-export interface TransportOptions {
-	readonly discoveryDir: string;
-	readonly host?: string;
-	readonly port?: number;
-}
-
 export interface Transport {
 	/** Port actually bound, for a client that will read the discovery file. */
 	readonly port: number;
 	readonly bearer: string;
 	readonly discoveryPath: string;
 	close(): Promise<void>;
+}
+
+/** What the listener needs from the bridge to serve its two endpoints. */
+export interface BridgeRoutes {
+	/** Next queued request for a pulling client, or null when idle. */
+	take(): unknown;
+	/** Accept a result and settle the matching call. */
+	deliver(body: unknown): void;
+}
+
+export interface TransportOptions {
+	readonly discoveryDir: string;
+	readonly host?: string;
+	readonly port?: number;
+	/**
+	 * Present when the daemon has a page bridge. Without it the listener still
+	 * enforces the bearer and origin, and answers 404 — which is what a daemon
+	 * with no extension attached should do.
+	 */
+	readonly bridge?: BridgeRoutes;
 }
 
 /** Refuse a non-loopback bind outright. */
@@ -76,7 +90,7 @@ export function startTransport(options: TransportOptions): Promise<Transport> {
 	const host = assertLoopbackBind(options.host ?? "127.0.0.1");
 	const bearer = createBearer();
 	const server: Server = createServer((request, response) => {
-		handleRequest(request, response, bearer);
+		handleRequest(request, response, bearer, options.bridge);
 	});
 	return new Promise<Transport>((resolve, reject) => {
 		const onError = (error: Error): void => {
@@ -133,11 +147,15 @@ function closeTransport(server: Server, discoveryPath: string): Promise<void> {
 	});
 }
 
-function handleRequest(
+/** Bound so a hostile client cannot exhaust memory with one request. */
+const MAX_BRIDGE_BODY = 1024 * 1024;
+
+async function handleRequest(
 	request: IncomingMessage,
 	response: ServerResponse,
 	bearer: string,
-): void {
+	bridge: BridgeRoutes | undefined,
+): Promise<void> {
 	try {
 		checkUpgradeOrigin(request.headers.origin);
 		checkBearer(request.headers["x-ax-bearer"], bearer);
@@ -146,6 +164,34 @@ function handleRequest(
 		response.end(
 			error instanceof TypeError ? error.message : "request refused",
 		);
+		return;
+	}
+	if (bridge === undefined) {
+		response.writeHead(404, { "content-type": "text/plain" });
+		response.end("no bridge");
+		return;
+	}
+	const path = (request.url ?? "/").split("?")[0];
+	if (path === "/pull") {
+		const next = bridge.take();
+		if (next === null) {
+			// Idle, not an error: the client should come back.
+			response.writeHead(204);
+			response.end();
+			return;
+		}
+		sendJson(response, 200, next);
+		return;
+	}
+	if (path === "/result" && request.method === "POST") {
+		try {
+			const body = await readBody(request, MAX_BRIDGE_BODY);
+			bridge.deliver(body);
+			sendJson(response, 200, { ok: true });
+		} catch (error: unknown) {
+			response.writeHead(400, { "content-type": "text/plain" });
+			response.end(error instanceof TypeError ? error.message : "bad result");
+		}
 		return;
 	}
 	response.writeHead(404, { "content-type": "text/plain" });
