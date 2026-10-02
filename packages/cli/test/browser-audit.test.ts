@@ -7,6 +7,7 @@ import { collectContext } from "../src/audit.js";
 import type { DrivenBrowser } from "../src/driver.js";
 import {
 	auditLiveUrl,
+	auditLiveUrlFindings,
 	exitCodeFor,
 	launchDrivenBrowser,
 } from "../src/driver.js";
@@ -238,10 +239,14 @@ describe("audit under real headless Chromium", () => {
 	});
 
 	it("reports failing fixtures with a non-zero code through the driver", async () => {
-		const failing = await auditLiveUrl(
+		const { report, context } = await auditLiveUrlFindings(
 			{ headless: true },
 			`${server.origin}/untyped`,
 		);
-		expect(failing).toContain("bareTool");
+		expect(report).toContain("bareTool");
+		// The name promises the code, so the code is what is asserted: a report
+		// that named the failure while the command still exited 0 would pass a
+		// text check and break the pipeline it exists for.
+		expect(exitCodeFor(context)).toBe(2);
 	});
 });
