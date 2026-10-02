@@ -30,6 +30,14 @@ export interface FrameToolView {
 	readonly consequentialHint: boolean;
 	readonly readOnlyHint: boolean;
 	readonly definitionVersion: string;
+	/**
+	 * The argument names the page's own input schema declares.
+	 *
+	 * Arguments are minimised against this list rather than against whatever a
+	 * caller sent, so a caller cannot introduce a key the page never asked for.
+	 * A page with no declared properties declares none, and receives none.
+	 */
+	readonly declaredKeys: ReadonlyArray<string>;
 }
 
 function checkOrigin(origin: string): void {
@@ -74,6 +82,19 @@ export function validateFrameTool(value: unknown): FrameToolView {
 	) {
 		throw new TypeError("bad annotations");
 	}
+	// The keys the page declares it accepts. Arguments are minimised against
+	// these, so they are validated at the boundary like every other field:
+	// a malformed list is a malformed listing, not an empty one, because
+	// treating it as empty would silently drop every argument.
+	const declaredKeys = record.declaredKeys;
+	if (!Array.isArray(declaredKeys)) {
+		throw new TypeError("bad declared keys");
+	}
+	for (const key of declaredKeys) {
+		if (typeof key !== "string" || key.length === 0) {
+			throw new TypeError("bad declared keys");
+		}
+	}
 	return {
 		name,
 		origin,
@@ -82,6 +103,7 @@ export function validateFrameTool(value: unknown): FrameToolView {
 		consequentialHint,
 		readOnlyHint,
 		definitionVersion,
+		declaredKeys: [...declaredKeys] as string[],
 	};
 }
 

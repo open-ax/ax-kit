@@ -57,8 +57,23 @@ interface AxTab {
 	readonly pendingUrl?: string;
 }
 
+/**
+ * The subset of `chrome.tabs.onUpdated` this worker reads.
+ *
+ * Only `status` is consumed, and only the transition to `"loading"`, which is
+ * the signal that a tab began navigating a new document. It is delivered
+ * without the `tabs` permission, so it costs nothing to request beyond the
+ * host access the bridge already needs.
+ */
+interface AxTabsOnUpdated {
+	addListener(
+		callback: (tabId: number, changeInfo: { status?: unknown }) => void,
+	): void;
+}
+
 interface AxTabs {
 	query(info: Record<string, unknown>): Promise<AxTab[]>;
+	onUpdated: AxTabsOnUpdated;
 }
 
 declare const chrome: {

@@ -67,11 +67,24 @@ async function listToolsInPage(_arg: unknown): Promise<unknown> {
 		const origin =
 			typeof record["origin"] === "string" ? (record["origin"] as string) : "";
 		const frameOrigin = String(location.origin);
+		const schema = record["inputSchema"];
 		const schemaJson =
-			typeof record["inputSchema"] === "object" &&
-			record["inputSchema"] !== null
-				? JSON.stringify(record["inputSchema"])
+			typeof schema === "object" && schema !== null
+				? JSON.stringify(schema)
 				: "{}";
+		// The keys the page says it accepts. Inlined rather than shared with the
+		// single-tool projection because this function is serialized alone: a
+		// call to a module-level helper would not survive the hop. A schema that
+		// is not a plain object of properties declares nothing, which fails
+		// closed rather than admitting keys.
+		const props =
+			typeof schema === "object" && schema !== null && !Array.isArray(schema)
+				? (schema as Record<string, unknown>)["properties"]
+				: undefined;
+		const declaredKeys =
+			typeof props === "object" && props !== null && !Array.isArray(props)
+				? Object.keys(props as Record<string, unknown>)
+				: [];
 		tools.push({
 			name: record["name"],
 			description: record["description"],
@@ -83,6 +96,9 @@ async function listToolsInPage(_arg: unknown): Promise<unknown> {
 			// derives one from the definition it just read. It changes when the
 			// definition changes, which is what the approval binding must catch.
 			definitionVersion: schemaJson,
+			// The keys the page says it accepts. The worker minimises arguments
+			// against these rather than against whatever the caller sent.
+			declaredKeys: declaredKeys,
 		});
 	}
 	return { tools };
@@ -126,11 +142,21 @@ async function getToolInPage(arg: unknown): Promise<unknown> {
 			| undefined;
 		const origin =
 			typeof record["origin"] === "string" ? (record["origin"] as string) : "";
+		const schema = record["inputSchema"];
 		const schemaJson =
-			typeof record["inputSchema"] === "object" &&
-			record["inputSchema"] !== null
-				? JSON.stringify(record["inputSchema"])
+			typeof schema === "object" && schema !== null
+				? JSON.stringify(schema)
 				: "{}";
+		// Inlined for the same reason as in the listing projection: this function
+		// is serialized alone and cannot reach a module-level helper.
+		const props =
+			typeof schema === "object" && schema !== null && !Array.isArray(schema)
+				? (schema as Record<string, unknown>)["properties"]
+				: undefined;
+		const declaredKeys =
+			typeof props === "object" && props !== null && !Array.isArray(props)
+				? Object.keys(props as Record<string, unknown>)
+				: [];
 		return {
 			name: record["name"],
 			description: record["description"],
@@ -139,6 +165,7 @@ async function getToolInPage(arg: unknown): Promise<unknown> {
 			consequentialHint: annotations?.["consequentialHint"] === true,
 			readOnlyHint: annotations?.["readOnlyHint"] === true,
 			definitionVersion: schemaJson,
+			declaredKeys,
 		};
 	}
 	return null;
@@ -301,9 +328,9 @@ async function handle(request: InjectionRequest): Promise<unknown> {
 		throw new TypeError("tool not exposed");
 	}
 	const definitionVersion = String(view["definitionVersion"]);
-	// Only allow-listed keys cross into the page. Anything the caller sent that
-	// was not asked for is dropped rather than forwarded.
-	const minimised = applyArgAllowList(callArgs, allowedArgKeys(args));
+	// Only keys this worker permits cross into the page. Anything the caller
+	// sent that was not asked for is dropped rather than forwarded.
+	const minimised = applyArgAllowList(callArgs, allowedArgKeys(args, view));
 	// Built through the validating constructor rather than by literal, so a
 	// malformed part rejects here instead of reaching the store.
 	const key = createHitlKey({
@@ -471,20 +498,42 @@ function pendingApprovals(): PanelApproval[] {
 /**
  * The keys the caller is asking to cross into the page.
  *
- * Absent a list, the caller's own keys are taken as the request — but they are
- * still filtered through the allow-list, so the shape the page receives is
- * always one the worker chose.
+ * An explicit list is honoured as given. Absent one, the keys are derived from
+ * the tool's own declared input schema and intersected with what the caller
+ * actually sent, so the page receives a shape this worker chose: a caller
+ * cannot introduce a key the page never declared for itself.
+ *
+ * Deriving from the caller's own keys instead would forward whatever the caller
+ * sent, which makes this function a no-op and lets an agent smuggle arbitrary
+ * arguments into a tool that never asked to receive them.
  */
-function allowedArgKeys(args: Record<string, unknown>): string[] {
-	const declared = args["allowedKeys"];
-	if (Array.isArray(declared)) {
-		return declared.filter((key): key is string => typeof key === "string");
+function declaredArgKeys(view: Record<string, unknown>): string[] {
+	const declared = view["declaredKeys"];
+	if (!Array.isArray(declared)) {
+		return [];
 	}
+	return declared.filter((key): key is string => typeof key === "string");
+}
+
+function allowedArgKeys(
+	args: Record<string, unknown>,
+	view: Record<string, unknown>,
+): string[] {
+	const declared = args["allowedKeys"];
 	const callArgs = args["args"];
 	if (typeof callArgs !== "object" || callArgs === null) {
 		return [];
 	}
-	return Object.keys(callArgs as Record<string, unknown>);
+	if (declared !== undefined) {
+		if (!Array.isArray(declared)) {
+			throw new TypeError("bad allow-list");
+		}
+		return declared.filter((key): key is string => typeof key === "string");
+	}
+	const permitted = new Set(declaredArgKeys(view));
+	return Object.keys(callArgs as Record<string, unknown>).filter((key) =>
+		permitted.has(key),
+	);
 }
 
 /**
@@ -551,6 +600,32 @@ function panel(op: unknown, args: unknown): unknown {
 	rejectApproval(record["key"]);
 	return { ok: true };
 }
+
+/**
+ * A pending confirmation does not survive navigation.
+ *
+ * An approval is bound to the document the person was shown. When the tab
+ * navigates that document is gone, so a confirmation left standing would
+ * authorise an invocation against whatever loaded next — the one case where
+ * the binding could outlive its own subject.
+ *
+ * `chrome.tabs.onUpdated` reporting `status: "loading"` is the browser's own
+ * signal and needs no permission beyond the host access already requested.
+ * The store is keyed on the reported tab rather than on a document identifier
+ * the caller supplied, so what gets discarded is decided from something the
+ * browser said rather than something the caller asked.
+ */
+chrome.tabs.onUpdated.addListener(
+	(tabId: number, changeInfo: { status?: unknown }): void => {
+		if (changeInfo.status !== "loading") {
+			return;
+		}
+		approvals.invalidateTab(tabId);
+		void chrome.runtime.sendMessage({ handler: "pendingChanged" }).catch(() => {
+			// No panel listening. The invalidation above already happened.
+		});
+	},
+);
 
 chrome.runtime.onMessage.addListener(
 	(

@@ -314,8 +314,11 @@ describe("emitted manifest", () => {
 	it("rejects a posture that is not held", () => {
 		expect(() =>
 			createManifestDocument(
-				// biome-ignore lint/suspicious/noExplicitAny: deliberately invalid
-				{ ...defaultManifestPosture(), incognito: "allowed" } as any,
+				// Deliberately not a `ManifestPosture`: `incognito` is widened back
+				// out, so the value can only be built through the index signature.
+				// The builder takes `unknown` and validates, which is what makes
+				// this assertion possible without an unchecked cast.
+				{ ...defaultManifestPosture(), incognito: "allowed" },
 				"x",
 				"0.0.0",
 				"y",

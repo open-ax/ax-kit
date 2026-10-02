@@ -47,7 +47,11 @@ await mc.registerTool({
 	name: "viewCart",
 	description: "Show the cart.",
 	inputSchema: { type: "object", properties: { detailed: { type: "boolean", description: "Include items." } } },
-	execute: async (args) => ({ items: 3, detailed: args.detailed === true }),
+	// Echoes every key the tool actually received, not a fixed projection.
+	// Echoing only the keys under test would make a leak of anything else
+	// invisible, and the assertions below would pass with the allow-list
+	// deleted.
+	execute: async (args) => ({ items: 3, received: args }),
 });
 await mc.registerTool({
 	name: "payNow",
@@ -304,7 +308,10 @@ describe("tool execution end to end", () => {
 			[],
 		);
 		// The page's execute callback ran; this is its value, not a string.
-		expect(result).toEqual(JSON.stringify({ items: 3, detailed: true }));
+		expect(JSON.parse(result as string)).toEqual({
+			items: 3,
+			received: { detailed: true },
+		});
 	});
 
 	it("answers an MCP tools/list with the page's real tool set", async () => {
@@ -339,7 +346,13 @@ describe("tool execution end to end", () => {
 			origin,
 			[],
 		);
-		expect(result).toEqual(JSON.stringify({ items: 3, detailed: true }));
+		// The tool echoes the argument object it was handed, so this states what
+		// the page received rather than what the caller asked for. An assertion
+		// about the caller's input would hold no matter what the page is given.
+		expect(JSON.parse(result as string)).toEqual({
+			items: 3,
+			received: { detailed: true },
+		});
 	});
 
 	it("returns a refusal as a typed error, not a malformed answer", async () => {
@@ -378,8 +391,8 @@ describe("tool execution end to end", () => {
 			bridge.callTool("viewCart", { detailed: true }, tabId, origin, []),
 		]);
 		expect(await both).toEqual([
-			JSON.stringify({ items: 3, detailed: false }),
-			JSON.stringify({ items: 3, detailed: true }),
+			JSON.stringify({ items: 3, received: { detailed: false } }),
+			JSON.stringify({ items: 3, received: { detailed: true } }),
 		]);
 	});
 });

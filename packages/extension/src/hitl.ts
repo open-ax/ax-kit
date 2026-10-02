@@ -495,11 +495,29 @@ export class ApprovalStore {
 		if (typeof documentId !== "string") {
 			throw new TypeError("bad documentId");
 		}
-		for (const [key, details] of this.pending) {
-			if (details.key.documentId === documentId) {
-				this.pending.delete(key);
-				this.approved.delete(key);
-				this.record("invalidated", key);
+		this.dropPending((key) => key.documentId === documentId);
+	}
+
+	/**
+	 * Navigation invalidates every pending entry for a tab.
+	 *
+	 * Keyed on the tab rather than on the document identifier because the tab
+	 * is the part the browser reports and this store cannot be asked to trust a
+	 * caller-supplied identifier to decide what it should discard.
+	 */
+	invalidateTab(tabId: unknown): void {
+		if (typeof tabId !== "number" || !Number.isInteger(tabId)) {
+			throw new TypeError("bad tabId");
+		}
+		this.dropPending((key) => key.tabId === tabId);
+	}
+
+	private dropPending(matches: (key: HitlKey) => boolean): void {
+		for (const [binding, details] of this.pending) {
+			if (matches(details.key)) {
+				this.pending.delete(binding);
+				this.approved.delete(binding);
+				this.record("invalidated", binding);
 			}
 		}
 	}

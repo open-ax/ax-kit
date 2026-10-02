@@ -11,7 +11,6 @@
  * against — a hand-written equivalent would test a fiction.
  */
 
-import type { ManifestPosture } from "./manifest.js";
 import { assertManifestPosture, defaultManifestPosture } from "./manifest.js";
 
 export interface ManifestDocument {
@@ -45,9 +44,14 @@ export interface ManifestDocument {
  * Build the manifest from a posture. `assertManifestPosture` runs first, so an
  * unknown or hostile posture rejects here rather than producing a file that
  * claims a posture it does not hold.
+ *
+ * The posture arrives as `unknown` for the same reason `assertManifestPosture`
+ * takes one: it is validated from scratch at this boundary, so the parameter
+ * type must not claim a caller already guaranteed what validation exists to
+ * check.
  */
 export function createManifestDocument(
-	posture: ManifestPosture,
+	posture: unknown,
 	name: string,
 	version: string,
 	description: string,

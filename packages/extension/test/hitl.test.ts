@@ -98,6 +98,48 @@ describe("hitl binding", () => {
 		expect(store.pendingKeys().join(",")).toContain("doc-b");
 	});
 
+	it("invalidates a whole tab on navigation, approved or not", () => {
+		const store = new ApprovalStore();
+		const elsewhere = createHitlKey({
+			...details("doc-c").key,
+			tabId: 8,
+		});
+		const pending = store.requestApproval(details("doc-a"), true);
+		const approved = store.requestApproval(details("doc-b"), true);
+		store.approveApproval(approved);
+		store.requestApproval({ ...details("doc-c"), key: elsewhere }, true);
+		expect(store.pendingKeys()).toHaveLength(3);
+
+		store.invalidateTab(7);
+
+		// Both the merely-pending and the already-approved binding are dropped:
+		// an approval that survives its own document is exactly the case that
+		// would authorise an invocation against whatever loaded next.
+		expect(store.pendingKeys()).toHaveLength(1);
+		expect(store.pendingKeys().join(",")).toContain("doc-c");
+		// A consumed-and-dropped approval must not verify afterwards.
+		expect(() =>
+			store.verifyAndConsume(approved, details("doc-b").key, "v1"),
+		).toThrow(TypeError);
+		expect(pending).not.toBe(approved);
+		expect(() => store.invalidateTab("7")).toThrow(TypeError);
+	});
+
+	it("refuses a definition that changed after the person approved it", () => {
+		const store = new ApprovalStore();
+		const key = store.requestApproval(details("doc-a"), true);
+		store.approveApproval(key);
+		// Same target, same arguments, different definition: the person agreed
+		// to one definition and a different one arrived.
+		expect(() =>
+			store.verifyAndConsume(key, details("doc-a").key, "v2"),
+		).toThrow(/definition changed/);
+		// The drift also consumed the approval rather than leaving it usable.
+		expect(() =>
+			store.verifyAndConsume(key, details("doc-a").key, "v1"),
+		).toThrow(TypeError);
+	});
+
 	it("uses the side panel only", () => {
 		expect(CONFIRMATION_SURFACE).toBe("side-panel");
 	});

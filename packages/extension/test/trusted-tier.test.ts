@@ -66,6 +66,7 @@ describe("trusted tier", () => {
 				consequentialHint: false,
 				readOnlyHint: true,
 				definitionVersion: "v1",
+				declaredKeys: ["detailed"],
 			}),
 		).not.toThrow();
 		expect(() => validateFrameTool({ name: "bad name!" })).toThrow(TypeError);
@@ -78,8 +79,35 @@ describe("trusted tier", () => {
 				consequentialHint: false,
 				readOnlyHint: true,
 				definitionVersion: "v1",
+				declaredKeys: [],
 			}),
 		).toThrow(TypeError);
+		// Arguments are minimised against `declaredKeys`, so a malformed list is
+		// rejected rather than read as "accepts nothing" or "accepts anything".
+		const withoutDeclaredKeys = {
+			name: "viewCart",
+			origin: "https://shop.example",
+			frameOrigin: "https://shop.example",
+			description: "Show the cart.",
+			consequentialHint: false,
+			readOnlyHint: true,
+			definitionVersion: "v1",
+		};
+		expect(() => validateFrameTool(withoutDeclaredKeys)).toThrow(TypeError);
+		expect(() =>
+			validateFrameTool({ ...withoutDeclaredKeys, declaredKeys: "detailed" }),
+		).toThrow(TypeError);
+		expect(() =>
+			validateFrameTool({ ...withoutDeclaredKeys, declaredKeys: [7] }),
+		).toThrow(TypeError);
+		expect(() =>
+			validateFrameTool({ ...withoutDeclaredKeys, declaredKeys: [""] }),
+		).toThrow(TypeError);
+		// A page that declares no arguments is valid: it accepts none.
+		expect(
+			validateFrameTool({ ...withoutDeclaredKeys, declaredKeys: [] })
+				.declaredKeys,
+		).toEqual([]);
 	});
 
 	it("mirrors exposure and minimizes args", () => {

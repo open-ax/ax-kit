@@ -70,6 +70,14 @@ let context: BrowserContext;
 let userDataDir: string;
 let worker: Worker;
 let page: Page;
+/**
+ * The tab `tabId` names, kept so a case can navigate it.
+ *
+ * Bound once, in `beforeAll`, and not by "whatever page opened last" — a suite
+ * that opens further fixtures must not silently change which tab a navigation
+ * case moves.
+ */
+let shopPage: Page | undefined;
 let tabId = -1;
 
 interface CallResult {
@@ -146,6 +154,69 @@ function plain(overrides: Record<string, unknown> = {}): Promise<CallResult> {
 	});
 }
 
+/**
+ * Put a pending request in front of the panel and approve it, the way a person
+ * clicking Confirm would. `overrides` lets a case move one field — a stale
+ * definition version, say — without restating the whole flow.
+ */
+async function approveThroughPanel(
+	result: Record<string, unknown>,
+	documentId: string,
+	overrides: Record<string, unknown> = {},
+): Promise<boolean> {
+	const argsJson = String(result["argsJson"]);
+	const definitionVersion = String(result["definitionVersion"]);
+	const binding = String(result["pendingApproval"]);
+	const argsHash = await worker.evaluate((text: unknown) => {
+		const scope = globalThis as unknown as Record<string, unknown>;
+		const hash = scope["__axHash"] as ((s: string) => string) | undefined;
+		if (hash === undefined) {
+			throw new Error("no hasher exposed");
+		}
+		return hash(text as string);
+	}, argsJson);
+	return await worker.evaluate(
+		(payload: unknown) => {
+			const scope = globalThis as unknown as Record<string, unknown>;
+			const panel = scope["__axPanel"] as (
+				op: string,
+				args: unknown,
+			) => unknown;
+			const record = payload as Record<string, unknown>;
+			panel("request", {
+				gesture: true,
+				approval: {
+					key: record["key"],
+					toolName: "payNow",
+					description: "Charge the saved card.",
+					argsJson: record["argsJson"],
+					origin: record["origin"],
+					frameOrigin: record["origin"],
+					consequentialHint: true,
+					readOnlyHint: false,
+					definitionVersion: record["definitionVersion"],
+				},
+			});
+			panel("approve", { key: record["binding"] });
+			return true;
+		},
+		{
+			binding,
+			argsJson,
+			origin,
+			definitionVersion,
+			...overrides,
+			key: {
+				tabId,
+				documentId,
+				frameId: 0,
+				toolName: "payNow",
+				argsHash,
+			},
+		},
+	);
+}
+
 /** Clear anything left pending, so a case asserts on its own state. */
 async function clearPending(): Promise<void> {
 	await worker.evaluate(() => {
@@ -160,10 +231,22 @@ async function clearPending(): Promise<void> {
 	});
 }
 
-/** Open a fixture page and wait for its own readiness marker. */
-async function openFixture(path: string): Promise<number> {
+/**
+ * Open a fixture page and wait for its own readiness marker.
+ *
+ * Each page gets a distinct query string. Tabs are located by URL, so two
+ * fixtures served from the same path would make that lookup ambiguous and
+ * could bind `tabId` to the wrong tab — which a navigation case would then
+ * quietly fail to exercise.
+ */
+let fixtureSeq = 0;
+async function openFixture(
+	path: string,
+): Promise<{ tabId: number; page: Page }> {
 	const fixture = await context.newPage();
-	await fixture.goto(`${origin}${path}`);
+	fixtureSeq += 1;
+	const unique = `${path}?fixture=${fixtureSeq}`;
+	await fixture.goto(`${origin}${unique}`);
 	await fixture.waitForFunction(
 		() =>
 			(globalThis as unknown as Record<string, unknown>)["__ready"] === true,
@@ -189,7 +272,7 @@ async function openFixture(path: string): Promise<number> {
 	}, fixture.url());
 	// The page stays open: a tab that has been closed is a different refusal,
 	// and the case under test is the tool listing, not tab lifetime.
-	return id;
+	return { tabId: id, page: fixture };
 }
 
 beforeAll(async () => {
@@ -221,7 +304,9 @@ beforeAll(async () => {
 		undefined,
 		{ timeout: 20_000 },
 	);
-	tabId = await openFixture("/shop");
+	const opened = await openFixture("/shop");
+	tabId = opened.tabId;
+	shopPage = opened.page;
 	if (tabId < 0) {
 		throw new Error("no tab id for the fixture page");
 	}
@@ -311,9 +396,9 @@ describe("authorisation outcomes at the real seam", () => {
 	});
 
 	it("refuses a page that forges a tool listing", async () => {
-		const forgedTab = await openFixture("/forged");
+		const forgedPage = await openFixture("/forged");
 		const forged = await invoke("listTools", {
-			tabId: forgedTab,
+			tabId: forgedPage.tabId,
 			frameId: 0,
 		});
 		// The forged entries are refused at the boundary rather than acted on:
@@ -487,6 +572,94 @@ describe("authorisation outcomes at the real seam", () => {
 		const replay = await call();
 		expect(replay.ok).toBe(true);
 		expect(replay.result).not.toEqual(JSON.stringify({ paid: 250 }));
+		await clearPending();
+	});
+
+	it("refuses an approval whose definition changed after the person agreed", async () => {
+		await clearPending();
+		const first = await invoke("executeTool", {
+			tabId,
+			frameId: 0,
+			name: "payNow",
+			args: { amount: 400 },
+			callerOrigin: origin,
+			allowedOrigins: [],
+			documentId: "doc-1",
+		});
+		expect(first.ok).toBe(true);
+		const result = first.result as Record<string, unknown>;
+		const liveVersion = String(result["definitionVersion"]);
+		expect(liveVersion.length).toBeGreaterThan(0);
+
+		// The person is shown a definition, and a different one is live by the
+		// time the invocation runs. Same tool, same tab, same arguments: the
+		// version is the only thing that moved, which is exactly what a
+		// re-registration between confirmation and execution produces.
+		const approved = await approveThroughPanel(result, "doc-1", {
+			definitionVersion: "a-different-definition",
+		});
+		expect(approved).toBe(true);
+
+		const drifted = await invoke("executeTool", {
+			tabId,
+			frameId: 0,
+			name: "payNow",
+			args: { amount: 400 },
+			callerOrigin: origin,
+			allowedOrigins: [],
+			documentId: "doc-1",
+		});
+		// Refused in its own error family, distinct from an argument mismatch, so
+		// a client can tell "the thing changed" from "you asked for something
+		// else".
+		expect(drifted.ok).toBe(false);
+		expect(drifted.error).toMatch(/definition changed/);
+		await clearPending();
+	});
+
+	it("refuses an approval that outlived the document it was given for", async () => {
+		await clearPending();
+		const first = await invoke("executeTool", {
+			tabId,
+			frameId: 0,
+			name: "payNow",
+			args: { amount: 700 },
+			callerOrigin: origin,
+			allowedOrigins: [],
+			documentId: "doc-1",
+		});
+		expect(first.ok).toBe(true);
+		const result = first.result as Record<string, unknown>;
+		expect(await approveThroughPanel(result, "doc-1")).toBe(true);
+
+		// The tab navigates. The approval was bound to the document that just
+		// went away, so it cannot authorise anything against whatever loaded
+		// next. Readiness is the new document's own marker.
+		await shopPage?.goto(`${origin}/shop`);
+		await shopPage?.waitForFunction(
+			() =>
+				(globalThis as unknown as Record<string, unknown>)["__ready"] === true,
+			undefined,
+			{ timeout: 20_000 },
+		);
+
+		const afterNavigation = await invoke("executeTool", {
+			tabId,
+			frameId: 0,
+			name: "payNow",
+			args: { amount: 700 },
+			callerOrigin: origin,
+			allowedOrigins: [],
+			documentId: "doc-1",
+		});
+		// It asks again rather than running on the spent approval.
+		expect(afterNavigation.ok).toBe(true);
+		expect(afterNavigation.result).not.toEqual(JSON.stringify({ paid: 700 }));
+		const asked = afterNavigation.result as Record<string, unknown>;
+		expect(asked["requiresConfirmation"]).toBe(true);
+		// The binding is unchanged because the caller still names the same
+		// document; what changed is that the approval behind it is gone, so the
+		// same request no longer resolves to an execution.
 		await clearPending();
 	});
 
