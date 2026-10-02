@@ -1,9 +1,15 @@
 // Copyright 2026 Utpal Sen
 // SPDX-License-Identifier: Apache-2.0
 
-import { describe, expect, it } from "vitest";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
-import { BridgeRefusal, PageBridge } from "../src/bridge.js";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+
+import { BridgeClient, BridgeRefusal, PageBridge } from "../src/bridge.js";
+import type { Transport } from "../src/lifecycle.js";
+import { startTransport } from "../src/lifecycle.js";
 import { createDaemonInfo } from "../src/protocol.js";
 
 /**
@@ -46,5 +52,86 @@ describe("page bridge pending calls", () => {
 		expect(() =>
 			bridge.deliver(JSON.stringify({ id: envelope?.id, result: {} })),
 		).not.toThrow();
+	});
+});
+
+/**
+ * The worker's side of the bridge, against a real listener.
+ *
+ * The idle poll and the posted body are the whole contract, and both are easy to
+ * get wrong in a way that only shows up between requests. The daemon here is
+ * the real one over a real socket, so the 204 and the JSON body are the
+ * platform's, not a stand-in's.
+ */
+
+let discoveryDir: string;
+let transport: Transport;
+let bridge: PageBridge;
+
+beforeAll(async () => {
+	discoveryDir = await mkdtemp(join(tmpdir(), "ax-bridge-disc-"));
+	bridge = new PageBridge(createDaemonInfo(), 30_000);
+	transport = await startTransport({ discoveryDir, bridge });
+});
+
+afterAll(async () => {
+	await transport?.close();
+	await rm(discoveryDir, { recursive: true, force: true }).catch(() => {});
+});
+
+describe("bridge client over the real transport", () => {
+	it("keeps serving past an idle poll and posts a body the daemon can read", async () => {
+		const base = `http://127.0.0.1:${transport.port}`;
+		const headers = {
+			"x-ax-bearer": transport.bearer,
+			origin: base,
+			"content-type": "application/json",
+		};
+		let reachable = true;
+		let sawIdle: (() => void) | undefined;
+		const idle = new Promise<void>((done) => {
+			sawIdle = done;
+		});
+		const client = new BridgeClient(
+			async (body: unknown) => {
+				await fetch(`${base}/result`, {
+					method: "POST",
+					headers,
+					body: body as string,
+				});
+				return true;
+			},
+			async () => {
+				if (!reachable) {
+					return null;
+				}
+				try {
+					const response = await fetch(`${base}/pull`, { headers });
+					if (response.status === 204) {
+						// The daemon had nothing queued. A client that read this as
+						// the end of the stream would never reach the call below.
+						sawIdle?.();
+						sawIdle = undefined;
+						return "";
+					}
+					return await response.text();
+				} catch {
+					return null;
+				}
+			},
+		);
+
+		const serving = client.serve(async (request) => ({
+			tools: [{ name: request.handler, tabId: request.args["tabId"] }],
+		}));
+		await idle;
+		await expect(bridge.listTools(7)).resolves.toEqual([
+			{ name: "listTools", tabId: 7 },
+		]);
+
+		// The listener is still up; what ends the loop is the client learning the
+		// transport is gone, which is the only shutdown signal it has.
+		reachable = false;
+		await expect(serving).resolves.toBeUndefined();
 	});
 });

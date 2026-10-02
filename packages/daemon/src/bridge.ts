@@ -76,6 +76,11 @@ const PENDING_DEADLINE_MS = 60_000;
  *
  * Only extension contexts hold one of these. It is the sole path from the
  * daemon to a page, and it is reachable only with the bearer.
+ *
+ * Both callbacks speak the wire format, not the object format: `pull` yields
+ * the raw `/pull` body — an empty string when the daemon is idle — and `post`
+ * takes the raw `/result` body as a string. Anything else is a transport bug
+ * that would otherwise be discovered by a result nobody receives.
  */
 export class BridgeClient {
 	constructor(
@@ -83,22 +88,27 @@ export class BridgeClient {
 		private readonly pull: () => Promise<unknown>,
 	) {}
 
-	/** Serve requests until the daemon reports no more. */
+	/** Serve requests until the daemon's transport is gone. */
 	async serve(
 		handler: (request: BridgeRequest) => Promise<unknown>,
 	): Promise<void> {
 		for (;;) {
-			const envelope = await this.pull();
-			if (envelope === null || envelope === undefined) {
+			const body: unknown = await this.pull();
+			// Idle is not shutdown. `/pull` answers 204 with an empty body, and an
+			// empty queue is the normal state between requests; a client that read
+			// that as "no more work" would stop at the first gap. Only a vanished
+			// transport ends the loop.
+			if (body === null || body === undefined) {
 				return;
 			}
-			const parsed = readEnvelope(envelope);
-			if (parsed === null) {
-				return;
+			if (body === "") {
+				continue;
 			}
+			const parsed = readEnvelope(parseBody(body));
 			const result = await handler(parsed.request).then(
-				(value: unknown) => ({ id: parsed.id, result: value }),
+				(value: unknown) => ({ jsonrpc: "2.0", id: parsed.id, result: value }),
 				(error: unknown) => ({
+					jsonrpc: "2.0",
 					id: parsed.id,
 					error: {
 						code: BRIDGE_ERRORS.badRequest,
@@ -106,8 +116,20 @@ export class BridgeClient {
 					},
 				}),
 			);
-			await this.post(result);
+			await this.post(JSON.stringify(result));
 		}
+	}
+}
+
+/** Parse a pulled body, refusing anything that is not an object frame. */
+function parseBody(body: unknown): unknown {
+	if (typeof body !== "string") {
+		return body;
+	}
+	try {
+		return JSON.parse(body) as unknown;
+	} catch {
+		throw new TypeError("unparsable envelope");
 	}
 }
 
