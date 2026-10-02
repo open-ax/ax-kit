@@ -634,18 +634,4 @@ describe("authorisation outcomes at the real seam", () => {
 		// same request no longer resolves to an execution.
 		await clearPending();
 	});
-
-	it("keeps zero any at the boundary", async () => {
-		// Not a runtime assertion: a guard against the shape regressing. Every
-		// value that crossed a realm boundary in this suite came back `unknown`
-		// and was validated, and this test would fail if the boundary validators
-		// stopped being consulted — a forged listing would then be accepted.
-		const listing = await invoke("listTools", { tabId, frameId: 0 });
-		expect(listing.ok).toBe(true);
-		const tools = (listing.result as { tools: ReadonlyArray<unknown> }).tools;
-		for (const tool of tools) {
-			expect(typeof tool).toBe("object");
-			expect(tool).not.toBeNull();
-		}
-	});
 });

@@ -784,13 +784,12 @@ chrome.runtime.onMessage.addListener(
 // reachable from the page: a service worker's global is not a page global, and
 // the manifest denies external connections. The panel reaches the worker over
 // `chrome.runtime.sendMessage` and uses none of these.
+//
+// Approvals are filed by the worker from its own validated view, so there is
+// nothing left for a test to file and nothing to reimplement the rule for.
 Object.assign(globalThis as unknown as Record<string, unknown>, {
 	__axHandle: handle,
 	__axApprovals: approvals,
 	__axPanel: panel,
 	__axTrail: trail,
-	// The canonicaliser and hasher, so a caller filing an approval derives the
-	// same binding the worker will check rather than reimplementing the rule.
-	__axHash: (text: string) =>
-		hashArgs(canonicalizeArgs(JSON.parse(text) as unknown)),
 });

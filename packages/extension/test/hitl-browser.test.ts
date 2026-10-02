@@ -173,18 +173,6 @@ async function clearPending(): Promise<void> {
 	});
 }
 
-/** The worker's own hash of a canonical argument string. */
-async function hashInWorker(argsJson: string): Promise<string> {
-	return await worker.evaluate((text: unknown) => {
-		const scope = globalThis as unknown as Record<string, unknown>;
-		const hash = scope["__axHash"] as ((s: string) => string) | undefined;
-		if (hash === undefined) {
-			throw new Error("no hasher exposed");
-		}
-		return hash(text as string);
-	}, argsJson);
-}
-
 /** Wire the panel page's decision functions for the test to drive. */
 async function preparePanel(panel: Page): Promise<void> {
 	await panel.evaluate(() => {

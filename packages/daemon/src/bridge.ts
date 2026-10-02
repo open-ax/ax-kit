@@ -18,7 +18,7 @@
  * two invocations can be in flight at once without either settling the other.
  */
 
-import type { IncomingMessage, Server, ServerResponse } from "node:http";
+import type { IncomingMessage, ServerResponse } from "node:http";
 import type { DaemonInfo, JsonRpcResponse } from "./protocol.js";
 
 export interface BridgeRequest {
