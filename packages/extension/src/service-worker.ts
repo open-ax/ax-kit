@@ -328,9 +328,9 @@ function readToolViews(payload: unknown): FrameToolView[] {
 			continue;
 		}
 		// Hostile even though our own injected code produced it: the page realm
-		// can subvert anything the function touches.
-		const view = validateFrameTool(entry);
-		views.push({ ...view });
+		// can subvert anything the function touches. `validateFrameTool` builds a
+		// fresh literal, so what it returns is already this worker's own copy.
+		views.push(validateFrameTool(entry));
 	}
 	return views;
 }
@@ -401,7 +401,7 @@ async function handle(request: InjectionRequest): Promise<unknown> {
 	const definitionVersion = view.definitionVersion;
 	// Only keys this worker permits cross into the page. Anything the caller
 	// sent that was not asked for is dropped rather than forwarded.
-	const minimised = applyArgAllowList(callArgs, allowedArgKeys(args, view));
+	const minimised = applyArgAllowList(callArgs, allowedArgKeys(callArgs, view));
 	if (view.consequentialHint === true) {
 		// Built through the validating constructor rather than by literal, so a
 		// malformed part rejects here instead of reaching the store. Only a
@@ -417,12 +417,13 @@ async function handle(request: InjectionRequest): Promise<unknown> {
 				"a consequential call needs a documentId to bind its approval to",
 			);
 		}
+		const argsJson = canonicalizeArgs(minimised);
 		const key = createHitlKey({
 			tabId,
 			documentId,
 			frameId,
 			toolName: name,
-			argsHash: hashArgs(canonicalizeArgs(minimised)),
+			argsHash: hashArgs(argsJson),
 		});
 		// A Consequential tool never runs on the strength of the caller's claim.
 		const binding = hitlKeyToString(key);
@@ -467,7 +468,6 @@ async function handle(request: InjectionRequest): Promise<unknown> {
 		// Asked and not yet answered: the person is the one who answers, so the
 		// question has to be on the panel. Filing is idempotent — asking twice
 		// must not raise a second card or clear an answer already given.
-		const argsJson = canonicalizeArgs(minimised);
 		if (!pending.includes(binding)) {
 			fileApproval({
 				key,
@@ -497,11 +497,11 @@ async function handle(request: InjectionRequest): Promise<unknown> {
 			readOnlyHint: view.readOnlyHint,
 		};
 	}
-	// Non-consequential: the handler name is checked against the enumerated set.
-	// Exposure was already decided above, before the two paths diverged, so it is
-	// not re-decided here. The approval store is deliberately not consulted —
+	// Non-consequential: the handler name was checked against the enumerated set
+	// on the way in, and the two earlier branches have returned, so what is left
+	// here is `executeTool`. Exposure was decided before the paths diverged, so
+	// it is not re-decided. The approval store is deliberately not consulted —
 	// there is nothing to approve.
-	assertHandlerName(handler);
 	return inject(tabId, frameId, "executeTool", {
 		name,
 		args: minimised,
@@ -617,33 +617,22 @@ function pendingApprovals(): PanelApproval[] {
 }
 
 /**
- * The argument names the tool's own input schema declares.
- */
-function declaredArgKeys(view: FrameToolView): string[] {
-	const declared = view.declaredKeys;
-	if (!Array.isArray(declared)) {
-		return [];
-	}
-	return declared.filter((key): key is string => typeof key === "string");
-}
-
-/**
  * The keys that may cross into the page: what the tool declared, and no more.
  *
  * There is deliberately no branch that widens this from the request. A caller
  * that could name the permitted keys would be choosing the shape the page
  * receives, which is the one thing data minimisation exists to prevent — the
  * boundary would be exactly as strong as the least careful caller.
+ *
+ * `view.declaredKeys` is already the boundary's own output: validated as an
+ * array of non-empty strings when the tool view was built, and typed as such.
+ * Re-checking it here would be a guard nothing could make fail.
  */
-function allowedArgKeys(
-	args: Record<string, unknown>,
-	view: FrameToolView,
-): string[] {
-	const callArgs = args["args"];
+function allowedArgKeys(callArgs: unknown, view: FrameToolView): string[] {
 	if (typeof callArgs !== "object" || callArgs === null) {
 		return [];
 	}
-	const permitted = new Set(declaredArgKeys(view));
+	const permitted = new Set(view.declaredKeys);
 	return Object.keys(callArgs as Record<string, unknown>).filter((key) =>
 		permitted.has(key),
 	);
