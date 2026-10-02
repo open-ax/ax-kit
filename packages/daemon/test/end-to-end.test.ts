@@ -23,7 +23,7 @@ import {
 	parseFrame,
 	serializeFrame,
 } from "../src/protocol.js";
-import { RawClient, toolsListFrame } from "./client.js";
+import { RawClient, toolsCallFrame, toolsListFrame } from "./client.js";
 
 /**
  * One test drives the whole chain:
@@ -331,6 +331,17 @@ describe("tool execution end to end", () => {
 			const listed = await client.nextFrame();
 			expect(listed.error).toBeUndefined();
 			expect(JSON.stringify(listed.result)).toContain("resultType");
+			// A call answers differently from a listing: with no bridge attached
+			// the daemon defers the execution rather than inventing a result, and
+			// saying so is the whole answer.
+			client.write(toolsCallFrame(2, "viewCart", { detailed: true }));
+			const called = await client.nextFrame();
+			expect(called.id).toBe(2);
+			expect(called.error).toBeUndefined();
+			expect(called.result).toMatchObject({
+				deferred: true,
+				name: "viewCart",
+			});
 			client.endInput();
 			expect(await client.waitForExit()).toBe(0);
 		} finally {
