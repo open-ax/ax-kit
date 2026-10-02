@@ -21,12 +21,6 @@
 import type { IncomingMessage, Server, ServerResponse } from "node:http";
 import type { DaemonInfo, JsonRpcResponse } from "./protocol.js";
 
-export interface BridgeEndpoint {
-	readonly host: string;
-	readonly port: number;
-	readonly bearer: string;
-}
-
 export interface BridgeRequest {
 	readonly handler: string;
 	readonly args: Record<string, unknown>;
@@ -401,30 +395,6 @@ export function readResponse(value: unknown): JsonRpcResponse {
 	};
 }
 
-/** The bearer and origin gate every bridge request passes through. */
-export function assertBridgeCaller(
-	presented: unknown,
-	expected: string,
-	origin: unknown,
-	host: string,
-	port: number,
-): void {
-	const expectedOrigin = `http://${host}:${port}`;
-	if (origin !== expectedOrigin) {
-		throw new TypeError("non-loopback origin");
-	}
-	if (typeof presented !== "string" || presented.length !== expected.length) {
-		throw new TypeError("bad bearer");
-	}
-	let diff = 0;
-	for (let index = 0; index < expected.length; index += 1) {
-		diff |= (presented.charCodeAt(index) ^ expected.charCodeAt(index)) & 0xffff;
-	}
-	if (diff !== 0) {
-		throw new TypeError("bad bearer");
-	}
-}
-
 /** Read a request body, bounded so a hostile client cannot exhaust memory. */
 export async function readBody(
 	request: IncomingMessage,
@@ -459,5 +429,3 @@ export function sendJson(
 	});
 	response.end(typeof text === "string" ? text : "null");
 }
-
-export type { Server };

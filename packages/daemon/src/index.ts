@@ -10,10 +10,7 @@
  * handshake, no session header, and no deprecated capabilities.
  */
 
-export type {
-	BridgeEndpoint,
-	BridgeRequest,
-} from "./bridge.js";
+export type { BridgeRequest } from "./bridge.js";
 export {
 	BRIDGE_ERRORS,
 	BridgeClient,
