@@ -124,9 +124,15 @@ export function isExposedToCaller(
 }
 
 /**
- * Caller-controlled argument allow-list with data minimization: only keys
- * the caller explicitly allows cross into the invocation; anything else is
- * dropped rather than forwarded. Returns the minimized record directly.
+ * Argument allow-list with data minimisation: only the keys named cross into
+ * the invocation, anything else is dropped rather than forwarded. Returns the
+ * minimised record directly.
+ *
+ * The list is derived from the tool's own declared schema, by the caller of
+ * this function. It is not taken from the request: a caller that chose the
+ * permitted keys would be choosing the shape the page receives, which is the
+ * one thing this boundary exists to prevent. Every entry is checked here
+ * anyway, because a key crossing a realm boundary is hostile until validated.
  */
 export function applyArgAllowList(
 	args: unknown,
