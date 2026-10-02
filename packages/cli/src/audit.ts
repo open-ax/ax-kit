@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { createReport, formatReport } from "./output.js";
-import type { AuditContextInput } from "./scoring.js";
+import type { AuditContextInput, AuditToolInput } from "./scoring.js";
 import { scoreAudit } from "./scoring.js";
 
 /**
@@ -28,13 +28,86 @@ export type BrowserLike = {
 };
 
 /**
+ * Validate one collected tool Node-side.
+ *
+ * A page may subvert its own guards, so nothing about the shape it reports is
+ * taken on trust. A field that is not the declared type rejects the snapshot
+ * rather than being coerced: a coerced value would let a subverted page choose
+ * its own verdict on a field the audit is supposed to be reading.
+ */
+function parseAuditTool(value: unknown): AuditToolInput {
+	if (typeof value !== "object" || value === null || Array.isArray(value)) {
+		throw new TypeError("bad audit tool");
+	}
+	const record = value as Record<string, unknown>;
+	const origins = record.exposedOrigins;
+	if (
+		typeof record.name !== "string" ||
+		typeof record.description !== "string" ||
+		typeof record.hasInputSchema !== "boolean" ||
+		typeof record.schemaValid !== "boolean" ||
+		typeof record.consequentialHint !== "boolean" ||
+		typeof record.readOnlyHint !== "boolean" ||
+		typeof record.outputLength !== "number" ||
+		typeof record.paramCount !== "number" ||
+		typeof record.maxParamDescription !== "number" ||
+		!Array.isArray(origins)
+	) {
+		throw new TypeError("bad audit tool");
+	}
+	return {
+		name: record.name,
+		description: record.description,
+		...(typeof record.title === "string" ? { title: record.title } : {}),
+		hasInputSchema: record.hasInputSchema,
+		schemaValid: record.schemaValid,
+		consequentialHint: record.consequentialHint,
+		readOnlyHint: record.readOnlyHint,
+		exposedOrigins: origins.filter(
+			(origin): origin is string => typeof origin === "string",
+		),
+		outputLength: record.outputLength,
+		paramCount: record.paramCount,
+		maxParamDescription: record.maxParamDescription,
+	};
+}
+
+/**
+ * Validate the collected snapshot Node-side.
+ *
+ * The page realm is hostile, so what arrives is `unknown` until it has been
+ * checked field by field here. The declared return type is earned by this
+ * function rather than asserted by a cast at the call site, which is the
+ * difference between a type that describes the value and one that describes
+ * the author's expectation of it.
+ */
+function parseAuditContext(raw: unknown): AuditContextInput {
+	if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
+		throw new TypeError("bad audit context");
+	}
+	const record = raw as Record<string, unknown>;
+	if (
+		!Array.isArray(record.tools) ||
+		typeof record.policyAllowsTools !== "boolean" ||
+		typeof record.originKeyed !== "boolean"
+	) {
+		throw new TypeError("bad audit context");
+	}
+	return {
+		tools: record.tools.map(parseAuditTool),
+		policyAllowsTools: record.policyAllowsTools,
+		originKeyed: record.originKeyed,
+	};
+}
+
+/**
  * Collect the audit context inside the page. Never navigates: the caller
  * owns navigation. Every page function is self-contained with no closed-over
  * state; only serializable data crosses the boundary.
  *
  * Fail-closed: the page realm is hostile and may subvert in-page guards
- * (for example poisoned `Array.isArray` or `Object.entries`), so shaped
- * values are revalidated Node-side by `scoreAudit`. Malformed tool data
+ * (for example poisoned `Array.isArray` or `Object.entries`), so the shape
+ * is revalidated Node-side by `parseAuditContext`. Malformed tool data
  * throws instead of scoring the remaining tools; no filtering or
  * normalization is applied before scoring.
  */
@@ -243,7 +316,7 @@ export async function collectContext(
 	if (typeof raw !== "object" || raw === null) {
 		throw new TypeError("bad audit context");
 	}
-	return raw as AuditContextInput;
+	return parseAuditContext(raw);
 }
 
 /** Drive a headless browser, collect, score, and format. */
