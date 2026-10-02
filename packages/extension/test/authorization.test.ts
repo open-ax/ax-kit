@@ -352,6 +352,21 @@ describe("authorisation outcomes at the real seam", () => {
 		expect(allowed.result).toEqual(JSON.stringify({ seen: "hello" }));
 	});
 
+	it("calls a tool that needs no approval without a document id", async () => {
+		// The approval binding has a document to name only when something is
+		// being approved. A read-only tool involves no approval, so requiring a
+		// document id to call one would refuse a well-formed invocation.
+		const result = await invoke("executeTool", {
+			tabId,
+			frameId: 0,
+			name: "plainTool",
+			args: { note: "hello" },
+			callerOrigin: origin,
+		});
+		expect(result.ok).toBe(true);
+		expect(result.result).toEqual(JSON.stringify({ seen: "hello" }));
+	});
+
 	it("drops argument keys that were never allow-listed", async () => {
 		// The page echoes what it received, so a smuggled key is visible in the
 		// result rather than merely absent from a log.

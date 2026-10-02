@@ -331,16 +331,19 @@ async function handle(request: InjectionRequest): Promise<unknown> {
 	// Only keys this worker permits cross into the page. Anything the caller
 	// sent that was not asked for is dropped rather than forwarded.
 	const minimised = applyArgAllowList(callArgs, allowedArgKeys(args, view));
-	// Built through the validating constructor rather than by literal, so a
-	// malformed part rejects here instead of reaching the store.
-	const key = createHitlKey({
-		tabId,
-		documentId: String(args["documentId"] ?? ""),
-		frameId,
-		toolName: name,
-		argsHash: hashArgs(canonicalizeArgs(minimised)),
-	});
 	if (view["consequentialHint"] === true) {
+		// Built through the validating constructor rather than by literal, so a
+		// malformed part rejects here instead of reaching the store. Only a
+		// consequential call needs a document to bind an approval to: asking a
+		// read-only tool for one would refuse an invocation that involves no
+		// approval at all.
+		const key = createHitlKey({
+			tabId,
+			documentId: String(args["documentId"] ?? ""),
+			frameId,
+			toolName: name,
+			argsHash: hashArgs(canonicalizeArgs(minimised)),
+		});
 		// A Consequential tool never runs on the strength of the caller's claim.
 		const binding = hitlKeyToString(key);
 		const pending = approvals.pendingKeys();
