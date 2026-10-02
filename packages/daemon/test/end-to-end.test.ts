@@ -115,14 +115,6 @@ async function file(): Promise<DiscoveryFile> {
  * context, where `__axHandle` lives. Nothing here is passed in as a closure:
  * Playwright serializes the function, so a captured handler would arrive
  * undefined.
- */
-/**
- * Drive the pull/result loop from inside the worker.
- *
- * The loop body is written inline because it has to exist in the worker's
- * context, where `__axHandle` lives. Nothing is passed in as a closure:
- * Playwright serializes the function, so a captured handler would arrive
- * undefined.
  *
  * Deliberately not awaited. The loop runs for the life of the worker, so
  * awaiting it would block forever. Readiness is observed by the first bridge
@@ -213,9 +205,14 @@ beforeAll(async () => {
 		worker = started[0];
 	} else {
 		const event = context.waitForEvent("serviceworker", { timeout: 30_000 });
-		// A page gives the worker a reason to start and a tab to address.
-		page = await context.newPage();
+		// A page gives the worker a reason to start, and it has to navigate to
+		// have a tab to address. Opening a blank page is not enough — the
+		// extension only starts against a document it can be injected into, so
+		// without the navigation this branch hangs until the bridge deadline.
+		const starter = await context.newPage();
+		await starter.goto(`${origin}/shop`);
 		worker = await event;
+		await starter.close();
 	}
 	page = await context.newPage();
 	await page.goto(`${origin}/shop`);
