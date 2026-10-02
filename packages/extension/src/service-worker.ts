@@ -492,6 +492,9 @@ async function handle(request: InjectionRequest): Promise<unknown> {
 			definitionVersion,
 			origin: ownerOrigin,
 			callerOrigin,
+			// The admitted set is the page's own origin and nothing else, so this is
+			// always empty. It is reported because a caller deciding whether to
+			// retry elsewhere is better served by the policy than by guessing.
 			allowedOrigins: allowed,
 			consequentialHint: true,
 			readOnlyHint: view.readOnlyHint,
@@ -510,7 +513,7 @@ async function handle(request: InjectionRequest): Promise<unknown> {
 }
 
 /** What the panel shows, and what a person's click decides on. */
-export interface PanelApproval {
+interface PanelApproval {
 	readonly key: string;
 	readonly toolName: string;
 	readonly description: string;
@@ -671,9 +674,9 @@ function sameTarget(binding: string, key: HitlKey): boolean {
  * choosing in front of a person as though the page had written it. Filing
  * raises the question; only `approve` answers it.
  */
-export const PANEL_OPERATIONS = ["approve", "reject", "list"] as const;
+const PANEL_OPERATIONS = ["approve", "reject", "list"] as const;
 
-export type PanelOperation = (typeof PANEL_OPERATIONS)[number];
+type PanelOperation = (typeof PANEL_OPERATIONS)[number];
 
 /** Run one panel operation. Arguments are validated before use. */
 function panel(op: unknown, args: unknown): unknown {

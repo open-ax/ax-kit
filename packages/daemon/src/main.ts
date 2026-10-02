@@ -29,8 +29,8 @@ import {
 } from "./protocol.js";
 import { logToStderr, splitFrames } from "./stdio.js";
 
-/** The input side, abstracted so a test can drive it without a real pipe. */
-export interface StdioSource {
+/** The input side. The process tests drive this over a real pipe instead. */
+interface StdioSource {
 	/** Subscribe to chunks. Returns a disposer. */
 	onData(handler: (chunk: string) => void): () => void;
 	/** Runs once the input side closes for good. Returns a disposer. */
@@ -38,14 +38,14 @@ export interface StdioSource {
 }
 
 /** The output side. Frames go to stdout; `warn` must never reach stdout. */
-export interface StdioSink {
+interface StdioSink {
 	writeFrame(response: JsonRpcResponse): void;
 	warn(message: string): void;
 	close(): void;
 }
 
 /** Where tools come from. Re-read per request: the page may change under us. */
-export interface BridgeProvider {
+interface BridgeProvider {
 	listTools(): ReadonlyArray<Record<string, unknown>>;
 }
 
@@ -57,7 +57,7 @@ function protocolError(code: number, message: string): JsonRpcResponse {
  * Answer one wire frame. Never throws: a failure becomes a typed protocol
  * error, because a refused frame must not be able to stop the loop.
  */
-export function answerFrame(
+function answerFrame(
 	line: string,
 	tools: BridgeProvider,
 	info: DaemonInfo,
@@ -81,7 +81,7 @@ export function answerFrame(
  * Run the loop until the input side closes. Readiness is observed through the
  * pipe itself, so nothing here waits on a timer.
  */
-export function runStdioLoop(
+function runStdioLoop(
 	source: StdioSource,
 	sink: StdioSink,
 	tools: BridgeProvider,
@@ -120,7 +120,7 @@ export function runStdioLoop(
 	});
 }
 
-export function createNodeSource(): StdioSource {
+function createNodeSource(): StdioSource {
 	const stdin = process.stdin;
 	stdin.setEncoding("utf8");
 	stdin.resume();
@@ -136,7 +136,7 @@ export function createNodeSource(): StdioSource {
 	};
 }
 
-export function createNodeSink(): StdioSink {
+function createNodeSink(): StdioSink {
 	return {
 		writeFrame(response: JsonRpcResponse): void {
 			process.stdout.write(`${serializeFrame(response)}\n`);
@@ -153,9 +153,7 @@ export function createNodeSink(): StdioSink {
 }
 
 /** With no page bridge attached the daemon is honest and offers nothing. */
-export function createEmptyProvider(
-	warn: (message: string) => void,
-): BridgeProvider {
+function createEmptyProvider(warn: (message: string) => void): BridgeProvider {
 	warn("ax-kit daemon: no page bridge attached");
 	return { listTools: () => [] };
 }

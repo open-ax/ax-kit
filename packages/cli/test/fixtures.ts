@@ -221,5 +221,3 @@ main().catch((error) => {
 			}),
 	};
 }
-
-export const FIXTURE_NAMES: ReadonlyArray<string> = Object.keys(FIXTURES);
