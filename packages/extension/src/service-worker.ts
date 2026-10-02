@@ -189,9 +189,29 @@ async function getToolInPage(arg: unknown): Promise<unknown> {
 	return null;
 }
 
-/** Invoke one tool in the page. Self-contained. */
+/**
+ * Invoke one tool in the page. Self-contained.
+ *
+ * The definition version is re-derived here, from the entry this call is about
+ * to execute, and compared with the one the worker approved. Checking it in the
+ * worker's earlier `getTool` injection would be checking a different read: the
+ * page chooses what each of its two listings says, and between them there is an
+ * `await` boundary and the page controls the timing. Only the entry used to
+ * execute is the entry that matters, so that is the entry checked.
+ *
+ * Untested against a real browser. The check is present in the emitted worker
+ * and is exercised by the definition-drift cases in the authorization suite, but
+ * a test that isolated *this* read from the worker's own proved order-dependent:
+ * it passed only because earlier cases had already advanced the page's read
+ * counter. The check is kept because it closes the window the comment describes
+ * and costs nothing, not because a green test stands behind it.
+ */
 async function executeToolInPage(arg: unknown): Promise<unknown> {
-	const request = arg as { name?: unknown; args?: unknown } | null;
+	const request = arg as {
+		name?: unknown;
+		args?: unknown;
+		definitionVersion?: unknown;
+	} | null;
 	const doc = document as unknown as Record<string, unknown>;
 	const surface = doc["modelContext"] as
 		| { getTools?: unknown; executeTool?: unknown }
@@ -220,6 +240,27 @@ async function executeToolInPage(arg: unknown): Promise<unknown> {
 	if (tool === undefined) {
 		// Absent at the moment of the request is a typed error, not a retry loop.
 		throw new Error(`tool not found: ${String(wanted)}`);
+	}
+	if (typeof request?.definitionVersion === "string") {
+		// Inlined for the same reason as the two projections above: this function
+		// is serialized alone and cannot reach a module-level helper.
+		const record = tool as Record<string, unknown>;
+		const annotations = record["annotations"] as
+			| Record<string, unknown>
+			| undefined;
+		const schema = record["inputSchema"];
+		const live = JSON.stringify([
+			record["name"],
+			record["description"],
+			annotations?.["consequentialHint"] === true,
+			annotations?.["readOnlyHint"] === true,
+			typeof schema === "object" && schema !== null
+				? JSON.stringify(schema)
+				: "{}",
+		]);
+		if (live !== request.definitionVersion) {
+			throw new Error("tool definition changed");
+		}
 	}
 	const result: unknown = await (
 		surface.executeTool as (t: unknown, a: unknown) => Promise<unknown>
@@ -400,7 +441,11 @@ async function handle(request: InjectionRequest): Promise<unknown> {
 				origin: ownerOrigin,
 				decision: "executed",
 			});
-			return inject(tabId, frameId, "executeTool", { name, args: minimised });
+			return inject(tabId, frameId, "executeTool", {
+				name,
+				args: minimised,
+				definitionVersion,
+			});
 		}
 		// Asked and not yet answered: the person is the one who answers, so the
 		// question has to be on the panel. Filing is idempotent — asking twice
@@ -440,7 +485,11 @@ async function handle(request: InjectionRequest): Promise<unknown> {
 	// not re-decided here. The approval store is deliberately not consulted —
 	// there is nothing to approve.
 	assertHandlerName(handler);
-	return inject(tabId, frameId, "executeTool", { name, args: minimised });
+	return inject(tabId, frameId, "executeTool", {
+		name,
+		args: minimised,
+		definitionVersion,
+	});
 }
 
 /** What the panel shows, and what a person's click decides on. */
