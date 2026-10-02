@@ -53,6 +53,49 @@ describe("page bridge pending calls", () => {
 			bridge.deliver(JSON.stringify({ id: envelope?.id, result: {} })),
 		).not.toThrow();
 	});
+
+	it("does not hand a client work whose caller was already refused", async () => {
+		const bridge = new PageBridge(createDaemonInfo(), 10);
+		// No client is draining the queue, so this call is refused at the door.
+		const abandoned = bridge.listTools(1);
+		// A second caller arrives and is served, which is what makes the first
+		// envelope still sitting in the queue dangerous.
+		const served = bridge.listTools(2);
+		await expect(abandoned).rejects.toThrow(/timed out/);
+
+		// The abandoned call is gone, not waiting to be executed against the page.
+		const envelope = bridge.take();
+		expect(envelope?.request.args["tabId"]).toBe(2);
+		expect(bridge.take()).toBeNull();
+
+		bridge.deliver(JSON.stringify({ id: envelope?.id, result: { tools: [] } }));
+		await expect(served).resolves.toEqual([]);
+	});
+
+	it("refuses a queue nothing is draining", async () => {
+		const bridge = new PageBridge(createDaemonInfo(), 60_000);
+		const accepted: Array<Promise<unknown>> = [];
+		for (let index = 0; index < 256; index += 1) {
+			accepted.push(bridge.listTools(index));
+		}
+		// Nothing is draining the queue, so the next caller is told so rather
+		// than joining a backlog that would only look like a slow daemon.
+		const refused = await bridge
+			.listTools(999)
+			.catch((error: unknown) => error);
+		expect(refused).toBeInstanceOf(BridgeRefusal);
+		expect((refused as BridgeRefusal).message).toMatch(/no client is draining/);
+		// The refused call left nothing behind for a later client to pick up.
+		expect(bridge.take()).not.toBeNull();
+		let drained = 1;
+		while (bridge.take() !== null) {
+			drained += 1;
+		}
+		expect(drained).toBe(256);
+		for (const call of accepted) {
+			void call.catch(() => undefined);
+		}
+	});
 });
 
 /**

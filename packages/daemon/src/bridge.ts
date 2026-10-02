@@ -36,6 +36,7 @@ export interface BridgeRequest {
 export const BRIDGE_ERRORS = {
 	badRequest: -32602,
 	notExposed: -32010,
+	tooManyPending: -32011,
 } as const;
 
 /** A refusal from the worker, carrying the worker's own error code. */
@@ -141,6 +142,16 @@ function parseBody(body: unknown): unknown {
 }
 
 /**
+ * How many requests may wait for a client at once.
+ *
+ * With no extension attached, nothing drains the queue, so a client looping
+ * `tools/call` would otherwise grow it for the life of the process. Refusing at
+ * the door says the bridge is not being served; a queue that fills silently
+ * looks like a daemon that is merely slow.
+ */
+const MAX_PENDING = 256;
+
+/**
  * The daemon side of the bridge: holds pending calls and speaks the two
  * endpoints the extension uses.
  */
@@ -162,12 +173,21 @@ export class PageBridge {
 	/**
 	 * The next queued request for a pulling client, or null when idle.
 	 *
-	 * Every envelope handed out is one `settled` already holds, so a result for
-	 * it always has an entry to land on. Minting an id here that `settled` does
-	 * not know would silently drop the answer to a call nobody is awaiting.
+	 * An envelope whose call has already been refused is discarded rather than
+	 * handed out: the caller has been told it failed, and executing it later
+	 * would run work the client believes did not happen — a purchase it was told
+	 * was not placed.
 	 */
 	take(): Envelope | null {
-		return this.queue.shift() ?? null;
+		for (;;) {
+			const next = this.queue.shift();
+			if (next === undefined) {
+				return null;
+			}
+			if (this.settled.has(next.id)) {
+				return next;
+			}
+		}
 	}
 
 	/** Accept a result from the client and settle the matching call. */
@@ -196,9 +216,15 @@ export class PageBridge {
 		return new Promise<unknown>((resolve, reject) => {
 			// The deadline is the only thing that ends a call nobody answers. It
 			// releases the entry on the same terms a result would, so a late
-			// answer for a refused id lands on nothing instead of hanging.
+			// answer for a refused id lands on nothing instead of hanging. The
+			// queued envelope goes with it: leaving it there would hand a client
+			// work it has already been told did not happen.
 			const timer: ReturnType<typeof setTimeout> = setTimeout(() => {
 				this.settled.delete(id);
+				const queued = this.queue.findIndex((held) => held.id === id);
+				if (queued !== -1) {
+					this.queue.splice(queued, 1);
+				}
 				reject(
 					new BridgeRefusal(BRIDGE_ERRORS.badRequest, "bridge call timed out"),
 				);
@@ -215,6 +241,17 @@ export class PageBridge {
 				reject(error);
 			};
 			this.settled.set(id, { request, resolve: settle, reject: fail });
+			if (this.queue.length >= MAX_PENDING) {
+				this.settled.delete(id);
+				clearTimeout(timer);
+				reject(
+					new BridgeRefusal(
+						BRIDGE_ERRORS.tooManyPending,
+						`too many pending bridge calls (${MAX_PENDING}); no client is draining the queue`,
+					),
+				);
+				return;
+			}
 			this.queue.push({ id, request });
 		});
 	}
