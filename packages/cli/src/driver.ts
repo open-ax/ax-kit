@@ -136,8 +136,15 @@ async function launchSession(options: LaunchOptions): Promise<Session> {
 		channel: "chromium",
 		headless: options.headless,
 	});
-	const context = await browser.newContext();
-	return { browser, context };
+	try {
+		const context = await browser.newContext();
+		return { browser, context };
+	} catch (error: unknown) {
+		// No `Session` comes back, so no caller has a `finally` that could close
+		// it. Leaving the process here keeps the command alive with no exit code.
+		await browser.close();
+		throw error;
+	}
 }
 
 /**
