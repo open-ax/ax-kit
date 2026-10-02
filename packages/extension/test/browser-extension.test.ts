@@ -284,7 +284,7 @@ describe("emitted manifest", () => {
 		// The assertions run against what is emitted, not a hand-written
 		// equivalent of it.
 		expect(doc["incognito"]).toBe("not_allowed");
-		expect(doc["externally_connectable"]).toEqual({ matches: [] });
+		expect(doc["externally_connectable"]).toEqual({ ids: [], matches: [] });
 		expect(doc["background"]).toEqual({
 			service_worker: "sw.js",
 			type: "module",
@@ -298,6 +298,22 @@ describe("emitted manifest", () => {
 		// Byte-for-byte what the manifest function produces, so the shipped file
 		// cannot drift from the posture it claims.
 		expect(doc).toEqual({ ...defaultManifestDocument() });
+	});
+
+	it("emits every externally connectable id the posture asserts", () => {
+		const ids = ["abcdefghijklmnopabcdefghijklmnop"];
+		const doc = createManifestDocument(
+			{
+				...defaultManifestPosture(),
+				externallyConnectable: { ids, matches: [] },
+			},
+			"ax-kit",
+			"0.0.0",
+			"Trusted-tier bridge for document.modelContext.",
+		);
+		// The posture accepts and validates these ids, so a document that dropped
+		// them would assert a gate in code and ship a manifest without it.
+		expect(doc.externally_connectable.ids).toEqual(ids);
 	});
 
 	it("refuses to emit a manifest for a non-service-worker posture", () => {

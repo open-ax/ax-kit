@@ -29,6 +29,7 @@ export interface ManifestDocument {
 		readonly extension_pages: string;
 	};
 	readonly externally_connectable: {
+		readonly ids: ReadonlyArray<string>;
 		readonly matches: ReadonlyArray<string>;
 	};
 	readonly action: {
@@ -78,6 +79,7 @@ export function createManifestDocument(
 			extension_pages: "script-src 'self'; object-src 'self'",
 		},
 		externally_connectable: {
+			ids: [...held.externallyConnectable.ids],
 			matches: [...held.externallyConnectable.matches],
 		},
 		action: { default_title: "ax-kit" },
