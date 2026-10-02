@@ -17,7 +17,6 @@ observe them.
 import {
 	ApprovalStore,
 	TRANSPORT_KIND,
-	authorizeExecution,
 	canonicalizeArgs,
 	createHitlKey,
 	createInjectionRequest,

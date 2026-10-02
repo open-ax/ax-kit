@@ -40,7 +40,6 @@ export {
 } from "./hitl.js";
 export type { ExternallyConnectable, ManifestPosture } from "./manifest.js";
 export {
-	assertLiveContext,
 	assertManifestPosture,
 	defaultManifestPosture,
 	firefoxManifestPosture,
@@ -50,15 +49,10 @@ export {
 	createManifestDocument,
 	defaultManifestDocument,
 } from "./manifest-document.js";
-export type {
-	AuditEntry,
-	AuthorizationInput,
-	FrameToolView,
-} from "./trusted-tier.js";
+export type { AuditEntry, FrameToolView } from "./trusted-tier.js";
 export {
 	AUDIT_TRAIL_DISCLAIMER,
 	applyArgAllowList,
-	authorizeExecution,
 	isExposedToCaller,
 	validateFrameTool,
 	WorkerAuditTrail,

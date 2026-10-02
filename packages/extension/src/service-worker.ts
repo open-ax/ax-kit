@@ -25,7 +25,6 @@ import {
 	hashArgs,
 	hitlKeyToString,
 } from "./hitl.js";
-import { assertLiveContext } from "./manifest.js";
 import type { FrameToolView } from "./trusted-tier.js";
 import {
 	AUDIT_TRAIL_DISCLAIMER,
@@ -436,12 +435,11 @@ async function handle(request: InjectionRequest): Promise<unknown> {
 			readOnlyHint: view.readOnlyHint,
 		};
 	}
-	// Non-consequential: the handler and the context are checked against
-	// validated values. Exposure was already decided above, before the two paths
-	// diverged, so it is not re-decided here. The approval store is
-	// deliberately not consulted — there is nothing to approve.
+	// Non-consequential: the handler name is checked against the enumerated set.
+	// Exposure was already decided above, before the two paths diverged, so it is
+	// not re-decided here. The approval store is deliberately not consulted —
+	// there is nothing to approve.
 	assertHandlerName(handler);
-	assertLiveContext(true);
 	return inject(tabId, frameId, "executeTool", { name, args: minimised });
 }
 

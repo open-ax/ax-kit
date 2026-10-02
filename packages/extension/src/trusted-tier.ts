@@ -1,15 +1,7 @@
 // Copyright 2026 Utpal Sen
 // SPDX-License-Identifier: Apache-2.0
 
-import { assertHandlerName } from "./handlers.js";
-import type { ApprovalStore, HitlKey } from "./hitl.js";
-import {
-	assertToolName,
-	hashArgs,
-	hitlKeysEqual,
-	hitlKeyToString,
-} from "./hitl.js";
-import { assertLiveContext } from "./manifest.js";
+import { assertToolName } from "./hitl.js";
 
 /**
  * Trusted tier: the service worker as the single authorization point.
@@ -236,55 +228,4 @@ export class WorkerAuditTrail {
 	list(): AuditEntry[] {
 		return [...this.entries];
 	}
-}
-
-export interface AuthorizationInput {
-	readonly handler: unknown;
-	readonly contextLive: unknown;
-	readonly key: HitlKey;
-	readonly approvedKey: string;
-	readonly ownerOrigin: string;
-	readonly callerOrigin: string;
-	readonly allowedOrigins: ReadonlyArray<string>;
-	readonly argsJson: string;
-	readonly liveKey: HitlKey;
-	readonly liveDefinitionVersion: string;
-	readonly store: ApprovalStore;
-}
-
-/**
- * Single authorization point. Validates the handler name, the context
- * liveness, the HITL binding (args hash + five key parts + definition
- * version via the store), and the exposure gate before execution.
- */
-export function authorizeExecution(input: AuthorizationInput): string {
-	assertHandlerName(input.handler);
-	assertLiveContext(input.contextLive);
-	if (
-		!isExposedToCaller(
-			input.ownerOrigin,
-			input.allowedOrigins,
-			input.callerOrigin,
-		)
-	) {
-		throw new TypeError("tool not exposed");
-	}
-	if (typeof input.argsJson !== "string") {
-		throw new TypeError("bad arguments");
-	}
-	if (hashArgs(input.argsJson) !== input.key.argsHash) {
-		throw new TypeError("approval args mismatch");
-	}
-	if (!hitlKeysEqual(input.key, input.liveKey)) {
-		throw new TypeError("approval target changed");
-	}
-	if (hitlKeyToString(input.key) !== input.approvedKey) {
-		throw new TypeError("approval target changed");
-	}
-	input.store.verifyAndConsume(
-		input.approvedKey,
-		input.liveKey,
-		input.liveDefinitionVersion,
-	);
-	return input.approvedKey;
 }
