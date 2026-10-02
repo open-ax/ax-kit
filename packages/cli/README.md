@@ -12,8 +12,15 @@ surface, while this command grades how well one page uses it.
 ## Use
 
 ```sh
+pnpm exec playwright install chromium
 ax-kit audit https://shop.example
 ```
+
+The Chromium that Playwright installs is required before the first run: a
+missing browser is reported as a failed command with exit code `1`, not as a
+page with no tools. The bundled headless shell is not enough — the audit needs
+the full `chromium` binary, which is what loads an extension and what
+`channel: "chromium"` resolves to.
 
 The command launches a real headless Chromium, navigates to the URL, collects
 the page's actual registered tools from its `document.modelContext`, scores
