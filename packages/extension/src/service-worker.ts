@@ -544,16 +544,7 @@ function pendingApprovals(): PanelApproval[] {
 }
 
 /**
- * The keys the caller is asking to cross into the page.
- *
- * An explicit list is honoured as given. Absent one, the keys are derived from
- * the tool's own declared input schema and intersected with what the caller
- * actually sent, so the page receives a shape this worker chose: a caller
- * cannot introduce a key the page never declared for itself.
- *
- * Deriving from the caller's own keys instead would forward whatever the caller
- * sent, which makes this function a no-op and lets an agent smuggle arbitrary
- * arguments into a tool that never asked to receive them.
+ * The argument names the tool's own input schema declares.
  */
 function declaredArgKeys(view: FrameToolView): string[] {
 	const declared = view.declaredKeys;
@@ -563,20 +554,21 @@ function declaredArgKeys(view: FrameToolView): string[] {
 	return declared.filter((key): key is string => typeof key === "string");
 }
 
+/**
+ * The keys that may cross into the page: what the tool declared, and no more.
+ *
+ * There is deliberately no branch that widens this from the request. A caller
+ * that could name the permitted keys would be choosing the shape the page
+ * receives, which is the one thing data minimisation exists to prevent — the
+ * boundary would be exactly as strong as the least careful caller.
+ */
 function allowedArgKeys(
 	args: Record<string, unknown>,
 	view: FrameToolView,
 ): string[] {
-	const declared = args["allowedKeys"];
 	const callArgs = args["args"];
 	if (typeof callArgs !== "object" || callArgs === null) {
 		return [];
-	}
-	if (declared !== undefined) {
-		if (!Array.isArray(declared)) {
-			throw new TypeError("bad allow-list");
-		}
-		return declared.filter((key): key is string => typeof key === "string");
 	}
 	const permitted = new Set(declaredArgKeys(view));
 	return Object.keys(callArgs as Record<string, unknown>).filter((key) =>

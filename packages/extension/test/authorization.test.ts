@@ -38,6 +38,18 @@ await mc.registerTool({
 	execute: async (args) => ({ seen: args.note ?? null }),
 });
 await mc.registerTool({
+	name: "echoTool",
+	description: "Echoes every key it was handed.",
+	inputSchema: { type: "object", properties: { note: { type: "string", description: "A note." } } },
+	execute: async (args) => ({ received: args }),
+});
+await mc.registerTool({
+	name: "narrowTool",
+	description: "Accepts nothing at all.",
+	inputSchema: { type: "object", properties: {} },
+	execute: async (args) => ({ seen: args.note ?? null }),
+});
+await mc.registerTool({
 	name: "payNow",
 	description: "Charge the saved card.",
 	inputSchema: { type: "object", properties: { amount: { type: "number", description: "Amount." } } },
@@ -354,20 +366,44 @@ describe("authorisation outcomes at the real seam", () => {
 		expect(result.result).toEqual(JSON.stringify({ seen: "hello" }));
 	});
 
-	it("drops argument keys that were never allow-listed", async () => {
-		// The page echoes what it received, so a smuggled key is visible in the
-		// result rather than merely absent from a log.
+	it("drops argument keys the tool never declared", async () => {
+		// The page echoes every key it was handed, so a smuggled key is visible in
+		// what the page received rather than merely absent from a log.
 		const smuggled = await plain({
+			name: "echoTool",
 			args: { note: "hello", secret: "must not arrive" },
-			allowedKeys: ["note"],
 		});
 		expect(smuggled.ok).toBe(true);
-		expect(smuggled.result).toEqual(JSON.stringify({ seen: "hello" }));
+		expect(smuggled.result).toEqual(
+			JSON.stringify({ received: { note: "hello" } }),
+		);
+	});
 
-		const absent = await plain({
-			args: { note: "hello" },
-			allowedKeys: [],
+	it("drops an undeclared key even when the caller allow-lists it", async () => {
+		// `secret` is not in the tool's schema. A caller that names it in
+		// `allowedKeys` is choosing the shape the page receives, which is the one
+		// thing the boundary exists to prevent — so the list is not consulted.
+		const smuggled = await plain({
+			name: "echoTool",
+			args: { note: "hello", secret: "must not arrive" },
+			allowedKeys: ["note", "secret"],
 		});
+		expect(smuggled.ok).toBe(true);
+		expect(smuggled.result).toEqual(
+			JSON.stringify({ received: { note: "hello" } }),
+		);
+	});
+
+	it("crosses nothing into a tool that declares no arguments", async () => {
+		const absent = await invoke("executeTool", {
+			tabId,
+			frameId: 0,
+			name: "narrowTool",
+			args: { note: "hello" },
+			callerOrigin: origin,
+		});
+		// A page that declares no properties receives none, whatever the caller
+		// sent and whatever it asked for.
 		expect(absent.ok).toBe(true);
 		expect(absent.result).toEqual(JSON.stringify({ seen: null }));
 	});
