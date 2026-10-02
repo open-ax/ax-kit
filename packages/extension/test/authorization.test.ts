@@ -343,13 +343,21 @@ describe("authorisation outcomes at the real seam", () => {
 		expect(refused.error).toMatch(/not exposed/);
 	});
 
-	it("allows a caller the allow-list names", async () => {
+	it("does not let a caller grant itself exposure", async () => {
+		// The page's own origin is the only one this worker admits, because a
+		// list supplied by the caller is the caller deciding what it may reach.
 		const allowed = await plain({
 			allowedOrigins: ["https://elsewhere.example"],
 			callerOrigin: "https://elsewhere.example",
 		});
-		expect(allowed.ok).toBe(true);
-		expect(allowed.result).toEqual(JSON.stringify({ seen: "hello" }));
+		expect(allowed.ok).toBe(false);
+		expect(allowed.error).toMatch(/not exposed/);
+	});
+
+	it("exposes a page's tool to that page's own origin", async () => {
+		const own = await plain({ callerOrigin: origin });
+		expect(own.ok).toBe(true);
+		expect(own.result).toEqual(JSON.stringify({ seen: "hello" }));
 	});
 
 	it("calls a tool that needs no approval without a document id", async () => {

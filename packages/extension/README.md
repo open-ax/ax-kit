@@ -98,9 +98,22 @@ the same tool on the same tab, the answer is **refusal**. Re-prompting would
 train a person to click through, which defeats the control.
 
 The manifest defaults deny external connections, keep private browsing
-closed, and flag broad host scope with a review justification. The audit
-trail is written by the worker into page-unreachable storage: local log only,
-with no integrity guarantee until shipped off-machine.
+closed, and flag broad host scope with a review justification. Only the
+permissions the worker reads are requested. The audit trail is written by the
+worker into page-unreachable storage: local log only, with no integrity
+guarantee until shipped off-machine.
+
+## Exposure
+
+A tool is exposed to its own origin and to nothing else. The draft also lets a
+definition widen itself with `exposedTo`, and the registered-tool listing this
+package reads does not carry that set, so the worker has none to honour and
+admits the page's own origin only — the draft's default.
+
+The allow-list is deliberately never taken from the request. A caller that
+supplies both the allowed set and the identity being checked against it always
+agrees with itself, so it would grant itself whatever it asked for. Widening
+this needs the declared set to reach the worker, not a caller to supply it.
 
 ## To consume the policy helpers
 

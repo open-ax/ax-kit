@@ -305,7 +305,6 @@ describe("tool execution end to end", () => {
 			{ detailed: true },
 			tabId,
 			origin,
-			[],
 		);
 		// The page's execute callback ran; this is its value, not a string.
 		expect(JSON.parse(result as string)).toEqual({
@@ -355,7 +354,6 @@ describe("tool execution end to end", () => {
 			{ detailed: true, smuggled: "should not arrive" },
 			tabId,
 			origin,
-			[],
 		);
 		// The tool echoes the argument object it was handed, so this states what
 		// the page received rather than what the caller asked for. An assertion
@@ -368,13 +366,13 @@ describe("tool execution end to end", () => {
 
 	it("returns a refusal as a typed error, not a malformed answer", async () => {
 		await expect(
-			bridge.callTool("noSuchTool", {}, tabId, origin, []),
+			bridge.callTool("noSuchTool", {}, tabId, origin),
 		).rejects.toBeInstanceOf(BridgeRefusal);
 	});
 
 	it("refuses a caller outside the Exposed to set", async () => {
 		await expect(
-			bridge.callTool("viewCart", {}, tabId, "https://elsewhere.example", []),
+			bridge.callTool("viewCart", {}, tabId, "https://elsewhere.example"),
 		).rejects.toThrow(/not exposed/);
 	});
 
@@ -398,8 +396,8 @@ describe("tool execution end to end", () => {
 
 	it("keeps two invocations in flight without settling each other", async () => {
 		const both = Promise.all([
-			bridge.callTool("viewCart", { detailed: false }, tabId, origin, []),
-			bridge.callTool("viewCart", { detailed: true }, tabId, origin, []),
+			bridge.callTool("viewCart", { detailed: false }, tabId, origin),
+			bridge.callTool("viewCart", { detailed: true }, tabId, origin),
 		]);
 		expect(await both).toEqual([
 			JSON.stringify({ items: 3, received: { detailed: false } }),

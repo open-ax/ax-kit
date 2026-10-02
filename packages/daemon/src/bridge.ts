@@ -105,6 +105,13 @@ export class BridgeClient {
 				continue;
 			}
 			const parsed = readEnvelope(parseBody(body));
+			if (parsed === null) {
+				// A daemon answering the literal text `null` is not reporting that
+				// it has nothing more; it is answering with something that is not a
+				// request, and treating that as the end of the stream would stop
+				// serving on a malformed frame.
+				throw new TypeError("bad envelope");
+			}
 			const result = await handler(parsed.request).then(
 				(value: unknown) => ({ jsonrpc: "2.0", id: parsed.id, result: value }),
 				(error: unknown) => ({
@@ -243,13 +250,20 @@ export class PageBridge {
 		return views;
 	}
 
-	/** Invoke one tool. A refusal arrives as a `BridgeRefusal`, not a throw of text. */
+	/**
+	 * Invoke one tool. A refusal arrives as a `BridgeRefusal`, not a throw of
+	 * text.
+	 *
+	 * The caller origin travels with the request because the worker needs
+	 * something to compare the page's exposure against. The allow-list does not
+	 * travel: the worker reads the page's own declaration, and an allow-list
+	 * sent from here would be this process deciding what it is allowed to reach.
+	 */
 	async callTool(
 		name: string,
 		args: Record<string, unknown>,
 		tabId: number,
 		callerOrigin: string,
-		allowedOrigins: ReadonlyArray<string>,
 	): Promise<unknown> {
 		return await this.enqueue({
 			handler: "executeTool",
@@ -259,7 +273,6 @@ export class PageBridge {
 				name,
 				args,
 				callerOrigin,
-				allowedOrigins: [...allowedOrigins],
 				documentId: `tab-${tabId}`,
 			},
 		});

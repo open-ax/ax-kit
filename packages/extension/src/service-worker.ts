@@ -26,6 +26,7 @@ import {
 	hitlKeyToString,
 } from "./hitl.js";
 import { assertLiveContext } from "./manifest.js";
+import type { FrameToolView } from "./trusted-tier.js";
 import {
 	AUDIT_TRAIL_DISCLAIMER,
 	applyArgAllowList,
@@ -250,7 +251,7 @@ const approvals = new ApprovalStore();
 const trail = new WorkerAuditTrail();
 
 /** Validate a Main-world listing into the worker's own view. */
-function readToolViews(payload: unknown): Array<Record<string, unknown>> {
+function readToolViews(payload: unknown): FrameToolView[] {
 	if (typeof payload !== "object" || payload === null) {
 		return [];
 	}
@@ -258,7 +259,7 @@ function readToolViews(payload: unknown): Array<Record<string, unknown>> {
 	if (!Array.isArray(tools)) {
 		return [];
 	}
-	const views: Array<Record<string, unknown>> = [];
+	const views: FrameToolView[] = [];
 	for (const entry of tools) {
 		// A lookup that found nothing is absence, not a malformed tool. Reading
 		// it as malformed would turn "this page has no such tool" into a
@@ -300,7 +301,7 @@ async function handle(request: InjectionRequest): Promise<unknown> {
 		}
 		return readToolViews({
 			tools: [await inject(tabId, frameId, "getTool", { name })],
-		}).filter((view) => view["name"] === name);
+		}).filter((view) => view.name === name);
 	}
 	const name = args["name"];
 	if (typeof name !== "string") {
@@ -314,24 +315,30 @@ async function handle(request: InjectionRequest): Promise<unknown> {
 	if (view === undefined) {
 		throw new TypeError("tool not found");
 	}
-	const ownerOrigin = String(view["origin"]);
+	const ownerOrigin = view.origin;
 	const callerOrigin = args["callerOrigin"];
 	if (typeof callerOrigin !== "string") {
 		throw new TypeError("bad caller origin");
 	}
-	// Exposure is re-checked here against validated values, never against what
-	// the page asserted about itself.
-	const allowed = Array.isArray(args["allowedOrigins"])
-		? (args["allowedOrigins"] as string[])
-		: [];
+	// Exposure is decided here, and only from the page's own origin.
+	//
+	// The draft lets a definition widen its exposure with `exposedTo`, and that
+	// set is the one allow-list a caller must never be able to supply: a caller
+	// that names both the allowed set and the identity being checked against it
+	// always agrees with itself, so it grants itself whatever it asks for. The
+	// registered-tool listing does not carry the declared set, so this worker
+	// has none to honour and admits the page's own origin only — the draft's
+	// default, and the refusal a caller can never argue its way past. Widening
+	// this needs the declared set to reach the worker, not a caller to supply it.
+	const allowed: ReadonlyArray<string> = [];
 	if (!isExposedToCaller(ownerOrigin, allowed, callerOrigin)) {
 		throw new TypeError("tool not exposed");
 	}
-	const definitionVersion = String(view["definitionVersion"]);
+	const definitionVersion = view.definitionVersion;
 	// Only keys this worker permits cross into the page. Anything the caller
 	// sent that was not asked for is dropped rather than forwarded.
 	const minimised = applyArgAllowList(callArgs, allowedArgKeys(args, view));
-	if (view["consequentialHint"] === true) {
+	if (view.consequentialHint === true) {
 		// Built through the validating constructor rather than by literal, so a
 		// malformed part rejects here instead of reaching the store. Only a
 		// consequential call needs a document to bind an approval to: asking a
@@ -382,14 +389,14 @@ async function handle(request: InjectionRequest): Promise<unknown> {
 			pendingApproval: binding,
 			requiresConfirmation: true,
 			toolName: name,
-			description: String(view["description"]),
+			description: view.description,
 			argsJson: canonicalizeArgs(minimised),
 			definitionVersion,
 			origin: ownerOrigin,
 			callerOrigin,
 			allowedOrigins: allowed,
 			consequentialHint: true,
-			readOnlyHint: view["readOnlyHint"] === true,
+			readOnlyHint: view.readOnlyHint,
 		};
 	}
 	// Non-consequential: the handler and the context are checked against
@@ -510,8 +517,8 @@ function pendingApprovals(): PanelApproval[] {
  * sent, which makes this function a no-op and lets an agent smuggle arbitrary
  * arguments into a tool that never asked to receive them.
  */
-function declaredArgKeys(view: Record<string, unknown>): string[] {
-	const declared = view["declaredKeys"];
+function declaredArgKeys(view: FrameToolView): string[] {
+	const declared = view.declaredKeys;
 	if (!Array.isArray(declared)) {
 		return [];
 	}
@@ -520,7 +527,7 @@ function declaredArgKeys(view: Record<string, unknown>): string[] {
 
 function allowedArgKeys(
 	args: Record<string, unknown>,
-	view: Record<string, unknown>,
+	view: FrameToolView,
 ): string[] {
 	const declared = args["allowedKeys"];
 	const callArgs = args["args"];
