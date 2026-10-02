@@ -86,6 +86,18 @@ async function listToolsInPage(_arg: unknown): Promise<unknown> {
 			typeof props === "object" && props !== null && !Array.isArray(props)
 				? Object.keys(props as Record<string, unknown>)
 				: [];
+		// Ours: the page does not report a definition version, so the worker
+		// derives one from the definition it just read. It covers every field a
+		// person is shown when they approve: a version built from the schema
+		// alone would let a page change what it says the tool does, or what
+		// consequence it carries, and keep the approval given to the old words.
+		const definitionVersion = JSON.stringify([
+			record["name"],
+			record["description"],
+			annotations?.["consequentialHint"] === true,
+			annotations?.["readOnlyHint"] === true,
+			schemaJson,
+		]);
 		tools.push({
 			name: record["name"],
 			description: record["description"],
@@ -93,10 +105,7 @@ async function listToolsInPage(_arg: unknown): Promise<unknown> {
 			frameOrigin,
 			consequentialHint: annotations?.["consequentialHint"] === true,
 			readOnlyHint: annotations?.["readOnlyHint"] === true,
-			// Ours: the page does not report a definition version, so the worker
-			// derives one from the definition it just read. It changes when the
-			// definition changes, which is what the approval binding must catch.
-			definitionVersion: schemaJson,
+			definitionVersion,
 			// The keys the page says it accepts. The worker minimises arguments
 			// against these rather than against whatever the caller sent.
 			declaredKeys: declaredKeys,
@@ -165,7 +174,16 @@ async function getToolInPage(arg: unknown): Promise<unknown> {
 			frameOrigin: String(location.origin),
 			consequentialHint: annotations?.["consequentialHint"] === true,
 			readOnlyHint: annotations?.["readOnlyHint"] === true,
-			definitionVersion: schemaJson,
+			// The same value the listing projection builds, from the same fields.
+			// Two projections of one tool that disagreed here would let an approval
+			// be checked against a version the person was never shown.
+			definitionVersion: JSON.stringify([
+				record["name"],
+				record["description"],
+				annotations?.["consequentialHint"] === true,
+				annotations?.["readOnlyHint"] === true,
+				schemaJson,
+			]),
 			declaredKeys,
 		};
 	}

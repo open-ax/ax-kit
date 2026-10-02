@@ -84,7 +84,9 @@ browser binary.
 Confirmation renders in the side panel only, bound to tab, document,
 frame, tool name, and argument hash, with all five re-verified at
 execution. Approvals are single-use; a definition change invalidates the
-pending entry.
+pending entry. The version covers every field the person reads — the name,
+the description, the annotations, and the input schema — so a page that
+changes what it says a tool does loses the approval given to the old words.
 
 The worker files the confirmation itself, from the tool view it validated,
 when a consequential tool is invoked. Nothing outside the worker can raise

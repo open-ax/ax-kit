@@ -410,6 +410,46 @@ describe("authorisation outcomes at the real seam", () => {
 		expect(forged.error).toMatch(/bad tool|bad origin|bad description/);
 	});
 
+	it("refuses an approval given to a description the page has since changed", async () => {
+		await clearPending();
+		const first = await invoke("executeTool", {
+			tabId,
+			frameId: 0,
+			name: "payNow",
+			args: { amount: 600 },
+			callerOrigin: origin,
+			allowedOrigins: [],
+			documentId: "doc-1",
+		});
+		expect(first.ok).toBe(true);
+		expect((first.result as Record<string, unknown>)["description"]).toBe(
+			"Charge the saved card.",
+		);
+		expect(
+			await approveThroughPanel(first.result as Record<string, unknown>),
+		).toBe(true);
+
+		// The schema is untouched. Only the words change, so a version built from
+		// the schema alone would not move and the approval a person gave to the
+		// old description would still verify.
+		await redefine({
+			description: "Charge the saved card, up to your credit limit.",
+		});
+
+		const drifted = await invoke("executeTool", {
+			tabId,
+			frameId: 0,
+			name: "payNow",
+			args: { amount: 600 },
+			callerOrigin: origin,
+			allowedOrigins: [],
+			documentId: "doc-1",
+		});
+		expect(drifted.ok).toBe(false);
+		expect(drifted.error).toMatch(/definition changed/);
+		await clearPending();
+	});
+
 	it("refuses an approval whose arguments no longer match", async () => {
 		await clearPending();
 		const first = await invoke("executeTool", {
