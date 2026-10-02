@@ -342,6 +342,36 @@ describe("consequential confirmation", () => {
 		await panel.close();
 	});
 
+	it("tells the person when the worker refuses their decision", async () => {
+		const panel = await openPanel();
+		await preparePanel(panel);
+		await clearPending();
+		const raised = await pay(750);
+		const binding = String(raised.result?.["pendingApproval"]);
+
+		// The card is on the panel and the entry behind it is gone, which is what
+		// a restarted worker looks like from here. The browser stops an idle
+		// Manifest V3 worker, so this is an ordinary outcome, not a contrived one.
+		await worker.evaluate((key: unknown) => {
+			const store = (globalThis as unknown as Record<string, unknown>)[
+				"__axApprovals"
+			] as { rejectApproval(value: unknown): void };
+			store.rejectApproval(key);
+		}, binding);
+
+		await panel.click("[data-operation='approve']");
+		// A card that quietly reappears would leave a person clicking a button
+		// that does nothing, believing they had answered.
+		await panel.waitForFunction(
+			() =>
+				document.getElementById("refused")?.hasAttribute("hidden") === false,
+			undefined,
+			{ timeout: 15_000 },
+		);
+		expect(await panel.textContent("#refused")).toContain("unknown approval");
+		await panel.close();
+	});
+
 	it("cannot be made to file an approval from outside the worker", async () => {
 		const panel = await openPanel();
 		await preparePanel(panel);

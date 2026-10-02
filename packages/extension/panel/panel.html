@@ -53,12 +53,17 @@
 			#empty {
 				color: #444;
 			}
+			#refused {
+				color: #a11;
+				font-weight: 600;
+			}
 		</style>
 	</head>
 	<body>
 		<h1>ax-kit</h1>
 		<div id="requests"></div>
 		<p id="empty">No tool invocation is waiting for approval.</p>
+		<p id="refused" hidden></p>
 		<p id="disclaimer"></p>
 		<script type="module" src="panel.js"></script>
 	</body>

@@ -9,12 +9,17 @@
  * comes from the worker's store, so the panel and the thing that will execute
  * cannot disagree.
  *
- * Approval is a click. `request` is gesture-gated in the worker as well, so a
- * request filed without one is rejected there too rather than trusted here.
+ * Approval is a click, and it is the only thing that grants one: the worker
+ * files the confirmation itself from the tool view it validated, and nothing
+ * else can put an approval in front of a person.
+ *
+ * Copied verbatim into the unpacked directory, so this file is plain
+ * JavaScript — it is never transpiled.
  */
 
 const requests = document.getElementById("requests");
 const empty = document.getElementById("empty");
+const refused = document.getElementById("refused");
 const disclaimer = document.getElementById("disclaimer");
 
 /** Ask the worker for the pending approvals, and nothing else. */
@@ -81,11 +86,36 @@ function render(entry) {
 	return card;
 }
 
+/**
+ * Record a refusal the person needs to see.
+ *
+ * The worker refuses for reasons a person can act on — the invocation is gone,
+ * the tab has moved on — and a card that quietly reappears with no explanation
+ * would leave them clicking a button that does nothing.
+ */
+function reportRefusal(reason) {
+	if (refused === null) {
+		return;
+	}
+	refused.textContent = reason;
+	refused.hidden = false;
+}
+
 async function decide(operation, key) {
-	await chrome.runtime.sendMessage({
+	const reply = await chrome.runtime.sendMessage({
 		panel: operation,
 		args: { key },
 	});
+	if (typeof reply !== "object" || reply === null || reply.ok !== true) {
+		const detail = typeof reply?.error === "string" ? reply.error : "";
+		reportRefusal(
+			detail === ""
+				? "The worker did not accept that decision. It may have restarted."
+				: `The worker refused that decision: ${detail}`,
+		);
+	} else if (refused !== null) {
+		refused.hidden = true;
+	}
 	await refresh();
 }
 
