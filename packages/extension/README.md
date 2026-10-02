@@ -105,9 +105,16 @@ train a person to click through, which defeats the control.
 
 The manifest defaults deny external connections, keep private browsing
 closed, and flag broad host scope with a review justification. Only the
-permissions the worker reads are requested. The audit trail is written by the
-worker into page-unreachable storage: local log only, with no integrity
-guarantee until shipped off-machine.
+permissions the worker reads are requested.
+
+Pending approvals and the audit trail live in the service worker's memory, not
+in extension storage. The worker is page-unreachable, so neither is reachable
+from a page, and the trail is a local log with no integrity guarantee until it
+is shipped off-machine. It does not survive the browser stopping an idle
+worker: a pending approval is lost rather than executed, and the panel says so
+when a decision arrives for an invocation the worker no longer holds. Making
+either durable means writing them to extension storage, which is async and
+would put an await on every decision.
 
 ## Exposure
 

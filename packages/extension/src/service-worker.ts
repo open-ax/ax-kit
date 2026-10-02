@@ -262,9 +262,11 @@ async function inject(
 const approvals = new ApprovalStore();
 
 /**
- * The local audit trail. Held outside any page lifetime and labelled as such:
- * page-unreachable is not tamper-proof, and `AUDIT_TRAIL_DISCLAIMER` says so
- * wherever it is presented.
+ * The local audit trail. Held in the worker's own memory, outside any page
+ * lifetime, and labelled as such: page-unreachable is not tamper-proof, and
+ * `AUDIT_TRAIL_DISCLAIMER` says so wherever it is presented. It does not
+ * survive the browser stopping an idle worker, so it is a record of this
+ * session rather than a ledger.
  */
 const trail = new WorkerAuditTrail();
 
