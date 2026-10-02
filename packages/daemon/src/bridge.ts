@@ -107,29 +107,24 @@ export class BridgeClient {
 export class PageBridge {
 	private nextId = 1;
 	private readonly queue: Envelope[] = [];
-	private readonly waiting: Array<PendingCall> = [];
 	private readonly settled = new Map<number, PendingCall>();
-	private served = false;
 
 	constructor(private readonly info: DaemonInfo) {}
 
-	/** True once a client has picked up work, so callers can tell idle from stuck. */
+	/** True while a request is queued and no client has taken it yet. */
 	get hasPending(): boolean {
 		return this.queue.length > 0;
 	}
 
-	/** The next queued request for a pulling client, or null when idle. */
+	/**
+	 * The next queued request for a pulling client, or null when idle.
+	 *
+	 * Every envelope handed out is one `settled` already holds, so a result for
+	 * it always has an entry to land on. Minting an id here that `settled` does
+	 * not know would silently drop the answer to a call nobody is awaiting.
+	 */
 	take(): Envelope | null {
-		const next = this.queue.shift();
-		if (next !== undefined) {
-			return next;
-		}
-		const call = this.waiting.shift();
-		if (call === undefined) {
-			return null;
-		}
-		this.served = true;
-		return { id: this.nextId++, request: call.request };
+		return this.queue.shift() ?? null;
 	}
 
 	/** Accept a result from the client and settle the matching call. */
@@ -224,10 +219,6 @@ export class PageBridge {
 				version: this.info.version,
 			},
 		};
-	}
-
-	get isServed(): boolean {
-		return this.served;
 	}
 }
 
