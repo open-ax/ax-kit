@@ -55,7 +55,11 @@ function render(entry) {
 	const list = document.createElement("dl");
 	const fields = [
 		["Description", entry.description],
-		["Origin", entry.origin],
+		// Two origins, because they can disagree: `origin` is what the tool
+		// declared about itself and `frameOrigin` is where it actually lives.
+		// Only the second is observed, so a person deciding reads both.
+		["Declared origin", entry.origin],
+		["Frame origin", entry.frameOrigin],
 		["Arguments", entry.argsJson],
 	];
 	for (const [label, value] of fields) {

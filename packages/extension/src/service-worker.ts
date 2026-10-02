@@ -499,6 +499,14 @@ export interface PanelApproval {
 	readonly description: string;
 	readonly argsJson: string;
 	readonly origin: string;
+	/**
+	 * The origin of the frame the tool actually lives in, read from the frame
+	 * itself rather than from anything the tool declared. `origin` is the page's
+	 * own claim about itself; a person deciding should be shown the one value
+	 * this worker observed, and a disagreement between the two is exactly what
+	 * they need to see.
+	 */
+	readonly frameOrigin: string;
 }
 
 /**
@@ -539,6 +547,7 @@ function fileApproval(details: ApprovalDetails): PanelApproval {
 		description: details.description,
 		argsJson: details.argsJson,
 		origin: details.origin,
+		frameOrigin: details.frameOrigin,
 	};
 	filed.set(binding, entry);
 	trail.append({

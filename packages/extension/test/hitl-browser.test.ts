@@ -205,6 +205,7 @@ interface ShownRequest {
 	readonly description: string;
 	readonly args: string;
 	readonly origin: string;
+	readonly frameOrigin: string;
 	readonly hasApprove: boolean;
 	readonly hasReject: boolean;
 }
@@ -220,7 +221,10 @@ async function shown(panel: Page): Promise<ReadonlyArray<ShownRequest>> {
 	return (await panel.evaluate(() =>
 		[...document.querySelectorAll(".request")].map((card) => ({
 			key: (card as HTMLElement).dataset["key"] ?? "",
-			origin: card.querySelector("[data-field='origin']")?.textContent ?? "",
+			origin:
+				card.querySelector("[data-field='declared origin']")?.textContent ?? "",
+			frameOrigin:
+				card.querySelector("[data-field='frame origin']")?.textContent ?? "",
 			args: card.querySelector("[data-field='arguments']")?.textContent ?? "",
 			description:
 				card.querySelector("[data-field='description']")?.textContent ?? "",
@@ -337,6 +341,7 @@ describe("consequential confirmation", () => {
 		expect(cards[0]?.description).toBe("Charge the saved card for the cart.");
 		expect(cards[0]?.args).toBe('{"amount":900}');
 		expect(cards[0]?.origin).toBe(origin);
+		expect(cards[0]?.frameOrigin).toBe(origin);
 		expect(cards[0]?.hasApprove).toBe(true);
 		expect(cards[0]?.hasReject).toBe(true);
 		await panel.close();
