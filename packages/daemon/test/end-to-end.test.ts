@@ -330,17 +330,14 @@ describe("tool execution end to end", () => {
 			const listed = await client.nextFrame();
 			expect(listed.error).toBeUndefined();
 			expect(JSON.stringify(listed.result)).toContain("resultType");
-			// A call answers differently from a listing: with no bridge attached
-			// the daemon defers the execution rather than inventing a result, and
-			// saying so is the whole answer.
+			// A call is refused rather than completed. The spawned process
+			// holds no page bridge, so there is nothing to execute against and the
+			// only honest answer is one that tells the client nothing happened.
 			client.write(toolsCallFrame(2, "viewCart", { detailed: true }));
 			const called = await client.nextFrame();
 			expect(called.id).toBe(2);
-			expect(called.error).toBeUndefined();
-			expect(called.result).toMatchObject({
-				deferred: true,
-				name: "viewCart",
-			});
+			expect(called.result).toBeUndefined();
+			expect(called.error?.message).toMatch(/no page bridge/);
 			client.endInput();
 			expect(await client.waitForExit()).toBe(0);
 		} finally {
