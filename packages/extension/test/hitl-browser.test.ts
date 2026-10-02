@@ -139,51 +139,19 @@ async function openPanel(): Promise<Page> {
 	return panel;
 }
 
-/** File and approve an invocation through the worker's panel surface. */
-async function approveInvocation(
-	binding: string,
-	argsJson: string,
-	definitionVersion: string,
-): Promise<void> {
-	const argsHash = await hashInWorker(argsJson);
-	await worker.evaluate(
-		(payload: unknown) => {
-			const scope = globalThis as unknown as Record<string, unknown>;
-			const panel = scope["__axPanel"] as (
-				op: string,
-				args: unknown,
-			) => unknown;
-			const record = payload as Record<string, unknown>;
-			panel("request", {
-				gesture: true,
-				approval: {
-					key: record["key"],
-					toolName: "payNow",
-					description: "Charge the saved card for the cart.",
-					argsJson: record["argsJson"],
-					origin: record["origin"],
-					consequentialHint: true,
-					readOnlyHint: false,
-					frameOrigin: "https://shop.example",
-					definitionVersion: record["definitionVersion"],
-				},
-			});
-			panel("approve", { key: record["binding"] });
-		},
-		{
-			binding,
-			argsJson,
-			origin,
-			definitionVersion,
-			key: {
-				tabId,
-				documentId: "doc-1",
-				frameId: 0,
-				toolName: "payNow",
-				argsHash,
-			},
-		},
-	);
+/**
+ * Answer a filed invocation the way a person clicking Approve would.
+ *
+ * Filing is the worker's own job now, so this only answers: the binding came
+ * from the confirmation the worker raised for this exact invocation, and the
+ * text a person would have read is the tool's own, not something written here.
+ */
+async function approveInvocation(binding: string): Promise<void> {
+	await worker.evaluate((key: unknown) => {
+		const scope = globalThis as unknown as Record<string, unknown>;
+		const panel = scope["__axPanel"] as (op: string, args: unknown) => unknown;
+		panel("approve", { key });
+	}, binding);
 }
 
 /**
@@ -359,12 +327,29 @@ describe("consequential confirmation", () => {
 		const panel = await openPanel();
 		await preparePanel(panel);
 		await clearPending();
-		// The hash comes from the worker's own rule, not reimplemented here: a
-		// test that computed it differently would approve a binding the product
-		// would refuse, and prove nothing.
-		const argsJson = '{"amount":900}';
-		const argsHash = await hashInWorker(argsJson);
-		const filed = await panel.evaluate(
+		// The card the person reads is raised by the worker from the tool it
+		// validated, so nothing here writes the text being approved.
+		const raised = await pay(900);
+		expect(raised.result?.["requiresConfirmation"]).toBe(true);
+		const cards = await shown(panel);
+		expect(cards.length).toBe(1);
+		expect(cards[0]?.toolName).toBe("payNow");
+		expect(cards[0]?.description).toBe("Charge the saved card for the cart.");
+		expect(cards[0]?.args).toBe('{"amount":900}');
+		expect(cards[0]?.origin).toBe(origin);
+		expect(cards[0]?.hasApprove).toBe(true);
+		expect(cards[0]?.hasReject).toBe(true);
+		await panel.close();
+	});
+
+	it("cannot be made to file an approval from outside the worker", async () => {
+		const panel = await openPanel();
+		await preparePanel(panel);
+		await clearPending();
+		// There is no panel operation that raises a confirmation. A caller with
+		// the worker's own channel still cannot put text of its own choosing in
+		// front of a person as though the page had written it.
+		const refused = await panel.evaluate(
 			async (approval: unknown) => {
 				const scope = globalThis as unknown as Record<string, unknown>;
 				const run = scope["__request"] as (
@@ -375,54 +360,11 @@ describe("consequential confirmation", () => {
 			},
 			{
 				key: {
-					tabId: 7,
-					documentId: "doc-2",
-					frameId: 0,
-					toolName: "payNow",
-					argsHash,
-				},
-				toolName: "payNow",
-				description: "Charge the saved card for the cart.",
-				argsJson,
-				origin: "https://shop.example",
-				consequentialHint: true,
-				readOnlyHint: false,
-				frameOrigin: "https://shop.example",
-				definitionVersion: "{}",
-			},
-		);
-		expect(filed).toMatchObject({ ok: true });
-		const cards = await shown(panel);
-		expect(cards.length).toBe(1);
-		expect(cards[0]?.toolName).toBe("payNow");
-		expect(cards[0]?.description).toBe("Charge the saved card for the cart.");
-		expect(cards[0]?.args).toBe('{"amount":900}');
-		expect(cards[0]?.origin).toBe("https://shop.example");
-		expect(cards[0]?.hasApprove).toBe(true);
-		expect(cards[0]?.hasReject).toBe(true);
-		await panel.close();
-	});
-
-	it("refuses to file an approval without a gesture", async () => {
-		const panel = await openPanel();
-		await preparePanel(panel);
-		await clearPending();
-		const refusal = await panel.evaluate(
-			async (approval: unknown) => {
-				const scope = globalThis as unknown as Record<string, unknown>;
-				const run = scope["__request"] as (
-					op: string,
-					args: unknown,
-				) => Promise<unknown>;
-				return await run("request", { gesture: false, approval });
-			},
-			{
-				key: {
 					tabId: 8,
 					documentId: "doc-3",
 					frameId: 0,
 					toolName: "payNow",
-					argsHash: await hashInWorker("{}"),
+					argsHash: "0".repeat(64),
 				},
 				toolName: "payNow",
 				description: "Charge the saved card for the cart.",
@@ -434,7 +376,7 @@ describe("consequential confirmation", () => {
 				definitionVersion: "{}",
 			},
 		);
-		expect(refusal).toMatchObject({ ok: false });
+		expect(refused).toMatchObject({ ok: false });
 		expect(await shown(panel)).toHaveLength(0);
 		await panel.close();
 	});
@@ -442,11 +384,7 @@ describe("consequential confirmation", () => {
 	it("executes once the exact invocation is approved", async () => {
 		const first = await pay(1200);
 		const binding = String(first.result?.["pendingApproval"]);
-		await approveInvocation(
-			binding,
-			String(first.result?.["argsJson"]),
-			String(first.result?.["definitionVersion"]),
-		);
+		await approveInvocation(binding);
 
 		const second = await pay(1200);
 		// Approved and consumed: this time it ran, and the page's own value came
@@ -457,11 +395,7 @@ describe("consequential confirmation", () => {
 
 	it("refuses rather than re-prompting when the binding has moved", async () => {
 		const first = await pay(700);
-		await approveInvocation(
-			String(first.result?.["pendingApproval"]),
-			String(first.result?.["argsJson"]),
-			String(first.result?.["definitionVersion"]),
-		);
+		await approveInvocation(String(first.result?.["pendingApproval"]));
 
 		// The person approved 700. The caller now asks for 900.
 		const moved = await pay(900);
@@ -472,11 +406,7 @@ describe("consequential confirmation", () => {
 
 	it("consumes an approval so it cannot be replayed", async () => {
 		const first = await pay(1500);
-		await approveInvocation(
-			String(first.result?.["pendingApproval"]),
-			String(first.result?.["argsJson"]),
-			String(first.result?.["definitionVersion"]),
-		);
+		await approveInvocation(String(first.result?.["pendingApproval"]));
 		const used = await pay(1500);
 		expect(used.result).toEqual(JSON.stringify({ paid: 1500 }));
 		// The same approval a second time does not run again.
@@ -500,6 +430,7 @@ describe("consequential confirmation", () => {
 
 		const panel = await openPanel();
 		await preparePanel(panel);
+		await clearPending();
 		// Nothing new is waiting: the ordinary call raised nothing.
 		expect(await shown(panel)).toHaveLength(0);
 		await panel.close();

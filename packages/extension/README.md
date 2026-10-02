@@ -30,25 +30,23 @@ console.log(TRANSPORT_KIND, request.handler);
 
 const store = new ApprovalStore();
 const argsJson = canonicalizeArgs({ sku: "lamp-01" });
-const key = store.requestApproval(
-	{
-		key: createHitlKey({
-			tabId: 1,
-			documentId: "doc-1",
-			frameId: 0,
-			toolName: "proceedToCheckout",
-			argsHash: hashArgs(argsJson),
-		}),
+const key = store.requestApproval({
+	key: createHitlKey({
+		tabId: 1,
+		documentId: "doc-1",
+		frameId: 0,
 		toolName: "proceedToCheckout",
-		origin: "https://shop.example",
-		frameOrigin: "https://shop.example",
-		argsJson,
-		consequentialHint: true,
-		readOnlyHint: false,
-		definitionVersion: "v1",
-	},
-	true,
-);
+		argsHash: hashArgs(argsJson),
+	}),
+	toolName: "proceedToCheckout",
+	description: "Charge the saved card.",
+	origin: "https://shop.example",
+	frameOrigin: "https://shop.example",
+	argsJson,
+	consequentialHint: true,
+	readOnlyHint: false,
+	definitionVersion: "v1",
+});
 ```
 
 Traffic travels as request/response injection from the service worker with
@@ -85,8 +83,14 @@ browser binary.
 
 Confirmation renders in the side panel only, bound to tab, document,
 frame, tool name, and argument hash, with all five re-verified at
-execution. Approvals are single-use and gesture-initiated; a definition
-change invalidates the pending entry.
+execution. Approvals are single-use; a definition change invalidates the
+pending entry.
+
+The worker files the confirmation itself, from the tool view it validated,
+when a consequential tool is invoked. Nothing outside the worker can raise
+one: a caller cannot put text of its own choosing in front of a person as
+though the page had written it. Filing raises the question and grants
+nothing — the answer is `approve`, which only the panel's own click reaches.
 
 The panel shows the tool name, its description, and the exact arguments, so
 the click is informed. It holds no state of its own: every value it renders

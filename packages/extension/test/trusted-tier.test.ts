@@ -148,6 +148,7 @@ describe("trusted tier", () => {
 		const details = {
 			key,
 			toolName: "viewCart",
+			description: "Show the cart.",
 			origin: "https://shop.example",
 			frameOrigin: "https://shop.example",
 			argsJson,
@@ -156,7 +157,7 @@ describe("trusted tier", () => {
 			definitionVersion: "v1",
 		};
 		const store = new ApprovalStore();
-		const pendingKey = store.requestApproval(details, true);
+		const pendingKey = store.requestApproval(details);
 		expect(pendingKey).toBe(approvedKey);
 		store.approveApproval(pendingKey);
 		expect(() =>
@@ -217,19 +218,17 @@ describe("trusted tier", () => {
 		});
 		const approvedKey = hitlKeyToString(key);
 		const store = new ApprovalStore();
-		const pending = store.requestApproval(
-			{
-				key,
-				toolName: "viewCart",
-				origin: "https://shop.example",
-				frameOrigin: "https://shop.example",
-				argsJson,
-				consequentialHint: false,
-				readOnlyHint: true,
-				definitionVersion: "v1",
-			},
-			true,
-		);
+		const pending = store.requestApproval({
+			key,
+			toolName: "viewCart",
+			description: "Show the cart.",
+			origin: "https://shop.example",
+			frameOrigin: "https://shop.example",
+			argsJson,
+			consequentialHint: false,
+			readOnlyHint: true,
+			definitionVersion: "v1",
+		});
 		store.approveApproval(pending);
 		expect(() =>
 			authorizeExecution({

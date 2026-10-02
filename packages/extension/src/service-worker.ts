@@ -17,7 +17,7 @@
 
 import type { InjectionRequest } from "./handlers.js";
 import { assertHandlerName, createInjectionRequest } from "./handlers.js";
-import type { HitlKey } from "./hitl.js";
+import type { ApprovalDetails, HitlKey } from "./hitl.js";
 import {
 	ApprovalStore,
 	canonicalizeArgs,
@@ -369,7 +369,7 @@ async function handle(request: InjectionRequest): Promise<unknown> {
 			throw new TypeError("approval target changed");
 		}
 
-		const alreadyApproved = pending.includes(binding);
+		const alreadyApproved = approvals.isApproved(binding);
 		if (alreadyApproved) {
 			// The person has already been asked about this exact invocation. The
 			// binding is re-verified against live values here, not at the moment
@@ -383,14 +383,31 @@ async function handle(request: InjectionRequest): Promise<unknown> {
 			});
 			return inject(tabId, frameId, "executeTool", { name, args: minimised });
 		}
-		// Not yet approved: return what a person needs in order to decide, and
-		// do not execute. The caller is expected to come back after approval.
+		// Asked and not yet answered: the person is the one who answers, so the
+		// question has to be on the panel. Filing is idempotent — asking twice
+		// must not raise a second card or clear an answer already given.
+		const argsJson = canonicalizeArgs(minimised);
+		if (!pending.includes(binding)) {
+			fileApproval({
+				key,
+				toolName: name,
+				description: view.description,
+				origin: ownerOrigin,
+				frameOrigin: view.frameOrigin,
+				argsJson,
+				consequentialHint: true,
+				readOnlyHint: view.readOnlyHint,
+				definitionVersion,
+			});
+		}
+		// Return what a person needs in order to decide, and do not execute. The
+		// caller comes back once the answer is in.
 		return {
 			pendingApproval: binding,
 			requiresConfirmation: true,
 			toolName: name,
 			description: view.description,
-			argsJson: canonicalizeArgs(minimised),
+			argsJson,
 			definitionVersion,
 			origin: ownerOrigin,
 			callerOrigin,
@@ -440,20 +457,21 @@ function announceChange(): void {
 }
 
 /**
- * File a pending approval on a person's gesture.
+ * File a pending approval from the worker's own validated view.
  *
- * Gesture-initiated by construction: the store itself rejects a non-gesture
- * request, so a daemon cannot manufacture an approval by asking twice.
+ * Every field is read from a tool view this worker validated, so what a person
+ * is shown is what will execute — there is no path by which a caller supplies
+ * the text a person approves. Filing raises a confirmation and grants nothing;
+ * the answer is `approveApproval`, which only the panel's own click reaches.
  */
-function requestApproval(details: unknown, gesture: unknown): PanelApproval {
-	const record = details as Record<string, unknown>;
-	const binding = approvals.requestApproval(details, gesture);
+function fileApproval(details: ApprovalDetails): PanelApproval {
+	const binding = approvals.requestApproval(details);
 	const entry: PanelApproval = {
 		key: binding,
-		toolName: String(record["toolName"]),
-		description: String(record["description"]),
-		argsJson: String(record["argsJson"]),
-		origin: String(record["origin"]),
+		toolName: details.toolName,
+		description: details.description,
+		argsJson: details.argsJson,
+		origin: details.origin,
 	};
 	filed.set(binding, entry);
 	trail.append({
@@ -573,15 +591,13 @@ function sameTarget(binding: string, key: HitlKey): boolean {
 /**
  * The confirmation surface, as the panel drives it.
  *
- * Four enumerated operations, no dispatch. `request` requires a gesture and the
- * store enforces it, so the daemon cannot reach any of this by asking.
+ * Three enumerated operations, no dispatch. There is no way to file an approval
+ * from here: the worker files it from its own validated tool view when a
+ * consequential tool is invoked, so a caller cannot put text of its own
+ * choosing in front of a person as though the page had written it. Filing
+ * raises the question; only `approve` answers it.
  */
-export const PANEL_OPERATIONS = [
-	"request",
-	"approve",
-	"reject",
-	"list",
-] as const;
+export const PANEL_OPERATIONS = ["approve", "reject", "list"] as const;
 
 export type PanelOperation = (typeof PANEL_OPERATIONS)[number];
 
@@ -597,9 +613,6 @@ function panel(op: unknown, args: unknown): unknown {
 		typeof args === "object" && args !== null
 			? (args as Record<string, unknown>)
 			: {};
-	if (op === "request") {
-		return requestApproval(record["approval"], record["gesture"]);
-	}
 	if (op === "list") {
 		return { pending: pendingApprovals(), disclaimer: AUDIT_TRAIL_DISCLAIMER };
 	}
