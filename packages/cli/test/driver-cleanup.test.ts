@@ -1,36 +1,49 @@
 // Copyright 2026 Utpal Sen
 // SPDX-License-Identifier: Apache-2.0
 
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * Cleanup on the launch path, with the browser replaced by a stand-in.
+ * What the driver does with a browser it has launched.
  *
  * A leaked Chromium outlives the command that made it and keeps the process
- * alive with no exit code, so the guarantee is worth asserting directly. The
- * failure that matters is `newContext` rejecting after a successful launch,
- * which no page or option in this product can provoke — so the boundary is
- * substituted here rather than left untested. Everything else in the driver is
- * exercised against a real browser in `browser-audit.test.ts`.
+ * alive with no exit code, so both halves of that guarantee are asserted here:
+ * the window before a session exists, and the session that does. Neither can be
+ * provoked from the product's own inputs — a failed context creation is not
+ * reachable through a URL or a launch option — so the browser is substituted.
+ * Everything else in this driver is exercised against a real browser in
+ * `browser-audit.test.ts`.
  */
 
-const launched: Array<{ closed: number; newContext: () => Promise<unknown> }> =
-	[];
+interface FakeBrowser {
+	readonly contextsClosed: number;
+	readonly browsersClosed: number;
+}
+
+/** Fails the next `newContext` call, standing in for a context that cannot open. */
+let failContext = false;
+
+const launched: FakeBrowser[] = [];
 
 vi.mock("playwright", () => ({
 	chromium: {
 		launch: async (): Promise<unknown> => {
-			const record = {
-				closed: 0,
-				newContext: async (): Promise<unknown> => {
-					throw new TypeError("context refused");
-				},
-			};
+			const record = { contextsClosed: 0, browsersClosed: 0 };
 			launched.push(record);
 			return {
-				newContext: async (): Promise<unknown> => record.newContext(),
+				newContext: async (): Promise<unknown> => {
+					if (failContext) {
+						throw new TypeError("context refused");
+					}
+					return {
+						newPage: async (): Promise<unknown> => ({}),
+						close: async (): Promise<void> => {
+							record.contextsClosed += 1;
+						},
+					};
+				},
 				close: async (): Promise<void> => {
-					record.closed += 1;
+					record.browsersClosed += 1;
 				},
 			};
 		},
@@ -39,18 +52,31 @@ vi.mock("playwright", () => ({
 
 const { launchBrowser, launchDrivenBrowser } = await import("../src/driver.js");
 
-describe("driver launch cleanup", () => {
+beforeEach(() => {
+	failContext = false;
+	launched.length = 0;
+});
+
+describe("driver browser cleanup", () => {
 	it("closes a browser whose context could not be created", async () => {
+		failContext = true;
 		await expect(launchBrowser({ headless: true })).rejects.toThrow(
 			"context refused",
 		);
-		expect(launched.at(-1)?.closed).toBe(1);
-	});
-
-	it("closes a driven browser whose context could not be created", async () => {
 		await expect(launchDrivenBrowser({ headless: true })).rejects.toThrow(
 			"context refused",
 		);
-		expect(launched.at(-1)?.closed).toBe(1);
+		// Both entry points launch before they have a session, so neither has a
+		// caller-side `finally` that could close what it leaked.
+		expect(launched.map((entry) => entry.browsersClosed)).toEqual([1, 1]);
+	});
+
+	it("closes the browser, not only the context, when a session closes", async () => {
+		const session = await launchDrivenBrowser({ headless: true });
+		await session.close();
+		// Closing only the context leaves the browser process running and the
+		// node event loop alive, so the command would never return an exit code.
+		expect(launched.at(-1)?.contextsClosed).toBe(1);
+		expect(launched.at(-1)?.browsersClosed).toBe(1);
 	});
 });

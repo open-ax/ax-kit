@@ -100,18 +100,6 @@ export interface DrivenBrowser {
 	close(): Promise<void>;
 }
 
-class DrivenContextAdapter implements DrivenBrowser {
-	constructor(private readonly context: BrowserContext) {}
-
-	newPage(): Promise<DrivenPage> {
-		return this.context.newPage().then((page) => new DrivenPageAdapter(page));
-	}
-
-	close(): Promise<void> {
-		return this.context.close();
-	}
-}
-
 export interface LaunchOptions {
 	readonly headless: boolean;
 }
@@ -160,11 +148,6 @@ async function closeSession(session: Session): Promise<void> {
 	}
 }
 
-/** A driven browser plus its disposer. */
-export interface DrivenSession extends DrivenBrowser {
-	dispose(): Promise<void>;
-}
-
 /** Launch a real browser behind the collector's narrow interface. */
 export async function launchBrowser(
 	options: LaunchOptions,
@@ -173,16 +156,21 @@ export async function launchBrowser(
 	return new ContextAdapter(session);
 }
 
-/** The same browser, with pages that can also be waited on by condition. */
+/**
+ * The same browser, with pages that can also be waited on by condition.
+ *
+ * `close` closes the whole session rather than the context alone, so it means
+ * the same thing here as it does on the plain adapter: a caller that closes one
+ * browser never has to know a second thing was left running.
+ */
 export async function launchDrivenBrowser(
 	options: LaunchOptions,
-): Promise<DrivenSession> {
+): Promise<DrivenBrowser> {
 	const session = await launchSession(options);
-	const adapter = new DrivenContextAdapter(session.context);
 	return {
-		newPage: () => adapter.newPage(),
-		close: () => adapter.close(),
-		dispose: () => closeSession(session),
+		newPage: () =>
+			session.context.newPage().then((page) => new DrivenPageAdapter(page)),
+		close: () => closeSession(session),
 	};
 }
 
