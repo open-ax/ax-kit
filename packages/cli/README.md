@@ -46,12 +46,16 @@ The driver is exported so a caller can audit with its own browser options, and
 the pure scorer stays separately importable:
 
 ```ts
-import { auditLiveUrl, exitCodeFor, scoreAudit } from "@ax-kit/cli";
+import { auditLiveUrlFindings, exitCodeFor, scoreAudit } from "@ax-kit/cli";
 
-const { report, context } = await auditLiveUrl(
+const { report, context } = await auditLiveUrlFindings(
   { headless: true },
   "https://shop.example",
 );
 process.stdout.write(report);
 process.exitCode = exitCodeFor(context);
 ```
+
+`auditLiveUrlFindings` returns the report and the collected context; the context
+is what `exitCodeFor` scores into an exit code. `auditLiveUrl` is the same call
+returning only the formatted report, for when the code is not wanted.
