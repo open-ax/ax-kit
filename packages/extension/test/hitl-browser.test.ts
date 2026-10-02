@@ -448,6 +448,22 @@ describe("consequential confirmation", () => {
 		expect(replayed.result?.["requiresConfirmation"]).toBe(true);
 	});
 
+	it("names the missing field when a consequential call cannot be bound", async () => {
+		await clearPending();
+		// The document is what an approval is bound to, so a consequential call
+		// without one cannot reach a person. The refusal has to say that, rather
+		// than reporting a malformed key the caller cannot see.
+		const unbound = await invoke("executeTool", {
+			tabId,
+			frameId: 0,
+			name: "payNow",
+			args: { amount: 400 },
+			callerOrigin: origin,
+		});
+		expect(unbound.ok).toBe(false);
+		expect(unbound.error).toMatch(/needs a documentId/);
+	});
+
 	it("does not raise the panel for a tool that is not consequential", async () => {
 		const plain = await invoke("executeTool", {
 			tabId,

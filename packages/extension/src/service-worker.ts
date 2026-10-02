@@ -408,9 +408,18 @@ async function handle(request: InjectionRequest): Promise<unknown> {
 		// consequential call needs a document to bind an approval to: asking a
 		// read-only tool for one would refuse an invocation that involves no
 		// approval at all.
+		const documentId = args["documentId"];
+		if (typeof documentId !== "string" || documentId.length === 0) {
+			// Named rather than left to the key constructor, because this is the
+			// one field a caller can plausibly omit and the refusal should say
+			// what is missing rather than what is malformed.
+			throw new TypeError(
+				"a consequential call needs a documentId to bind its approval to",
+			);
+		}
 		const key = createHitlKey({
 			tabId,
-			documentId: String(args["documentId"] ?? ""),
+			documentId,
 			frameId,
 			toolName: name,
 			argsHash: hashArgs(canonicalizeArgs(minimised)),
