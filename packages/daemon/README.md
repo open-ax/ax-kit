@@ -22,12 +22,23 @@ const bridge = new PageBridge(createDaemonInfo());
 const transport = await startTransport({ discoveryDir, bridge });
 
 const tools = await bridge.listTools(tabId);
-const result = await bridge.callTool("viewCart", { detailed: true }, tabId, origin, []);
+const result = await bridge.callTool("viewCart", { detailed: true }, tabId, origin);
 ```
 
 A refusal arrives as a `BridgeRefusal` carrying the worker's own error code, so
 a client can tell "not permitted" from "malformed" rather than reading prose.
-The tab is always named by the caller; the bridge never guesses one.
+The tab is always named by the caller; the bridge never guesses one. A call
+nobody answers is refused at its deadline rather than left waiting, and the
+request leaves the queue at the same moment — a client told a call failed will
+not later find the work executed anyway.
+
+**This bridge is a library surface, not part of the shipped daemon.** The
+executable starts with no bridge attached, so it answers `server/discover` and
+`tools/list` and refuses `tools/call`: there is no listener and no page behind
+it. Attaching one is the host's job, and the two shapes do not yet meet —
+`BridgeProvider.listTools()` is synchronous while `PageBridge.listTools(tabId)`
+is not, so the provider interface has to change before the daemon can own a
+bridge. Until it does, the example above is how a host wires it.
 
 ## Local transport
 
@@ -62,7 +73,8 @@ is the manifest document, never the binary.
 ## Use
 
 Run it as a process. It speaks the client protocol on standard input and
-output, so any MCP client that can spawn a stdio server can drive it:
+output, so any MCP client that can spawn a stdio server can discover this
+server and list the tools it holds:
 
 ```sh
 ax-kit-daemon
@@ -71,6 +83,10 @@ ax-kit-daemon
 Frames go in one per line and come out one per line. There is no handshake:
 the first frame you send is answered. Diagnostics go to standard error, and
 closing standard input is how you stop it.
+
+`tools/call` is refused rather than answered. A completion marker on a frame
+whose work was never performed is the worst answer this daemon could give: a
+client that reads one reports the tool as run.
 
 To consume the policy helpers directly, import them:
 
