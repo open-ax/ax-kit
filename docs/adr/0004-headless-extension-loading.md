@@ -39,8 +39,9 @@ bundled Chromium in headless mode is the headless shell, which does not load
 extensions. The `chromium` channel is the full browser binary with the new
 headless mode, and it loads them.
 
-No fallback harness is needed. The reduced claim D2 reserves for a failed spike
-does not apply.
+No fallback harness is needed. The weaker claim a platform-API double would
+earn — a bridge tested against a substitute for the browser rather than in one
+— does not apply here, because a real browser loaded a real extension.
 
 ## Why the default headless mode fails
 
