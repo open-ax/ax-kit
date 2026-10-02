@@ -218,21 +218,30 @@ export async function collectSettled(page: Page): Promise<AuditContextInput> {
  * asynchronously is never misreported as empty. A page with no context is a
  * legitimate subject; the timeout only decides how long we are willing to wait
  * before believing it.
+ *
+ * Only the timeout is believed. A navigation that failed or a context that was
+ * destroyed is a different failure, and reporting it as "no tools to annotate"
+ * would point the reader at the page's declarations instead of at the page that
+ * never arrived.
  */
 async function waitForContextOrNothing(page: Page): Promise<void> {
 	try {
-		await page.waitForFunction(
-			() =>
-				typeof (document as unknown as Record<string, unknown>)[
-					"modelContext"
-				] === "object",
-			undefined,
-			{ timeout: 5_000 },
-		);
-	} catch {
+		await page.waitForFunction(hasModelContext, undefined, { timeout: 5_000 });
+	} catch (error: unknown) {
+		if (!(error instanceof Error) || error.name !== "TimeoutError") {
+			throw error;
+		}
 		// No context: the collector reports an empty tool set and scoring states
 		// that plainly, rather than treating it as a malfunction.
 	}
+}
+
+/** True once a page has installed a context. Serialized into the page. */
+function hasModelContext(): boolean {
+	return (
+		typeof (document as unknown as Record<string, unknown>)["modelContext"] ===
+		"object"
+	);
 }
 
 /** Audit one URL with a real browser and return the report and its context. */

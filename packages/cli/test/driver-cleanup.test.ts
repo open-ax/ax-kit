@@ -22,8 +22,15 @@ interface FakeBrowser {
 
 /** Fails the next `newContext` call, standing in for a context that cannot open. */
 let failContext = false;
+/** Fails the next context wait with something other than a timeout. */
+let waitFailure: Error | null = null;
 
 const launched: FakeBrowser[] = [];
+
+/** Stands in for Playwright's own TimeoutError, matched by name as it is in the driver. */
+class TimeoutError extends Error {
+	override name = "TimeoutError";
+}
 
 vi.mock("playwright", () => ({
 	chromium: {
@@ -36,7 +43,19 @@ vi.mock("playwright", () => ({
 						throw new TypeError("context refused");
 					}
 					return {
-						newPage: async (): Promise<unknown> => ({}),
+						newPage: async (): Promise<unknown> => ({
+							goto: async (): Promise<void> => {},
+							waitForFunction: async (): Promise<void> => {
+								if (waitFailure !== null) {
+									throw waitFailure;
+								}
+							},
+							evaluate: async (): Promise<unknown> => ({
+								tools: [],
+								policyAllowsTools: true,
+								originKeyed: true,
+							}),
+						}),
 						close: async (): Promise<void> => {
 							record.contextsClosed += 1;
 						},
@@ -50,10 +69,13 @@ vi.mock("playwright", () => ({
 	},
 }));
 
-const { launchBrowser, launchDrivenBrowser } = await import("../src/driver.js");
+const { auditLiveUrl, launchBrowser, launchDrivenBrowser } = await import(
+	"../src/driver.js"
+);
 
 beforeEach(() => {
 	failContext = false;
+	waitFailure = null;
 	launched.length = 0;
 });
 
@@ -77,6 +99,24 @@ describe("driver browser cleanup", () => {
 		// Closing only the context leaves the browser process running and the
 		// node event loop alive, so the command would never return an exit code.
 		expect(launched.at(-1)?.contextsClosed).toBe(1);
+		expect(launched.at(-1)?.browsersClosed).toBe(1);
+	});
+
+	it("reports a page that never arrived rather than one with no tools", async () => {
+		// A timeout is the legitimate case: a page with no context is a subject.
+		waitFailure = new TimeoutError("budget exhausted");
+		await expect(
+			auditLiveUrl({ headless: true }, "http://127.0.0.1:1/"),
+		).resolves.toContain("audit");
+
+		// Anything else — a failed navigation, a destroyed context — is a
+		// different failure. Scoring it as "no tools to annotate" would point the
+		// reader at the page's declarations instead of the page.
+		waitFailure = new TypeError("Execution context was destroyed");
+		await expect(
+			auditLiveUrl({ headless: true }, "http://127.0.0.1:1/"),
+		).rejects.toThrow(/destroyed/);
+		// Either way the browser is not left running.
 		expect(launched.at(-1)?.browsersClosed).toBe(1);
 	});
 });
