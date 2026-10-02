@@ -172,7 +172,10 @@ async function handleRequest(
 		return;
 	}
 	const path = (request.url ?? "/").split("?")[0];
-	if (path === "/pull") {
+	// GET only, as `/result` is POST only. A `DELETE` reaching this branch
+	// would take work off the queue without executing any of it, so a caller
+	// that cannot execute could still discard what is waiting.
+	if (path === "/pull" && request.method === "GET") {
 		const next = bridge.take();
 		if (next === null) {
 			// Idle, not an error: the client should come back.

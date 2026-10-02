@@ -38,10 +38,17 @@ async function tempDir(): Promise<string> {
 function call(
 	port: number,
 	headers: Record<string, string>,
+	route: { path?: string; method?: string } = {},
 ): Promise<{ status: number; body: string }> {
 	return new Promise((resolve, reject) => {
 		const req = httpRequest(
-			{ host: "127.0.0.1", port, path: "/", method: "GET", headers },
+			{
+				host: "127.0.0.1",
+				port,
+				path: route.path ?? "/",
+				method: route.method ?? "GET",
+				headers,
+			},
 			(res) => {
 				let body = "";
 				res.setEncoding("utf8");
@@ -135,6 +142,41 @@ describe("local transport", () => {
 					})
 				).status,
 			).toBe(403);
+		} finally {
+			await transport.close();
+		}
+	});
+
+	it("hands queued work to a GET and to nothing else", async () => {
+		const dir = await tempDir();
+		const queue: Array<{ id: number }> = [{ id: 1 }];
+		const transport = await startTransport({
+			discoveryDir: dir,
+			bridge: {
+				take: (): unknown => queue.shift() ?? null,
+				deliver: (): void => {},
+			},
+		});
+		try {
+			const headers = {
+				"x-ax-bearer": transport.bearer,
+				origin: `http://127.0.0.1:${transport.port}`,
+			};
+			expect(
+				(
+					await call(transport.port, headers, {
+						path: "/pull",
+						method: "DELETE",
+					})
+				).status,
+			).toBe(404);
+			// The refused method left the work where it was. A caller that cannot
+			// execute anything could otherwise still discard what is waiting.
+			expect(queue).toHaveLength(1);
+			const taken = await call(transport.port, headers, { path: "/pull" });
+			expect(taken.status).toBe(200);
+			expect(JSON.parse(taken.body)).toEqual({ id: 1 });
+			expect(queue).toHaveLength(0);
 		} finally {
 			await transport.close();
 		}
