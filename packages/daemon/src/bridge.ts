@@ -310,6 +310,10 @@ export class PageBridge {
 				name,
 				args,
 				callerOrigin,
+				// A tab-scoped placeholder, not a document identity: this process
+				// cannot ask the browser which document that is. Document-scoped
+				// invalidation therefore rests entirely on the worker hearing the
+				// tab navigate, which it does through `chrome.tabs.onUpdated`.
 				documentId: `tab-${tabId}`,
 			},
 		});

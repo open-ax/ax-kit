@@ -127,7 +127,6 @@ function pay(amount: number): Promise<CallResult> {
 		name: "payNow",
 		args: { amount },
 		callerOrigin: origin,
-		allowedOrigins: [],
 		documentId: "doc-1",
 	});
 }

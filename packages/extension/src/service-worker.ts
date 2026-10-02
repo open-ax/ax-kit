@@ -380,16 +380,20 @@ async function handle(request: InjectionRequest): Promise<unknown> {
 	if (typeof callerOrigin !== "string") {
 		throw new TypeError("bad caller origin");
 	}
-	// Exposure is decided here, and only from the page's own origin.
+	// Exposure is decided here, from the page's own origin only.
 	//
-	// The draft lets a definition widen its exposure with `exposedTo`, and that
-	// set is the one allow-list a caller must never be able to supply: a caller
-	// that names both the allowed set and the identity being checked against it
-	// always agrees with itself, so it grants itself whatever it asks for. The
-	// registered-tool listing does not carry the declared set, so this worker
-	// has none to honour and admits the page's own origin only — the draft's
-	// default, and the refusal a caller can never argue its way past. Widening
-	// this needs the declared set to reach the worker, not a caller to supply it.
+	// Two things this is not. It is not an authorisation boundary: `callerOrigin`
+	// arrives in the request, so a caller names its own identity here exactly as
+	// it used to name its own allow-list. What the removal buys is that the
+	// *policy* — the set of origins admitted — is no longer something a caller
+	// chooses. The manifest denies external connections, so the callers that can
+	// reach this are the extension's own pages rather than the open internet.
+	//
+	// The draft also lets a definition widen itself with `exposedTo`. The
+	// registered-tool listing does not carry the declared set, so this worker has
+	// none to honour and admits the page's own origin: the draft's default.
+	// Widening that needs the declared set to reach the worker, and an identity
+	// the browser asserts rather than one the caller does.
 	const allowed: ReadonlyArray<string> = [];
 	if (!isExposedToCaller(ownerOrigin, allowed, callerOrigin)) {
 		throw new TypeError("tool not exposed");
@@ -435,6 +439,10 @@ async function handle(request: InjectionRequest): Promise<unknown> {
 			// binding is re-verified against live values here, not at the moment
 			// of the click, because the page has had time to move underneath it.
 			approvals.verifyAndConsume(binding, key, definitionVersion);
+			// The answer is spent, so the copy the panel rendered is spent too.
+			// Left here it would hold a page-supplied description and argument
+			// string for the life of the worker.
+			filed.delete(binding);
 			trail.append({
 				key: binding,
 				toolName: name,
@@ -711,7 +719,18 @@ chrome.tabs.onUpdated.addListener(
 		if (changeInfo.status !== "loading") {
 			return;
 		}
+		// The store drops its own entries; the copies the panel rendered are this
+		// module's to drop and nothing else will. Whatever is still pending after
+		// the invalidation belonged to another tab, so the difference is exactly
+		// what the navigation discarded.
+		const before = new Set(approvals.pendingKeys());
 		approvals.invalidateTab(tabId);
+		for (const binding of approvals.pendingKeys()) {
+			before.delete(binding);
+		}
+		for (const binding of before) {
+			filed.delete(binding);
+		}
 		void chrome.runtime.sendMessage({ handler: "pendingChanged" }).catch(() => {
 			// No panel listening. The invalidation above already happened.
 		});
@@ -763,9 +782,10 @@ chrome.runtime.onMessage.addListener(
 	},
 );
 
-// Exposed for the extension's own pages and for tests driving the worker
-// directly. Not reachable from the page: the worker's global is not a page
-// global, and the manifest denies external connections.
+// Exposed for tests driving the worker directly through Playwright. Not
+// reachable from the page: a service worker's global is not a page global, and
+// the manifest denies external connections. The panel reaches the worker over
+// `chrome.runtime.sendMessage` and uses none of these.
 Object.assign(globalThis as unknown as Record<string, unknown>, {
 	__axHandle: handle,
 	__axApprovals: approvals,

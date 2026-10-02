@@ -90,7 +90,17 @@ export function startTransport(options: TransportOptions): Promise<Transport> {
 	const host = assertLoopbackBind(options.host ?? "127.0.0.1");
 	const bearer = createBearer();
 	const server: Server = createServer((request, response) => {
-		handleRequest(request, response, bearer, options.bridge);
+		// Answered, never awaited: a request that throws must become a response,
+		// and an unhandled rejection here would take the whole daemon down with
+		// it. One bad value is a refused request, not a dead process.
+		handleRequest(request, response, bearer, options.bridge).catch(() => {
+			if (!response.headersSent) {
+				response.writeHead(500, { "content-type": "text/plain" });
+				response.end("request failed");
+			} else {
+				response.end();
+			}
+		});
 	});
 	return new Promise<Transport>((resolve, reject) => {
 		const onError = (error: Error): void => {

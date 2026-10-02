@@ -174,7 +174,6 @@ function plain(overrides: Record<string, unknown> = {}): Promise<CallResult> {
 		name: "plainTool",
 		args: { note: "hello" },
 		callerOrigin: origin,
-		allowedOrigins: [],
 		documentId: "doc-1",
 		...overrides,
 	});
@@ -319,24 +318,23 @@ describe("authorisation outcomes at the real seam", () => {
 	it("refuses a caller outside the Exposed to set", async () => {
 		const refused = await plain({
 			callerOrigin: "https://elsewhere.example",
-			allowedOrigins: [],
 		});
 		expect(refused.ok).toBe(false);
 		expect(refused.error).toMatch(/not exposed/);
 	});
 
-	it("refuses a caller whose origin the allow-list names only indirectly", async () => {
+	it("refuses a caller on a different host", async () => {
 		const refused = await plain({
 			callerOrigin: "https://sub.shop.example",
-			allowedOrigins: ["https://shop.example"],
 		});
 		expect(refused.ok).toBe(false);
 		expect(refused.error).toMatch(/not exposed/);
 	});
 
 	it("does not let a caller grant itself exposure", async () => {
-		// The page's own origin is the only one this worker admits, because a
-		// list supplied by the caller is the caller deciding what it may reach.
+		// The page's own origin is the only one this worker admits. This request
+		// names a different caller *and* supplies an allow-list containing it —
+		// the shape that used to be self-granting. The list is still ignored.
 		const allowed = await plain({
 			allowedOrigins: ["https://elsewhere.example"],
 			callerOrigin: "https://elsewhere.example",
@@ -454,7 +452,6 @@ describe("authorisation outcomes at the real seam", () => {
 			name: "payNow",
 			args: { amount: 600 },
 			callerOrigin: origin,
-			allowedOrigins: [],
 			documentId: "doc-1",
 		});
 		expect(first.ok).toBe(true);
@@ -478,7 +475,6 @@ describe("authorisation outcomes at the real seam", () => {
 			name: "payNow",
 			args: { amount: 600 },
 			callerOrigin: origin,
-			allowedOrigins: [],
 			documentId: "doc-1",
 		});
 		expect(drifted.ok).toBe(false);
@@ -494,7 +490,6 @@ describe("authorisation outcomes at the real seam", () => {
 			name: "payNow",
 			args: { amount: 400 },
 			callerOrigin: origin,
-			allowedOrigins: [],
 			documentId: "doc-1",
 		});
 		expect(first.ok).toBe(true);
@@ -512,7 +507,6 @@ describe("authorisation outcomes at the real seam", () => {
 			name: "payNow",
 			args: { amount: 4000 },
 			callerOrigin: origin,
-			allowedOrigins: [],
 			documentId: "doc-1",
 		});
 		expect(changed.ok).toBe(false);
@@ -528,7 +522,6 @@ describe("authorisation outcomes at the real seam", () => {
 			name: "payNow",
 			args: { amount: 250 },
 			callerOrigin: origin,
-			allowedOrigins: [],
 			documentId: "doc-1",
 		});
 		await approveThroughPanel(once.result as Record<string, unknown>);
@@ -561,7 +554,6 @@ describe("authorisation outcomes at the real seam", () => {
 			name: "payNow",
 			args: { amount: 400 },
 			callerOrigin: origin,
-			allowedOrigins: [],
 			documentId: "doc-1",
 		});
 		expect(first.ok).toBe(true);
@@ -589,7 +581,6 @@ describe("authorisation outcomes at the real seam", () => {
 			name: "payNow",
 			args: { amount: 400 },
 			callerOrigin: origin,
-			allowedOrigins: [],
 			documentId: "doc-1",
 		});
 		// Refused in its own error family, distinct from an argument mismatch, so
@@ -608,7 +599,6 @@ describe("authorisation outcomes at the real seam", () => {
 			name: "payNow",
 			args: { amount: 700 },
 			callerOrigin: origin,
-			allowedOrigins: [],
 			documentId: "doc-1",
 		});
 		expect(first.ok).toBe(true);
@@ -632,7 +622,6 @@ describe("authorisation outcomes at the real seam", () => {
 			name: "payNow",
 			args: { amount: 700 },
 			callerOrigin: origin,
-			allowedOrigins: [],
 			documentId: "doc-1",
 		});
 		// It asks again rather than running on the spent approval.

@@ -119,13 +119,15 @@ would put an await on every decision.
 
 A tool is exposed to its own origin and to nothing else. The draft also lets a
 definition widen itself with `exposedTo`, and the registered-tool listing this
-package reads does not carry that set, so the worker has none to honour and
-admits the page's own origin only — the draft's default.
+package reads does not carry that set, so the worker has none to honour.
 
-The allow-list is deliberately never taken from the request. A caller that
-supplies both the allowed set and the identity being checked against it always
-agrees with itself, so it would grant itself whatever it asked for. Widening
-this needs the declared set to reach the worker, not a caller to supply it.
+This is a policy, not an authorisation boundary, and the difference is worth
+stating. The *caller origin* still arrives in the request, so a caller names its
+own identity here. What removing the caller-supplied allow-list buys is that the
+set of origins admitted is no longer something a caller chooses. The manifest
+denies external connections, so the callers that can reach the worker are this
+extension's own pages. An identity the browser asserts — taken from the message
+sender — is what would make this a boundary rather than a narrowing.
 
 ## To consume the policy helpers
 

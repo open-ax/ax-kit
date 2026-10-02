@@ -421,7 +421,6 @@ describe("extension loaded in real Chromium", () => {
 			name: "noSuchTool",
 			args: {},
 			callerOrigin: new URL(fixture.url).origin,
-			allowedOrigins: [],
 			documentId: "doc-1",
 		});
 		expect(reply["ok"]).toBe(false);
