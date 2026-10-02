@@ -292,9 +292,10 @@ describe("emitted manifest", () => {
 		// The posture function that produced it agrees with what is on disk.
 		const held = assertManifestPosture(defaultManifestPosture());
 		expect(doc["host_permissions"]).toEqual(held.hostMatches);
-		expect(
-			(doc["permissions"] as ReadonlyArray<string>).includes("scripting"),
-		).toBe(true);
+		// A permission the worker never reads is not requested. `tabs` would grant
+		// URL and title across every tab, which `<all_urls>` already covers for
+		// the tabs this extension addresses, and `storage` is not read at all.
+		expect(doc["permissions"]).toEqual(["scripting", "sidePanel"]);
 		// Byte-for-byte what the manifest function produces, so the shipped file
 		// cannot drift from the posture it claims.
 		expect(doc).toEqual({ ...defaultManifestDocument() });

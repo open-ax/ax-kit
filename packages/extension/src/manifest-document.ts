@@ -72,9 +72,12 @@ export function createManifestDocument(
 		incognito: held.incognito,
 		background: { service_worker: "sw.js", type: "module" },
 		// The only permissions the bridge needs: script injection into Main
-		// world, and the side panel the confirmation renders in.
+		// world, and the side panel the confirmation renders in. Nothing else is
+		// read — `chrome.tabs.onUpdated` reports `status` without the `tabs`
+		// permission, and tab URLs come from the host scope above — so nothing
+		// else is requested.
 		host_permissions: [...held.hostMatches],
-		permissions: ["scripting", "sidePanel", "tabs", "storage"],
+		permissions: ["scripting", "sidePanel"],
 		content_security_policy: {
 			extension_pages: "script-src 'self'; object-src 'self'",
 		},
