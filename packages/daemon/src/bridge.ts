@@ -61,6 +61,17 @@ interface PendingCall {
 }
 
 /**
+ * How long a queued call waits for an answer before it is refused.
+ *
+ * A call nothing answers — no extension attached, or one that pulls a request
+ * and never posts a result — would otherwise hold its promise and its `settled`
+ * entry for the life of the process. Long enough that an ordinary round trip
+ * through a browser is never cut short, short enough that a missing peer is
+ * reported rather than waited on indefinitely.
+ */
+const PENDING_DEADLINE_MS = 60_000;
+
+/**
  * The worker's side of the bridge: pull a request, execute it, post the result.
  *
  * Only extension contexts hold one of these. It is the sole path from the
@@ -109,7 +120,10 @@ export class PageBridge {
 	private readonly queue: Envelope[] = [];
 	private readonly settled = new Map<number, PendingCall>();
 
-	constructor(private readonly info: DaemonInfo) {}
+	constructor(
+		private readonly info: DaemonInfo,
+		private readonly deadlineMs: number = PENDING_DEADLINE_MS,
+	) {}
 
 	/** True while a request is queued and no client has taken it yet. */
 	get hasPending(): boolean {
@@ -151,7 +165,27 @@ export class PageBridge {
 		const id = this.nextId;
 		this.nextId += 1;
 		return new Promise<unknown>((resolve, reject) => {
-			this.settled.set(id, { request, resolve, reject });
+			// The deadline is the only thing that ends a call nobody answers. It
+			// releases the entry on the same terms a result would, so a late
+			// answer for a refused id lands on nothing instead of hanging.
+			const timer: ReturnType<typeof setTimeout> = setTimeout(() => {
+				this.settled.delete(id);
+				reject(
+					new BridgeRefusal(BRIDGE_ERRORS.badRequest, "bridge call timed out"),
+				);
+			}, this.deadlineMs);
+			// A queued call must not be what keeps the daemon alive. The listener
+			// and its sockets decide when the process exits.
+			timer.unref?.();
+			const settle = (value: unknown): void => {
+				clearTimeout(timer);
+				resolve(value);
+			};
+			const fail = (error: Error): void => {
+				clearTimeout(timer);
+				reject(error);
+			};
+			this.settled.set(id, { request, resolve: settle, reject: fail });
 			this.queue.push({ id, request });
 		});
 	}
