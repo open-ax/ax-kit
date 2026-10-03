@@ -2,9 +2,18 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /**
- * Native-messaging host manifest: field, path, registry-document, size,
- * and reachability behavior. Reachable only from extension pages and the
- * service worker; renderer input is validated and sanitized first.
+ * Native-messaging host manifest: the document a browser reads to locate the
+ * host binary, and the rules its fields must satisfy.
+ *
+ * This module owns the manifest and nothing else. It does not speak native
+ * messaging: no code here opens a `chrome.runtime.connectNative` port, so the
+ * per-message size cap, the Windows registry-document rule, the
+ * worker-reachability gate, and the renderer-payload sanitizer that a host
+ * process would need are absent here rather than present and unreachable.
+ *
+ * Unreachable policy is worse than absent policy: a validator nothing calls
+ * reads as a control that is already in place. Those four checks belong with
+ * the host process, when this package has one.
  */
 
 export interface NativeHostManifest {
@@ -14,9 +23,6 @@ export interface NativeHostManifest {
 	readonly type: "stdio";
 	readonly allowed_origins: ReadonlyArray<string>;
 }
-
-export const HOST_TO_BROWSER_MAX_BYTES: number = 1024 * 1024;
-export const BROWSER_TO_HOST_MAX_BYTES: number = 1024 * 1024;
 
 const NAME_PATTERN = /^[a-z0-9_.]+$/;
 
@@ -106,72 +112,4 @@ export function createNativeHostManifest(parts: unknown): NativeHostManifest {
 		type: "stdio",
 		allowed_origins: [...allowed_origins],
 	};
-}
-
-/** Windows registry points at the manifest document, never the binary. */
-export function windowsRegistryValue(manifestPath: unknown): string {
-	if (typeof manifestPath !== "string" || manifestPath.length === 0) {
-		throw new TypeError("bad manifest path");
-	}
-	if (!manifestPath.endsWith(".json")) {
-		throw new TypeError("registry must point at the manifest document");
-	}
-	return manifestPath;
-}
-
-export function checkMessageSize(bytes: unknown, direction: unknown): void {
-	if (direction !== "host-to-browser" && direction !== "browser-to-host") {
-		throw new TypeError("bad direction");
-	}
-	if (typeof bytes !== "number" || !Number.isInteger(bytes) || bytes < 0) {
-		throw new TypeError("bad message size");
-	}
-	if (direction === "host-to-browser" && bytes > HOST_TO_BROWSER_MAX_BYTES) {
-		throw new TypeError("host message too large");
-	}
-	if (direction === "browser-to-host" && bytes > BROWSER_TO_HOST_MAX_BYTES) {
-		throw new TypeError("browser message too large");
-	}
-}
-
-/** Only extension pages and the worker may reach the host. */
-export function assertWorkerReachable(caller: unknown): void {
-	if (caller !== "extension-page" && caller !== "service-worker") {
-		throw new TypeError("host reachable from worker contexts only");
-	}
-}
-
-/** Renderer input is hostile: validate origin and sanitize the payload. */
-export function sanitizeRendererPayload(
-	payload: unknown,
-): Record<string, unknown> {
-	if (
-		typeof payload !== "object" ||
-		payload === null ||
-		Array.isArray(payload)
-	) {
-		throw new TypeError("bad renderer payload");
-	}
-	const record = payload as Record<string, unknown>;
-	const clean: Record<string, unknown> = {};
-	for (const [key, value] of Object.entries(record)) {
-		if (key === "__proto__" || key === "constructor" || key === "prototype") {
-			throw new TypeError(`forbidden key: ${key}`);
-		}
-		if (
-			value === null ||
-			typeof value === "string" ||
-			typeof value === "boolean"
-		) {
-			clean[key] = value;
-		} else if (typeof value === "number") {
-			if (!Number.isFinite(value)) {
-				throw new TypeError("non-finite number");
-			}
-			clean[key] = value;
-		} else {
-			throw new TypeError("renderer payload must be flat JSON scalars");
-		}
-	}
-	return clean;
 }

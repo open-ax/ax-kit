@@ -16,9 +16,9 @@ open a TCP socket, so the extension dials *out*: it reads the discovery file,
 pulls a request, executes it in the Trusted tier, and posts the result back.
 
 ```ts
-import { PageBridge, createDaemonInfo, startTransport } from "@ax-kit/daemon";
+import { PageBridge, startTransport } from "@ax-kit/daemon";
 
-const bridge = new PageBridge(createDaemonInfo());
+const bridge = new PageBridge();
 const transport = await startTransport({ discoveryDir, bridge });
 
 const tools = await bridge.listTools(tabId);
@@ -70,8 +70,14 @@ const file = readDiscoveryFile("/run/user/1000/ax");
 ```
 
 `writeNativeHostManifest` writes the manifest a browser launches, pointing at
-the binary's own path rather than an assumed one. On Windows the registry entry
-is the manifest document, never the binary.
+the binary's own path rather than an assumed one, after checking that the path
+is absolute and is not a bare interpreter invocation.
+
+This package writes that manifest and stops there. Nothing here opens a native
+messaging port, so the per-message size cap, the Windows registry-document
+rule, the worker-reachability gate, and the renderer-payload sanitizer are not
+implemented: they guard a host process this package does not contain. They
+belong with that host.
 
 ## Use
 
@@ -132,7 +138,6 @@ Rules enforced by this package and its tests:
   validation. The extension dials out over native messaging while the
   daemon dials in; the page never listens.
 - The native host manifest carries an absolute path plus a shim or
-  single-file binary (never a bare interpreter invocation), the Windows
-  registry points at the manifest document, per-direction size limits are
-  honored, and host messaging is reachable only from extension pages and
-  the service worker with renderer input validated and sanitized.
+  single-file binary, never a bare interpreter invocation, and admits only
+  `chrome-extension://` origins with no wildcard. The manifest is the whole
+  of what this package does with native messaging; it hosts nothing.

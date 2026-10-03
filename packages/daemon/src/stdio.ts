@@ -2,29 +2,16 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /**
- * Byte-clean stdio transport: only protocol messages reach stdout, all
- * diagnostics go to stderr, frames are newline-delimited with no embedded
- * newlines, and stdin close is the portable shutdown signal.
+ * Byte-clean stdio transport: frames are newline-delimited with no embedded
+ * newlines, and an oversized frame is refused rather than buffered.
+ *
+ * Only protocol messages reach stdout. That is a property of construction
+ * rather than of a check: `createNodeSink` in the entry module holds the sole
+ * `process.stdout.write`, and it wraps serialized frames. A function asserting
+ * the property after the fact would be testing a caller that cannot violate it.
  */
 
 export const MAX_FRAME_BYTES: number = 1024 * 1024;
-
-export function assertStdoutClean(text: string): void {
-	for (const line of text.split("\n")) {
-		if (line === "") {
-			continue;
-		}
-		let parsed: unknown;
-		try {
-			parsed = JSON.parse(line) as unknown;
-		} catch {
-			throw new TypeError("non-protocol bytes on stdout");
-		}
-		if (typeof parsed !== "object" || parsed === null) {
-			throw new TypeError("non-protocol bytes on stdout");
-		}
-	}
-}
 
 /** Split buffered stdin bytes into complete lines, keeping the remainder. */
 export function splitFrames(buffer: string): { lines: string[]; rest: string } {
@@ -40,11 +27,6 @@ export function splitFrames(buffer: string): { lines: string[]; rest: string } {
 		}
 	}
 	return { lines, rest };
-}
-
-/** True when the stdin side closed: the only portable shutdown signal. */
-export function isStdinClosed(chunk: unknown): boolean {
-	return chunk === null;
 }
 
 /** Write diagnostics to stderr only; never to stdout. */

@@ -10,30 +10,14 @@ import {
 	parseDiscoveryFile,
 	resolveDiscoveryDir,
 } from "../src/discovery.js";
-import {
-	assertWorkerReachable,
-	checkMessageSize,
-	createNativeHostManifest,
-	sanitizeRendererPayload,
-	windowsRegistryValue,
-} from "../src/native-host.js";
-import { assertStdoutClean, isStdinClosed, splitFrames } from "../src/stdio.js";
+import { createNativeHostManifest } from "../src/native-host.js";
+import { splitFrames } from "../src/stdio.js";
 
 describe("stdio hygiene", () => {
-	it("keeps stdout to one protocol frame per line", () => {
-		assertStdoutClean(
-			`${JSON.stringify({ jsonrpc: "2.0", id: 1 })}\n${JSON.stringify({ jsonrpc: "2.0", id: 2 })}\n`,
-		);
-		expect(() => assertStdoutClean("log line\n")).toThrow(TypeError);
-		expect(() => assertStdoutClean("[debug] booted\n")).toThrow(TypeError);
-	});
-
-	it("splits buffered bytes and treats stdin close as shutdown", () => {
+	it("splits buffered bytes and keeps the remainder", () => {
 		const split = splitFrames("a\nb\npartial");
 		expect(split.lines).toEqual(["a", "b"]);
 		expect(split.rest).toBe("partial");
-		expect(isStdinClosed(null)).toBe(true);
-		expect(isStdinClosed("bytes")).toBe(false);
 	});
 });
 
@@ -57,11 +41,20 @@ describe("local transport", () => {
 		).toThrow(TypeError);
 	});
 
-	it("prefers the runtime dir with a home fallback", () => {
-		expect(resolveDiscoveryDir({ XDG_RUNTIME_DIR: "/run/user/1000" })).toBe(
-			"/run/user/1000/ax",
-		);
-		expect(resolveDiscoveryDir({ HOME: "/home/op" })).toBe("/home/op/.ax");
+	it("prefers the runtime dir, warns on the home fallback", () => {
+		const warnings: string[] = [];
+		expect(
+			resolveDiscoveryDir({ XDG_RUNTIME_DIR: "/run/user/1000" }, (message) =>
+				warnings.push(message),
+			),
+		).toBe("/run/user/1000/ax");
+		expect(warnings).toHaveLength(0);
+		expect(
+			resolveDiscoveryDir({ HOME: "/home/op" }, (message) =>
+				warnings.push(message),
+			),
+		).toBe("/home/op/.ax");
+		expect(warnings).toHaveLength(1);
 		expect(() => resolveDiscoveryDir({})).toThrow(TypeError);
 	});
 
@@ -79,7 +72,7 @@ describe("local transport", () => {
 });
 
 describe("native host", () => {
-	it("requires an absolute shim path and a manifest document on Windows", () => {
+	it("accepts a well-formed manifest and refuses a bare interpreter", () => {
 		const manifest = createNativeHostManifest({
 			name: "com.openax.bridge",
 			description: "ax-kit bridge",
@@ -88,8 +81,6 @@ describe("native host", () => {
 			allowed_origins: ["chrome-extension://knldjmfmopnpolahpmmgbagdohdnhkik/"],
 		});
 		expect(manifest.type).toBe("stdio");
-		expect(windowsRegistryValue("/host/bridge.json")).toBe("/host/bridge.json");
-		expect(() => windowsRegistryValue("/host/bridge.exe")).toThrow(TypeError);
 		expect(() =>
 			createNativeHostManifest({
 				name: "com.openax.bridge",
@@ -108,27 +99,6 @@ describe("native host", () => {
 				allowed_origins: ["*"],
 			}),
 		).toThrow(TypeError);
-	});
-
-	it("honors size limits and worker-only reachability", () => {
-		expect(() => checkMessageSize(10, "host-to-browser")).not.toThrow();
-		expect(() => checkMessageSize(2 * 1024 * 1024, "host-to-browser")).toThrow(
-			TypeError,
-		);
-		expect(() => checkMessageSize(10, "sideways")).toThrow(TypeError);
-		expect(() => assertWorkerReachable("service-worker")).not.toThrow();
-		expect(() => assertWorkerReachable("content-script")).toThrow(TypeError);
-	});
-
-	it("sanitizes renderer input", () => {
-		expect(sanitizeRendererPayload({ a: 1, b: "x" })).toEqual({ a: 1, b: "x" });
-		expect(() => sanitizeRendererPayload({ ["__proto__"]: 1 })).toThrow(
-			TypeError,
-		);
-		expect(() => sanitizeRendererPayload({ nested: { a: 1 } })).toThrow(
-			TypeError,
-		);
-		expect(() => sanitizeRendererPayload({ a: Number.NaN })).toThrow(TypeError);
 	});
 
 	it("rejects relative paths, interpreters, and non-extension origins", () => {
@@ -174,10 +144,11 @@ describe("native host", () => {
 			).toThrow(TypeError);
 		}
 	});
+});
 
-	it("enforces stdio caps and origin schemes", () => {
+describe("frame caps", () => {
+	it("refuses an oversized frame by bytes, not by characters", () => {
 		expect(() => checkUpgradeOrigin("file://127.0.0.1/")).toThrow(TypeError);
-		expect(isStdinClosed(undefined)).toBe(false);
 		expect(() => splitFrames("x".repeat(2 * 1024 * 1024))).toThrow(TypeError);
 		expect(() => splitFrames("界".repeat(400_000))).toThrow(TypeError);
 		const many = splitFrames(`${"a".repeat(100)}\n${"b".repeat(100)}\nrest`);

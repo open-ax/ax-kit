@@ -33,10 +33,10 @@ import {
 	DISCOVERY_FILE_NAME,
 	isLoopbackHost,
 	parseDiscoveryFile,
-	resolveDiscoveryDir,
 	serializeDiscoveryFile,
 } from "./discovery.js";
 import { createNativeHostManifest } from "./native-host.js";
+import { PROTOCOL_VERSION } from "./protocol.js";
 
 export interface Transport {
 	/** Port actually bound, for a client that will read the discovery file. */
@@ -125,7 +125,7 @@ export function startTransport(options: TransportOptions): Promise<Transport> {
 						port: address.port,
 						pid: process.pid,
 						token: bearer,
-						version: "2026-07-28",
+						version: PROTOCOL_VERSION,
 					}),
 				),
 				{ mode: 0o600 },
@@ -242,12 +242,4 @@ export function readDiscoveryFile(directory: string): DiscoveryFile {
 	return parseDiscoveryFile(
 		readFileSync(join(directory, DISCOVERY_FILE_NAME), "utf8"),
 	);
-}
-
-/** Resolve the discovery directory, warning on the fallback rather than failing. */
-export function discoveryDirectory(
-	env: unknown,
-	warn: (message: string) => void,
-): string {
-	return resolveDiscoveryDir(env, warn);
 }

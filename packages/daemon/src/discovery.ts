@@ -16,10 +16,6 @@ export interface DiscoveryFile {
 
 export const DISCOVERY_FILE_NAME = "relay.json" as const;
 
-export function discoveryFileName(): string {
-	return DISCOVERY_FILE_NAME;
-}
-
 export function resolveDiscoveryDir(
 	env: unknown,
 	onWarn?: (message: string) => void,

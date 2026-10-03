@@ -26,6 +26,15 @@ export interface WireFrame {
 	readonly error?: { readonly code: number; readonly message: string };
 }
 
+/**
+ * The pinned protocol version, written out rather than imported.
+ *
+ * This client stands in for an independent implementation on the other side of
+ * the wire, so it is pinned to the draft independently of `src/protocol.ts`. A
+ * test client that imported the server's constant could not catch the server
+ * drifting away from the draft, which is the one thing this constant is here to
+ * catch. If these two ever disagree, the server is what moved.
+ */
 const PROTOCOL_VERSION = "2026-07-28";
 
 /**

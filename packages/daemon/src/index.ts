@@ -25,7 +25,6 @@ export {
 	checkUpgradeOrigin,
 	createDiscoveryFile,
 	DISCOVERY_FILE_NAME,
-	discoveryFileName,
 	isLoopbackHost,
 	parseDiscoveryFile,
 	resolveDiscoveryDir,
@@ -35,21 +34,12 @@ export type { BridgeRoutes, Transport, TransportOptions } from "./lifecycle.js";
 export {
 	assertLoopbackBind,
 	createBearer,
-	discoveryDirectory,
 	readDiscoveryFile,
 	startTransport,
 	writeNativeHostManifest,
 } from "./lifecycle.js";
 export type { NativeHostManifest } from "./native-host.js";
-export {
-	assertWorkerReachable,
-	BROWSER_TO_HOST_MAX_BYTES,
-	checkMessageSize,
-	createNativeHostManifest,
-	HOST_TO_BROWSER_MAX_BYTES,
-	sanitizeRendererPayload,
-	windowsRegistryValue,
-} from "./native-host.js";
+export { createNativeHostManifest } from "./native-host.js";
 export type {
 	DaemonInfo,
 	JsonRpcRequest,
@@ -68,8 +58,6 @@ export {
 	serializeFrame,
 } from "./protocol.js";
 export {
-	assertStdoutClean,
-	isStdinClosed,
 	logToStderr,
 	MAX_FRAME_BYTES,
 	splitFrames,
