@@ -340,6 +340,20 @@ describe("consequential confirmation", () => {
 		await clearPending();
 		const raised = await pay(750);
 		const binding = String(raised.result?.["pendingApproval"]);
+		// Wait for the card this invocation filed before removing its entry:
+		// the panel renders on `pendingChanged`, so clicking before it appears
+		// races the refresh and can wait out the test timeout instead.
+		await panel.waitForFunction(
+			(key: unknown) =>
+				[...document.querySelectorAll(".request")].some(
+					(card) => (card as HTMLElement).dataset["key"] === key,
+				),
+			binding,
+			{ timeout: 15_000 },
+		);
+		const cards = await shown(panel);
+		expect(cards).toHaveLength(1);
+		expect(cards[0]?.key).toBe(binding);
 
 		// The card is on the panel and the entry behind it is gone, which is what
 		// a restarted worker looks like from here. The browser stops an idle
@@ -351,7 +365,7 @@ describe("consequential confirmation", () => {
 			store.rejectApproval(key);
 		}, binding);
 
-		await panel.click("[data-operation='approve']");
+		await panel.click("[data-operation='approve']", { timeout: 5_000 });
 		// A card that quietly reappears would leave a person clicking a button
 		// that does nothing, believing they had answered.
 		await panel.waitForFunction(
