@@ -106,9 +106,7 @@ export function readOptionsDict(options: unknown): Record<string, unknown> {
 	return raw as Record<string, unknown>;
 }
 
-export function readSignal(
-	opts: Record<string, unknown>,
-): AbortSignal | undefined {
+function readSignal(opts: Record<string, unknown>): AbortSignal | undefined {
 	const raw: unknown = opts.signal;
 	if (raw === undefined) {
 		return undefined;
@@ -234,7 +232,7 @@ function readAnnotations(value: unknown): StoredAnnotations | null {
  * Anything unreachable stays opaque. Ours: the draft names the Document
  * origin, which the platform does not expose for these documents.
  */
-export function effectiveOrigin(doc: Document): string {
+function effectiveOrigin(doc: Document): string {
 	return effectiveOriginOf(doc, null);
 }
 
@@ -683,22 +681,19 @@ async function runToolCall(
 	complete(serialized);
 }
 
-export function unregisterRecord(
-	doc: Document,
-	name: string,
-): { removed: boolean; exposedOrigins: ReadonlyArray<string> } {
+export function unregisterRecord(doc: Document, name: string): boolean {
 	const state = states.get(doc);
 	if (state === undefined) {
-		return { removed: false, exposedOrigins: [] };
+		return false;
 	}
 	const record = state.tools.get(name);
 	if (record === undefined) {
-		return { removed: false, exposedOrigins: [] };
+		return false;
 	}
 	state.tools.delete(name);
 	record.cleanup?.();
 	notifyToolChange(doc, record.exposedOrigins);
-	return { removed: true, exposedOrigins: record.exposedOrigins };
+	return true;
 }
 
 /**
@@ -754,7 +749,7 @@ export function collectRegisteredTools(
 	return listed;
 }
 
-export function notifyToolChange(
+function notifyToolChange(
 	owner: Document,
 	exposedOrigins: ReadonlyArray<string>,
 ): void {

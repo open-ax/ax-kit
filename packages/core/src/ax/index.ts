@@ -45,8 +45,7 @@ function defaultDocument(): Document {
 export function unregisterTool(name: string, doc?: Document): boolean {
 	const target = doc ?? defaultDocument();
 	checkCallerGates(target);
-	const { removed } = unregisterRecord(target, String(name));
-	return removed;
+	return unregisterRecord(target, String(name));
 }
 
 /**
