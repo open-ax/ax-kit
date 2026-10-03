@@ -7,7 +7,12 @@ import { join } from "node:path";
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { BridgeClient, BridgeRefusal, PageBridge } from "../src/bridge.js";
+import {
+	BRIDGE_ERRORS,
+	BridgeClient,
+	BridgeRefusal,
+	PageBridge,
+} from "../src/bridge.js";
 import type { Transport } from "../src/lifecycle.js";
 import { startTransport } from "../src/lifecycle.js";
 import { createDaemonInfo } from "../src/protocol.js";
@@ -70,6 +75,29 @@ describe("page bridge pending calls", () => {
 
 		bridge.deliver(JSON.stringify({ id: envelope?.id, result: { tools: [] } }));
 		await expect(served).resolves.toEqual([]);
+	});
+
+	it("marks a still-queued timeout as refused before execution", async () => {
+		const bridge = new PageBridge(createDaemonInfo(), 10);
+		const refused = bridge.listTools(1).catch((error: unknown) => error);
+		const outcome = (await refused) as BridgeRefusal;
+		expect(outcome).toBeInstanceOf(BridgeRefusal);
+		expect(outcome.code).toBe(BRIDGE_ERRORS.badRequest);
+		expect(outcome.message).toMatch(/timed out/);
+	});
+
+	it("marks an in-flight timeout as outcome-unknown", async () => {
+		const bridge = new PageBridge(createDaemonInfo(), 10);
+		const refused = bridge.listTools(1).catch((error: unknown) => error);
+		// Taken before the deadline, so the worker may still execute after the
+		// caller is told it failed — unknown, not refused before execution.
+		const envelope = bridge.take();
+		expect(envelope).not.toBeNull();
+		const outcome = (await refused) as BridgeRefusal;
+		expect(outcome).toBeInstanceOf(BridgeRefusal);
+		expect(outcome.code).toBe(BRIDGE_ERRORS.outcomeUnknown);
+		expect(outcome.message).toMatch(/timed out/);
+		expect(outcome.message).toMatch(/outcome unknown/);
 	});
 
 	it("refuses a queue nothing is draining", async () => {

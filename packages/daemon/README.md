@@ -28,9 +28,12 @@ const result = await bridge.callTool("viewCart", { detailed: true }, tabId, orig
 A refusal arrives as a `BridgeRefusal` carrying the worker's own error code, so
 a client can tell "not permitted" from "malformed" rather than reading prose.
 The tab is always named by the caller; the bridge never guesses one. A call
-nobody answers is refused at its deadline rather than left waiting, and the
-request leaves the queue at the same moment — a client told a call failed will
-not later find the work executed anyway.
+nobody answers is refused at its deadline rather than left waiting: an envelope
+still queued leaves the queue at the same moment, so queued work never starts
+after its caller was told it failed. An envelope a client already pulled may
+still execute after the deadline — that refusal carries `outcomeUnknown`, not
+`badRequest`, because the outcome is unknown rather than refused before
+execution.
 
 **This bridge is a library surface, not part of the shipped daemon.** The
 executable starts with no bridge attached, so it answers `server/discover` and

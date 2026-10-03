@@ -31,6 +31,7 @@ export const BRIDGE_ERRORS = {
 	badRequest: -32602,
 	notExposed: -32010,
 	tooManyPending: -32011,
+	outcomeUnknown: -32012,
 } as const;
 
 /** A refusal from the worker, carrying the worker's own error code. */
@@ -210,17 +211,30 @@ export class PageBridge {
 		return new Promise<unknown>((resolve, reject) => {
 			// The deadline is the only thing that ends a call nobody answers. It
 			// releases the entry on the same terms a result would, so a late
-			// answer for a refused id lands on nothing instead of hanging. The
+			// answer for a refused id lands on nothing instead of hanging. A
 			// queued envelope goes with it: leaving it there would hand a client
-			// work it has already been told did not happen.
+			// work it has already been told did not happen. An envelope already
+			// taken cannot be recalled — the worker may still execute it after
+			// this refusal — so that case reports outcome-unknown rather than a
+			// refusal before execution.
 			const timer: ReturnType<typeof setTimeout> = setTimeout(() => {
 				this.settled.delete(id);
 				const queued = this.queue.findIndex((held) => held.id === id);
 				if (queued !== -1) {
 					this.queue.splice(queued, 1);
+					reject(
+						new BridgeRefusal(
+							BRIDGE_ERRORS.badRequest,
+							"bridge call timed out",
+						),
+					);
+					return;
 				}
 				reject(
-					new BridgeRefusal(BRIDGE_ERRORS.badRequest, "bridge call timed out"),
+					new BridgeRefusal(
+						BRIDGE_ERRORS.outcomeUnknown,
+						"bridge call timed out after dispatch; outcome unknown",
+					),
 				);
 			}, this.deadlineMs);
 			// A queued call must not be what keeps the daemon alive. The listener
