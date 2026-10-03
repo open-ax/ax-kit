@@ -157,6 +157,43 @@ describe("hitl binding", () => {
 		expect(store.pendingDefinitionVersion(key)).toBe("v2");
 	});
 
+	it("finds pending approvals on the same target whatever the arguments", () => {
+		const store = new ApprovalStore();
+		// The person was asked about this tool, on this tab, in this document.
+		const filed = store.requestApproval(details("doc-a"));
+		const otherArgs = canonicalizeArgs({ sku: "b", quantity: 9 });
+		// Different arguments hash to a different binding, so it files separately.
+		const sameTargetOtherArgs = createHitlKey({
+			...details("doc-a").key,
+			argsHash: hashArgs(otherArgs),
+		});
+		store.requestApproval({
+			...details("doc-a"),
+			key: sameTargetOtherArgs,
+			argsJson: otherArgs,
+		});
+
+		// A target is tab, document, frame, and tool. Arguments are not part of
+		// it, so both bindings answer to the same question.
+		expect(store.pendingBindingsFor(sameTargetOtherArgs).sort()).toStrictEqual(
+			[filed, hitlKeyToString(sameTargetOtherArgs)].sort(),
+		);
+		// A different document, tool, tab, or frame is a different target.
+		for (const moved of [
+			{ ...details("doc-a").key, documentId: "doc-b" },
+			{ ...details("doc-a").key, toolName: "searchProducts" },
+			{ ...details("doc-a").key, tabId: 8 },
+			{ ...details("doc-a").key, frameId: 3 },
+		]) {
+			expect(store.pendingBindingsFor(moved)).toStrictEqual([]);
+		}
+		// A malformed target is refused rather than matching nothing. Answering
+		// "no other approval" to a target it could not read would let a
+		// consequential call through with the check silently not run.
+		expect(() => store.pendingBindingsFor("nonsense")).toThrow(TypeError);
+		expect(() => store.pendingBindingsFor({ tabId: -1 })).toThrow(TypeError);
+	});
+
 	it("uses the side panel only", () => {
 		expect(CONFIRMATION_SURFACE).toBe("side-panel");
 	});

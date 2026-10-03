@@ -412,6 +412,38 @@ export class ApprovalStore {
 		return [...this.pending.keys()];
 	}
 
+	/**
+	 * Bindings of pending approvals naming the same target as `target`.
+	 *
+	 * A target is tab, document, frame, and tool. The arguments hash is not part
+	 * of it: two pending approvals for one target means a person was asked about
+	 * this tool and a different invocation of it arrived, which is a moved target
+	 * rather than a second question worth asking.
+	 *
+	 * Answered from the structured keys the store already holds, and validated
+	 * through `createHitlKey` so a malformed target is refused rather than matched
+	 * against nothing. A caller comparing the serialised form would have to parse
+	 * a binding back into parts to ask this, and a parse that failed would answer
+	 * "no other approval" — the one answer that lets a consequential call through
+	 * with the check silently not run.
+	 */
+	pendingBindingsFor(target: unknown): string[] {
+		const wanted = createHitlKey(target);
+		const found: string[] = [];
+		for (const [binding, details] of this.pending) {
+			const candidate = details.key;
+			if (
+				candidate.tabId === wanted.tabId &&
+				candidate.documentId === wanted.documentId &&
+				candidate.frameId === wanted.frameId &&
+				candidate.toolName === wanted.toolName
+			) {
+				found.push(binding);
+			}
+		}
+		return found;
+	}
+
 	/** The definition version a pending entry was filed with, if still pending. */
 	pendingDefinitionVersion(key: unknown): string | undefined {
 		if (typeof key !== "string") {
