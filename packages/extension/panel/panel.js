@@ -21,6 +21,7 @@ const requests = document.getElementById("requests");
 const empty = document.getElementById("empty");
 const refused = document.getElementById("refused");
 const disclaimer = document.getElementById("disclaimer");
+const inFlight = new Set();
 
 /** Ask the worker for the pending approvals, and nothing else. */
 async function pending() {
@@ -86,7 +87,16 @@ function render(entry) {
 		// definition version travels with the decision so a stale card cannot
 		// approve a replacement definition it never showed.
 		button.addEventListener("click", () => {
-			void decide(operation, entry.key, entry.definitionVersion);
+			if (inFlight.has(entry.key)) {
+				return;
+			}
+			inFlight.add(entry.key);
+			for (const other of card.querySelectorAll("button")) {
+				other.disabled = true;
+			}
+			void decide(operation, entry.key, entry.definitionVersion).finally(() => {
+				inFlight.delete(entry.key);
+			});
 		});
 		card.appendChild(button);
 	}
