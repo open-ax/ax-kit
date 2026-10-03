@@ -315,6 +315,12 @@ export type ConfirmationSurface = typeof CONFIRMATION_SURFACE;
 export interface ApprovalDetails {
 	readonly key: HitlKey;
 	readonly toolName: string;
+	/**
+	 * The text a person is shown. It is carried on the approval rather than read
+	 * back from elsewhere so that what is rendered and what was decided on are
+	 * the same value, and so a definition change to it is caught by the version.
+	 */
+	readonly description: string;
 	readonly origin: string;
 	readonly frameOrigin: string;
 	readonly argsJson: string;
@@ -341,6 +347,7 @@ function readDetails(value: unknown): ApprovalDetails {
 	const record = value as Record<string, unknown>;
 	const key = createHitlKey(record.key as unknown);
 	const toolName = record.toolName;
+	const description = record.description;
 	const origin = record.origin;
 	const frameOrigin = record.frameOrigin;
 	const argsJson = record.argsJson;
@@ -351,6 +358,9 @@ function readDetails(value: unknown): ApprovalDetails {
 	checkToolName(toolName);
 	if (key.toolName !== toolName) {
 		throw new TypeError("approval tool mismatch");
+	}
+	if (typeof description !== "string" || description.length === 0) {
+		throw new TypeError("bad description");
 	}
 	if (typeof origin !== "string" || typeof frameOrigin !== "string") {
 		throw new TypeError("bad origin");
@@ -375,6 +385,7 @@ function readDetails(value: unknown): ApprovalDetails {
 	return {
 		key,
 		toolName,
+		description,
 		origin,
 		frameOrigin,
 		argsJson,
@@ -401,6 +412,14 @@ export class ApprovalStore {
 		return [...this.pending.keys()];
 	}
 
+	/** The definition version a pending entry was filed with, if still pending. */
+	pendingDefinitionVersion(key: unknown): string | undefined {
+		if (typeof key !== "string") {
+			throw new TypeError("bad approval key");
+		}
+		return this.pending.get(key)?.definitionVersion;
+	}
+
 	/** Recent activity, oldest first. Observable and interruptible by the holder. */
 	activityLog(): ApprovalActivity[] {
 		return [...this.activity];
@@ -414,20 +433,36 @@ export class ApprovalStore {
 	}
 
 	/**
-	 * File a pending approval. Must be gesture-initiated: callers pass
-	 * `gesture: true` from a user-action handler, otherwise this rejects.
-	 * Replaces any earlier pending entry for the same key.
+	 * File a pending approval. Replaces any earlier pending entry for the same
+	 * key.
+	 *
+	 * Filing is not authorisation: it raises a question in the panel and grants
+	 * nothing, so there is no gesture to assert here and a flag saying otherwise
+	 * would only be something the one caller fills in for itself. The answer is
+	 * `approveApproval`, which is bound to this key and reachable only from the
+	 * panel's own click.
 	 */
-	requestApproval(details: unknown, gesture: unknown): string {
-		if (gesture !== true) {
-			throw new TypeError("approval requires a user gesture");
-		}
+	requestApproval(details: unknown): string {
 		const parsed = readDetails(details);
 		const key = hitlKeyToString(parsed.key);
 		this.pending.set(key, parsed);
 		this.approved.delete(key);
 		this.record("requested", key);
 		return key;
+	}
+
+	/**
+	 * True when a person has answered this exact invocation.
+	 *
+	 * Distinct from being pending: an entry waiting in the panel has been asked
+	 * about, not answered, and treating the two as the same would consume an
+	 * approval nobody gave.
+	 */
+	isApproved(key: unknown): boolean {
+		if (typeof key !== "string") {
+			throw new TypeError("bad approval key");
+		}
+		return this.approved.has(key);
 	}
 
 	/** Confirm a pending approval. Leaves it approved until executed once. */
@@ -495,11 +530,29 @@ export class ApprovalStore {
 		if (typeof documentId !== "string") {
 			throw new TypeError("bad documentId");
 		}
-		for (const [key, details] of this.pending) {
-			if (details.key.documentId === documentId) {
-				this.pending.delete(key);
-				this.approved.delete(key);
-				this.record("invalidated", key);
+		this.dropPending((key) => key.documentId === documentId);
+	}
+
+	/**
+	 * Navigation invalidates every pending entry for a tab.
+	 *
+	 * Keyed on the tab rather than on the document identifier because the tab
+	 * is the part the browser reports and this store cannot be asked to trust a
+	 * caller-supplied identifier to decide what it should discard.
+	 */
+	invalidateTab(tabId: unknown): void {
+		if (typeof tabId !== "number" || !Number.isInteger(tabId)) {
+			throw new TypeError("bad tabId");
+		}
+		this.dropPending((key) => key.tabId === tabId);
+	}
+
+	private dropPending(matches: (key: HitlKey) => boolean): void {
+		for (const [binding, details] of this.pending) {
+			if (matches(details.key)) {
+				this.pending.delete(binding);
+				this.approved.delete(binding);
+				this.record("invalidated", binding);
 			}
 		}
 	}

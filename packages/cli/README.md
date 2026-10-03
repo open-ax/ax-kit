@@ -12,12 +12,25 @@ surface, while this command grades how well one page uses it.
 ## Use
 
 ```sh
+pnpm exec playwright install chromium
 ax-kit audit https://shop.example
 ```
 
-Experimental stub: the `ax-kit audit` command currently scores a fixed
-empty snapshot and exits non-zero, it does not drive a live page yet.
-Live results require `auditUrl()` with a headless browser.
+The Chromium that Playwright installs is required before the first run: a
+missing browser is reported as a failed command with exit code `1`, not as a
+page with no tools. The bundled headless shell is not enough — the audit needs
+the full `chromium` binary, which is what loads an extension and what
+`channel: "chromium"` resolves to.
+
+The command launches a real headless Chromium, navigates to the URL, collects
+the page's actual registered tools from its `document.modelContext`, scores
+them, and prints the report. Diagnostics go to standard error, so the report on
+standard output stays machine-readable.
+
+Exit code: `0` when nothing failed, `2` when the findings include a failure, `1`
+when the command could not run. A page with no tools at all is reported
+distinctly from a page whose tools are undiscoverable, so you can tell which
+problem you have.
 
 Scores typed tools, schema validity, consequential coverage, read-only
 sanity, exposure discipline, character budgets (500/150/30/1.5K),
@@ -26,3 +39,23 @@ feature-policy posture, and the origin-keyed cluster precondition.
 In-page contract audit: edge sees discoverability, journey agents see
 behavior, this audit sees the in-page contract. Never an unqualified
 readiness score.
+
+## Programmatic use
+
+The driver is exported so a caller can audit with its own browser options, and
+the pure scorer stays separately importable:
+
+```ts
+import { auditLiveUrlFindings, exitCodeFor } from "@ax-kit/cli";
+
+const { report, context } = await auditLiveUrlFindings(
+  { headless: true },
+  "https://shop.example",
+);
+process.stdout.write(report);
+process.exitCode = exitCodeFor(context);
+```
+
+`auditLiveUrlFindings` returns the report and the collected context; the context
+is what `exitCodeFor` scores into an exit code. `auditLiveUrl` is the same call
+returning only the formatted report, for when the code is not wanted.

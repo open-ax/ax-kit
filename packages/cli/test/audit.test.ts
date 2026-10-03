@@ -87,7 +87,12 @@ describe("cli audit", () => {
 		expect(formatReport).toBeDefined();
 	});
 
-	it("drives the browser without sleeps", async () => {
+	it("closes the browser and reports the lane through the injected browser", async () => {
+		// Browser lifecycle stays covered here as a unit because it needs no
+		// browser. Browser *behaviour* is covered against real Chromium in
+		// browser-audit.test.ts; this fake cannot observe a page's tools, which
+		// is exactly why the old version of this case was deleted rather than
+		// repaired.
 		const calls: string[] = [];
 		const text = await auditUrl(
 			{
@@ -114,7 +119,6 @@ describe("cli audit", () => {
 	});
 
 	it("scores param budgets, wildcard exposure, and empty coverage", async () => {
-		const { collectContext } = await import("../src/audit.js");
 		const over = scoreAudit({
 			tools: [
 				tool({ maxParamDescription: BUDGETS.paramDescription + 1 }),
@@ -136,6 +140,12 @@ describe("cli audit", () => {
 		expect(
 			empty.find((entry) => entry.check === "consequential-coverage")?.pass,
 		).toBe(false);
+	});
+
+	it("never navigates from inside the collector", async () => {
+		// Navigation belongs to the caller. A collector that navigated would be
+		// unable to answer "what did this page look like when I looked at it".
+		const { collectContext } = await import("../src/audit.js");
 		const calls: string[] = [];
 		await collectContext({
 			async goto(url: string): Promise<void> {
@@ -164,6 +174,71 @@ describe("cli audit", () => {
 		expect(() =>
 			parseAuditTarget(["audit", "https://shop.example"]),
 		).not.toThrow();
+	});
+
+	it("rejects a snapshot whose shape the page chose rather than reported", async () => {
+		// The page realm can subvert its own guards, so whatever comes back is
+		// `unknown` until it has been checked field by field. Each of these is a
+		// value a subverted page would have to return to steer the audit: a
+		// non-array tool set, a coerced flag, or a tool whose field types are
+		// wrong. Accepting any of them would let the audited page author its own
+		// verdict, so each rejects instead of being coerced.
+		const { collectContext } = await import("../src/audit.js");
+		const hostile: ReadonlyArray<unknown> = [
+			{ tools: {}, policyAllowsTools: true, originKeyed: true },
+			{ tools: [], policyAllowsTools: "yes", originKeyed: true },
+			{ tools: [], policyAllowsTools: true, originKeyed: 1 },
+			{ policyAllowsTools: true, originKeyed: true },
+			{
+				tools: [{ name: "viewCart" }],
+				policyAllowsTools: true,
+				originKeyed: true,
+			},
+			{
+				tools: [{ ...tool(), exposedOrigins: "https://shop.example" }],
+				policyAllowsTools: true,
+				originKeyed: true,
+			},
+			{
+				tools: [{ ...tool(), schemaValid: "true" }],
+				policyAllowsTools: true,
+				originKeyed: true,
+			},
+			{ tools: [null], policyAllowsTools: true, originKeyed: true },
+			["not", "a", "snapshot"],
+		];
+		for (const snapshot of hostile) {
+			await expect(
+				collectContext({
+					async goto(): Promise<void> {
+						throw new Error("must not navigate");
+					},
+					async evaluate<T>(): Promise<Awaited<T>> {
+						return snapshot as Awaited<T>;
+					},
+				}),
+			).rejects.toThrow(TypeError);
+		}
+	});
+
+	it("accepts a well-formed snapshot and carries its fields through", async () => {
+		const { collectContext } = await import("../src/audit.js");
+		const collected = await collectContext({
+			async goto(): Promise<void> {
+				throw new Error("must not navigate");
+			},
+			async evaluate<T>(): Promise<Awaited<T>> {
+				return {
+					tools: [tool({ title: "View cart" })],
+					policyAllowsTools: false,
+					originKeyed: true,
+				} as Awaited<T>;
+			},
+		});
+		expect(collected.policyAllowsTools).toBe(false);
+		expect(collected.tools).toHaveLength(1);
+		expect(collected.tools[0]?.title).toBe("View cart");
+		expect(collected.tools[0]?.name).toBe("viewCart");
 	});
 
 	it("closes the browser when page creation fails", async () => {

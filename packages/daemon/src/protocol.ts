@@ -220,13 +220,15 @@ export function dispatchRequest(
 		if (typeof callRecord.name !== "string" || callRecord.name.length === 0) {
 			return fail(id, -32602, "missing tool name");
 		}
-		return ok(
+		// Refused rather than answered. This process holds no page bridge, so no
+		// listener was opened and there is nothing to execute against. Completing
+		// the frame anyway would tell a client a tool ran when it did not, and a
+		// client that acts on a completion marker acts on it — this is the answer
+		// a purchase-shaped call must never get.
+		return fail(
 			id,
-			completeResult({
-				deferred: true,
-				name: callRecord.name,
-				note: "execution resolves through the trusted tier",
-			}),
+			-32601,
+			`tools/call is not served: no page bridge is attached to ${info.name}`,
 		);
 	}
 	return fail(id, -32601, `unknown method ${method}`);

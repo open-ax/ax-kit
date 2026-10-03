@@ -1,7 +1,7 @@
 {
 	"name": "@ax-kit/cli",
 	"version": "0.0.0",
-	"description": "In-page contract audit for document.modelContext under headless Chromium",
+	"description": "Audit a page's document.modelContext contract in a real headless browser",
 	"license": "Apache-2.0",
 	"engines": {
 		"node": ">=24.19.0 <25"
@@ -38,6 +38,9 @@
 		"size": "echo \"no size gate for audit cli\"",
 		"publint": "publint",
 		"attw": "attw --pack . --profile node16"
+	},
+	"dependencies": {
+		"playwright": "1.63.0"
 	},
 	"devDependencies": {
 		"@types/node": "^24.19.0",

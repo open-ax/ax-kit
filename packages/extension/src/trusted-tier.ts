@@ -1,15 +1,7 @@
 // Copyright 2026 Utpal Sen
 // SPDX-License-Identifier: Apache-2.0
 
-import { assertHandlerName } from "./handlers.js";
-import type { ApprovalStore, HitlKey } from "./hitl.js";
-import {
-	assertToolName,
-	hashArgs,
-	hitlKeysEqual,
-	hitlKeyToString,
-} from "./hitl.js";
-import { assertLiveContext } from "./manifest.js";
+import { assertToolName } from "./hitl.js";
 
 /**
  * Trusted tier: the service worker as the single authorization point.
@@ -30,6 +22,14 @@ export interface FrameToolView {
 	readonly consequentialHint: boolean;
 	readonly readOnlyHint: boolean;
 	readonly definitionVersion: string;
+	/**
+	 * The argument names the page's own input schema declares.
+	 *
+	 * Arguments are minimised against this list rather than against whatever a
+	 * caller sent, so a caller cannot introduce a key the page never asked for.
+	 * A page with no declared properties declares none, and receives none.
+	 */
+	readonly declaredKeys: ReadonlyArray<string>;
 }
 
 function checkOrigin(origin: string): void {
@@ -74,6 +74,19 @@ export function validateFrameTool(value: unknown): FrameToolView {
 	) {
 		throw new TypeError("bad annotations");
 	}
+	// The keys the page declares it accepts. Arguments are minimised against
+	// these, so they are validated at the boundary like every other field:
+	// a malformed list is a malformed listing, not an empty one, because
+	// treating it as empty would silently drop every argument.
+	const declaredKeys = record.declaredKeys;
+	if (!Array.isArray(declaredKeys)) {
+		throw new TypeError("bad declared keys");
+	}
+	for (const key of declaredKeys) {
+		if (typeof key !== "string" || key.length === 0) {
+			throw new TypeError("bad declared keys");
+		}
+	}
 	return {
 		name,
 		origin,
@@ -82,6 +95,7 @@ export function validateFrameTool(value: unknown): FrameToolView {
 		consequentialHint,
 		readOnlyHint,
 		definitionVersion,
+		declaredKeys: [...declaredKeys] as string[],
 	};
 }
 
@@ -110,9 +124,15 @@ export function isExposedToCaller(
 }
 
 /**
- * Caller-controlled argument allow-list with data minimization: only keys
- * the caller explicitly allows cross into the invocation; anything else is
- * dropped rather than forwarded. Returns the minimized record directly.
+ * Argument allow-list with data minimisation: only the keys named cross into
+ * the invocation, anything else is dropped rather than forwarded. Returns the
+ * minimised record directly.
+ *
+ * The list is derived from the tool's own declared schema, by the caller of
+ * this function. It is not taken from the request: a caller that chose the
+ * permitted keys would be choosing the shape the page receives, which is the
+ * one thing this boundary exists to prevent. Every entry is checked here
+ * anyway, because a key crossing a realm boundary is hostile until validated.
  */
 export function applyArgAllowList(
 	args: unknown,
@@ -162,7 +182,12 @@ export interface AuditEntry {
 	readonly key: string;
 	readonly toolName: string;
 	readonly origin: string;
-	readonly decision: "approved" | "rejected" | "executed";
+	/**
+	 * `requested` is recorded when a confirmation is first raised. Without it
+	 * the trail shows only outcomes, and an approval that was asked for and then
+	 * dropped — the tab closed, the call abandoned — leaves no trace at all.
+	 */
+	readonly decision: "requested" | "approved" | "rejected" | "executed";
 	readonly at: number;
 }
 
@@ -187,6 +212,7 @@ export class WorkerAuditTrail {
 			throw new TypeError("bad audit entry");
 		}
 		if (
+			record.decision !== "requested" &&
 			record.decision !== "approved" &&
 			record.decision !== "rejected" &&
 			record.decision !== "executed"
@@ -208,55 +234,4 @@ export class WorkerAuditTrail {
 	list(): AuditEntry[] {
 		return [...this.entries];
 	}
-}
-
-export interface AuthorizationInput {
-	readonly handler: unknown;
-	readonly contextLive: unknown;
-	readonly key: HitlKey;
-	readonly approvedKey: string;
-	readonly ownerOrigin: string;
-	readonly callerOrigin: string;
-	readonly allowedOrigins: ReadonlyArray<string>;
-	readonly argsJson: string;
-	readonly liveKey: HitlKey;
-	readonly liveDefinitionVersion: string;
-	readonly store: ApprovalStore;
-}
-
-/**
- * Single authorization point. Validates the handler name, the context
- * liveness, the HITL binding (args hash + five key parts + definition
- * version via the store), and the exposure gate before execution.
- */
-export function authorizeExecution(input: AuthorizationInput): string {
-	assertHandlerName(input.handler);
-	assertLiveContext(input.contextLive);
-	if (
-		!isExposedToCaller(
-			input.ownerOrigin,
-			input.allowedOrigins,
-			input.callerOrigin,
-		)
-	) {
-		throw new TypeError("tool not exposed");
-	}
-	if (typeof input.argsJson !== "string") {
-		throw new TypeError("bad arguments");
-	}
-	if (hashArgs(input.argsJson) !== input.key.argsHash) {
-		throw new TypeError("approval args mismatch");
-	}
-	if (!hitlKeysEqual(input.key, input.liveKey)) {
-		throw new TypeError("approval target changed");
-	}
-	if (hitlKeyToString(input.key) !== input.approvedKey) {
-		throw new TypeError("approval target changed");
-	}
-	input.store.verifyAndConsume(
-		input.approvedKey,
-		input.liveKey,
-		input.liveDefinitionVersion,
-	);
-	return input.approvedKey;
 }

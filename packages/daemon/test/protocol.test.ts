@@ -140,7 +140,7 @@ describe("stateless protocol", () => {
 		expect(legacyWrapper.error?.code).toBe(-32602);
 	});
 
-	it("calls tools with the spec parameter shape", () => {
+	it("refuses a tools/call rather than completing work it cannot do", () => {
 		const response = dispatchRequest(
 			{
 				jsonrpc: "2.0",
@@ -151,9 +151,12 @@ describe("stateless protocol", () => {
 			[],
 			createDaemonInfo(),
 		);
-		const result = response.result as Record<string, unknown>;
-		expect(result.resultType).toBe("complete");
-		expect(result.name).toBe("viewCart");
+		// The spec parameter shape is accepted and the call is understood — but
+		// there is no page bridge behind this process, so it is refused. A client
+		// that reads a completion marker will report the order as placed; the only
+		// honest answer is one that tells it nothing happened.
+		expect(response.result).toBeUndefined();
+		expect(response.error?.message).toMatch(/no page bridge/);
 	});
 
 	it("frames without embedded newlines", () => {

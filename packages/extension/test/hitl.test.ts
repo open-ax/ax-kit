@@ -22,6 +22,7 @@ function details(documentId = "doc-1") {
 			argsHash: hashArgs(canonicalizeArgs({ sku: "a", quantity: 1 })),
 		}),
 		toolName: "proceedToCheckout",
+		description: "Charge the saved card.",
 		origin: "https://shop.example",
 		frameOrigin: "https://shop.example",
 		argsJson: canonicalizeArgs({ sku: "a", quantity: 1 }),
@@ -57,15 +58,18 @@ describe("hitl binding", () => {
 		expect(hitlKeyToString(base)).toContain("viewCart");
 	});
 
-	it("requires a gesture and consumes approval on use", () => {
+	it("files without granting, and consumes the approval on use", () => {
 		const store = new ApprovalStore();
-		expect(() => store.requestApproval(details(), false)).toThrow(TypeError);
-		const key = store.requestApproval(details(), true);
+		const key = store.requestApproval(details());
 		expect(store.pendingKeys()).toContain(key);
+		// Filing raises the question. It is not the answer, so the call cannot
+		// execute on the strength of a request.
+		expect(store.isApproved(key)).toBe(false);
 		expect(() => store.verifyAndConsume(key, details().key, "v1")).toThrow(
 			TypeError,
 		);
 		store.approveApproval(key);
+		expect(store.isApproved(key)).toBe(true);
 		store.verifyAndConsume(key, details().key, "v1");
 		expect(store.pendingKeys()).not.toContain(key);
 		expect(() => store.verifyAndConsume(key, details().key, "v1")).toThrow(
@@ -75,14 +79,14 @@ describe("hitl binding", () => {
 
 	it("rejects navigation drift and definition drift", () => {
 		const store = new ApprovalStore();
-		const key = store.requestApproval(details("doc-old"), true);
+		const key = store.requestApproval(details("doc-old"));
 		store.approveApproval(key);
 		const moved = createHitlKey({
 			...details("doc-old").key,
 			documentId: "doc-new",
 		});
 		expect(() => store.verifyAndConsume(key, moved, "v1")).toThrow(TypeError);
-		const key2 = store.requestApproval(details("doc-a"), true);
+		const key2 = store.requestApproval(details("doc-a"));
 		store.approveApproval(key2);
 		expect(() =>
 			store.verifyAndConsume(key2, details("doc-a").key, "v2"),
@@ -91,11 +95,66 @@ describe("hitl binding", () => {
 
 	it("invalidates a document without touching others", () => {
 		const store = new ApprovalStore();
-		store.requestApproval(details("doc-a"), true);
-		store.requestApproval(details("doc-b"), true);
+		store.requestApproval(details("doc-a"));
+		store.requestApproval(details("doc-b"));
 		store.invalidateDocument("doc-a");
 		expect(store.pendingKeys().join(",")).not.toContain("doc-a");
 		expect(store.pendingKeys().join(",")).toContain("doc-b");
+	});
+
+	it("invalidates a whole tab on navigation, approved or not", () => {
+		const store = new ApprovalStore();
+		const elsewhere = createHitlKey({
+			...details("doc-c").key,
+			tabId: 8,
+		});
+		const pending = store.requestApproval(details("doc-a"));
+		const approved = store.requestApproval(details("doc-b"));
+		store.approveApproval(approved);
+		store.requestApproval({ ...details("doc-c"), key: elsewhere });
+		expect(store.pendingKeys()).toHaveLength(3);
+
+		store.invalidateTab(7);
+
+		// Both the merely-pending and the already-approved binding are dropped:
+		// an approval that survives its own document is exactly the case that
+		// would authorise an invocation against whatever loaded next.
+		expect(store.pendingKeys()).toHaveLength(1);
+		expect(store.pendingKeys().join(",")).toContain("doc-c");
+		// A consumed-and-dropped approval must not verify afterwards.
+		expect(() =>
+			store.verifyAndConsume(approved, details("doc-b").key, "v1"),
+		).toThrow(TypeError);
+		expect(pending).not.toBe(approved);
+		expect(() => store.invalidateTab("7")).toThrow(TypeError);
+	});
+
+	it("refuses a definition that changed after the person approved it", () => {
+		const store = new ApprovalStore();
+		const key = store.requestApproval(details("doc-a"));
+		store.approveApproval(key);
+		// Same target, same arguments, different definition: the person agreed
+		// to one definition and a different one arrived.
+		expect(() =>
+			store.verifyAndConsume(key, details("doc-a").key, "v2"),
+		).toThrow(/definition changed/);
+		// The drift also consumed the approval rather than leaving it usable.
+		expect(() =>
+			store.verifyAndConsume(key, details("doc-a").key, "v1"),
+		).toThrow(TypeError);
+	});
+
+	it("reports the definition version a pending entry was filed with", () => {
+		const store = new ApprovalStore();
+		const key = store.requestApproval(details("doc-a"));
+		// The worker uses this to decide whether a pending card is stale: same
+		// binding but a new definition must re-file rather than reuse the card.
+		expect(store.pendingDefinitionVersion(key)).toBe("v1");
+		expect(store.pendingDefinitionVersion("missing")).toBeUndefined();
+		expect(() => store.pendingDefinitionVersion(42)).toThrow(TypeError);
+		// Re-filing the same binding with a new definition replaces the entry.
+		store.requestApproval({ ...details("doc-a"), definitionVersion: "v2" });
+		expect(store.pendingDefinitionVersion(key)).toBe("v2");
 	});
 
 	it("uses the side panel only", () => {
@@ -105,10 +164,10 @@ describe("hitl binding", () => {
 	it("binds args hash and rejects malformed key parts", () => {
 		const good = details();
 		expect(() =>
-			new ApprovalStore().requestApproval(
-				{ ...good, argsJson: canonicalizeArgs({ sku: "b" }) },
-				true,
-			),
+			new ApprovalStore().requestApproval({
+				...good,
+				argsJson: canonicalizeArgs({ sku: "b" }),
+			}),
 		).toThrow(TypeError);
 		expect(() => createHitlKey({ ...good.key, frameId: -1 })).toThrow(
 			TypeError,

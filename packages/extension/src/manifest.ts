@@ -107,12 +107,14 @@ export function assertManifestPosture(value: unknown): ManifestPosture {
 }
 
 /**
- * Orphan discipline: content contexts that outlive a reload or update must
- * never approve or execute. Callers pass the live-valid flag; a stale
- * context rejects here, failing closed.
+ * Orphan discipline: a context that outlived a reload or update must never
+ * approve or execute.
+ *
+ * Removed rather than kept. The only caller this package had passed the literal
+ * `true`, so the check could not fail and the guarantee it was named for was in
+ * no place enforced. A Manifest V3 service worker has no content context to
+ * outlive anything, so there was nothing here to guard — and a guard that
+ * cannot fail is worse than none, because it reads as protection. If an
+ * extension ever gains content contexts, this returns with a real liveness
+ * value behind it.
  */
-export function assertLiveContext(isLive: unknown): void {
-	if (isLive !== true) {
-		throw new TypeError("stale extension context");
-	}
-}

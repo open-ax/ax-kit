@@ -54,9 +54,10 @@ Then commit the generated `.changeset/*.md` file.
 - `@ax-kit/daemon`: stateless MCP `2026-07-28` bridge over byte-clean stdio
   with mandatory discovery, ephemeral loopback transport plus bearer, and
   a native-messaging host manifest.
-- `@ax-kit/cli`: experimental `ax-kit audit <url>` API scoring a fixed
-  empty snapshot under headless Chromium with explicit lane naming.
-  The command is a stub; live results require `auditUrl()`.
+- `@ax-kit/cli`: experimental `ax-kit audit <url>` command that drives a real
+  headless Chromium, collects the page's contract, scores a fixed set of
+  checks, prints a report naming its own lane, and exits non-zero when a
+  check fails.
 - `@ax-kit/zod`: validation-library to input-schema conversion over the
   first-party JSON-Schema output with subset caps and boundary stringify.
 
