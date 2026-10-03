@@ -19,7 +19,7 @@
  */
 
 import type { IncomingMessage, ServerResponse } from "node:http";
-import type { DaemonInfo, JsonRpcResponse } from "./protocol.js";
+import type { JsonRpcResponse } from "./protocol.js";
 
 export interface BridgeRequest {
 	readonly handler: string;
@@ -155,15 +155,7 @@ export class PageBridge {
 	private readonly queue: Envelope[] = [];
 	private readonly settled = new Map<number, PendingCall>();
 
-	constructor(
-		private readonly info: DaemonInfo,
-		private readonly deadlineMs: number = PENDING_DEADLINE_MS,
-	) {}
-
-	/** True while a request is queued and no client has taken it yet. */
-	get hasPending(): boolean {
-		return this.queue.length > 0;
-	}
+	constructor(private readonly deadlineMs: number = PENDING_DEADLINE_MS) {}
 
 	/**
 	 * The next queued request for a pulling client, or null when idle.
@@ -325,18 +317,6 @@ export class PageBridge {
 				documentId: `tab-${tabId}`,
 			},
 		});
-	}
-
-	/** The per-request metadata the client should send with a frame. */
-	meta(): Record<string, unknown> {
-		return {
-			"io.modelcontextprotocol/protocolVersion": "2026-07-28",
-			"io.modelcontextprotocol/clientCapabilities": {},
-			"io.modelcontextprotocol/clientInfo": {
-				name: this.info.name,
-				version: this.info.version,
-			},
-		};
 	}
 }
 

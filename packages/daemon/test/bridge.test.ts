@@ -15,7 +15,6 @@ import {
 } from "../src/bridge.js";
 import type { Transport } from "../src/lifecycle.js";
 import { startTransport } from "../src/lifecycle.js";
-import { createDaemonInfo } from "../src/protocol.js";
 
 /**
  * What the daemon side of the bridge does with a request nobody answers.
@@ -28,14 +27,14 @@ import { createDaemonInfo } from "../src/protocol.js";
 
 describe("page bridge pending calls", () => {
 	it("refuses a queued call no client answers", async () => {
-		const bridge = new PageBridge(createDaemonInfo(), 10);
+		const bridge = new PageBridge(10);
 		const refused = bridge.listTools(1);
 		await expect(refused).rejects.toBeInstanceOf(BridgeRefusal);
 		await expect(refused).rejects.toThrow(/timed out/);
 	});
 
 	it("still answers a call the queue reaches in time", async () => {
-		const bridge = new PageBridge(createDaemonInfo(), 5_000);
+		const bridge = new PageBridge(5_000);
 		const call = bridge.listTools(1);
 		// The work is handed to a client exactly as the transport would.
 		const envelope = bridge.take();
@@ -47,7 +46,7 @@ describe("page bridge pending calls", () => {
 	});
 
 	it("refuses a call nothing settles and then releases it", async () => {
-		const bridge = new PageBridge(createDaemonInfo(), 10);
+		const bridge = new PageBridge(10);
 		const refused = bridge.listTools(1);
 		const envelope = bridge.take();
 		expect(envelope).not.toBeNull();
@@ -60,7 +59,7 @@ describe("page bridge pending calls", () => {
 	});
 
 	it("does not hand a client work whose caller was already refused", async () => {
-		const bridge = new PageBridge(createDaemonInfo(), 10);
+		const bridge = new PageBridge(10);
 		// No client is draining the queue, so this call is refused at the door.
 		const abandoned = bridge.listTools(1);
 		// A second caller arrives and is served, which is what makes the first
@@ -78,7 +77,7 @@ describe("page bridge pending calls", () => {
 	});
 
 	it("marks a still-queued timeout as refused before execution", async () => {
-		const bridge = new PageBridge(createDaemonInfo(), 10);
+		const bridge = new PageBridge(10);
 		const refused = bridge.listTools(1).catch((error: unknown) => error);
 		const outcome = (await refused) as BridgeRefusal;
 		expect(outcome).toBeInstanceOf(BridgeRefusal);
@@ -87,7 +86,7 @@ describe("page bridge pending calls", () => {
 	});
 
 	it("marks an in-flight timeout as outcome-unknown", async () => {
-		const bridge = new PageBridge(createDaemonInfo(), 10);
+		const bridge = new PageBridge(10);
 		const refused = bridge.listTools(1).catch((error: unknown) => error);
 		// Taken before the deadline, so the worker may still execute after the
 		// caller is told it failed — unknown, not refused before execution.
@@ -101,7 +100,7 @@ describe("page bridge pending calls", () => {
 	});
 
 	it("refuses a queue nothing is draining", async () => {
-		const bridge = new PageBridge(createDaemonInfo(), 60_000);
+		const bridge = new PageBridge(60_000);
 		const accepted: Array<Promise<unknown>> = [];
 		for (let index = 0; index < 256; index += 1) {
 			accepted.push(bridge.listTools(index));
@@ -141,7 +140,7 @@ let bridge: PageBridge;
 
 beforeAll(async () => {
 	discoveryDir = await mkdtemp(join(tmpdir(), "ax-bridge-disc-"));
-	bridge = new PageBridge(createDaemonInfo(), 30_000);
+	bridge = new PageBridge(30_000);
 	transport = await startTransport({ discoveryDir, bridge });
 });
 

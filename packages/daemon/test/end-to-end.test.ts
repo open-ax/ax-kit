@@ -246,7 +246,7 @@ beforeAll(async () => {
 		throw new Error("no tab id for the fixture page");
 	}
 
-	bridge = new PageBridge(createDaemonInfo());
+	bridge = new PageBridge();
 	transport = await startTransport({ discoveryDir, bridge });
 
 	// The extension reads the discovery file itself, as a real one would.

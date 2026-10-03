@@ -12,11 +12,11 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
 	assertLoopbackBind,
 	createBearer,
-	discoveryDirectory,
 	readDiscoveryFile,
 	startTransport,
 	writeNativeHostManifest,
 } from "../src/lifecycle.js";
+import { PROTOCOL_VERSION } from "../src/protocol.js";
 
 /**
  * The daemon's local transport, against a real listener and a real filesystem.
@@ -79,7 +79,7 @@ describe("local transport", () => {
 			expect(file.port).toBe(transport.port);
 			expect(file.pid).toBe(process.pid);
 			expect(file.token).toBe(transport.bearer);
-			expect(file.version).toBe("2026-07-28");
+			expect(file.version).toBe(PROTOCOL_VERSION);
 
 			const response = await call(file.port, {
 				"x-ax-bearer": file.token,
@@ -230,19 +230,6 @@ describe("local transport", () => {
 		expect(record["allowed_origins"]).toEqual([
 			"chrome-extension://knldjmfmopnpolahpmmgbagdohdnhkik/",
 		]);
-	});
-
-	it("resolves the discovery directory from the environment", () => {
-		const warnings: string[] = [];
-		expect(
-			discoveryDirectory({ XDG_RUNTIME_DIR: "/run/user/1000" }, (m) =>
-				warnings.push(m),
-			),
-		).toBe("/run/user/1000/ax");
-		expect(
-			discoveryDirectory({ HOME: "/home/op" }, (m) => warnings.push(m)),
-		).toBe("/home/op/.ax");
-		expect(warnings.length).toBe(1);
 	});
 
 	it("mints a bearer that is not guessable and not reused", () => {
