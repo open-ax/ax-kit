@@ -24,6 +24,7 @@ import { mkdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import type { IncomingMessage, Server, ServerResponse } from "node:http";
 import { createServer } from "node:http";
 import { join } from "node:path";
+import type { Envelope } from "./bridge.js";
 import { readBody, sendJson } from "./bridge.js";
 import type { DiscoveryFile } from "./discovery.js";
 import {
@@ -48,8 +49,13 @@ export interface Transport {
 
 /** What the listener needs from the bridge to serve its two endpoints. */
 export interface BridgeRoutes {
-	/** Next queued request for a pulling client, or null when idle. */
-	take(): unknown;
+	/**
+	 * Next queued request for a pulling client, or `null` when idle.
+	 *
+	 * `null` is the only idle signal, and the return type says so. The listener
+	 * answers it with 204; anything else is serialised as the `/pull` body.
+	 */
+	take(): Envelope | null;
 	/** Accept a result and settle the matching call. */
 	deliver(body: unknown): void;
 }

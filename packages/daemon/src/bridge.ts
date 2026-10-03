@@ -45,7 +45,17 @@ export class BridgeRefusal extends Error {
 	}
 }
 
-interface Envelope {
+/**
+ * One queued request as it crosses the transport: the id the daemon assigned
+ * and the request the worker will execute.
+ *
+ * This is the `/pull` body verbatim, which is why it is named at the seam
+ * rather than hidden behind the bridge. An adapter that returns anything else
+ * — including `undefined` for idle — is a bug the transport would otherwise
+ * forward: `undefined` reaches the client as a `null` body under a 200, and a
+ * client reads a `null` body as its transport having gone.
+ */
+export interface Envelope {
 	readonly id: number;
 	readonly request: BridgeRequest;
 }
