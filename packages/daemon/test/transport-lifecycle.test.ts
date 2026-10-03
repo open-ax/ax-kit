@@ -9,6 +9,7 @@ import { fileURLToPath } from "node:url";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+import type { Envelope } from "../src/bridge.js";
 import {
 	assertLoopbackBind,
 	createBearer,
@@ -149,11 +150,13 @@ describe("local transport", () => {
 
 	it("hands queued work to a GET and to nothing else", async () => {
 		const dir = await tempDir();
-		const queue: Array<{ id: number }> = [{ id: 1 }];
+		const queue: Envelope[] = [
+			{ id: 1, request: { handler: "listTools", args: { tabId: 7 } } },
+		];
 		const transport = await startTransport({
 			discoveryDir: dir,
 			bridge: {
-				take: (): unknown => queue.shift() ?? null,
+				take: (): Envelope | null => queue.shift() ?? null,
 				deliver: (): void => {},
 			},
 		});
@@ -175,8 +178,16 @@ describe("local transport", () => {
 			expect(queue).toHaveLength(1);
 			const taken = await call(transport.port, headers, { path: "/pull" });
 			expect(taken.status).toBe(200);
-			expect(JSON.parse(taken.body)).toEqual({ id: 1 });
+			expect(JSON.parse(taken.body)).toEqual({
+				id: 1,
+				request: { handler: "listTools", args: { tabId: 7 } },
+			});
 			expect(queue).toHaveLength(0);
+			// Idle is 204 with no body. A 200 carrying `null` here would read to a
+			// client as its transport having gone, which ends its serve loop.
+			const idle = await call(transport.port, headers, { path: "/pull" });
+			expect(idle.status).toBe(204);
+			expect(idle.body).toBe("");
 		} finally {
 			await transport.close();
 		}
