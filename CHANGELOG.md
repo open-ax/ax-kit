@@ -63,3 +63,31 @@ Then commit the generated `.changeset/*.md` file.
 
 No published package yet. Entries above describe the in-tree API; versioned
 releases will be cut with Changesets.
+
+### Fixed
+
+- `@ax-kit/daemon`: the loopback pull seam is typed as the queued envelope
+  rather than `unknown`. An adapter answering "idle" with `undefined` instead
+  of `null` previously reached a client as a `null` body under a `200`, which
+  a client reads as its transport having gone and stops serving on.
+- `@ax-kit/extension`: the moved-approval check is answered by the approval
+  store from the structured keys it holds, rather than by parsing a binding
+  back into parts in the worker. A binding it could not parse previously
+  compared as "no other approval", which is the one answer that lets a
+  consequential call through with the check silently not run.
+
+### Removed
+
+- `@ax-kit/daemon`: native-messaging and stdio checks that guarded no code
+  path in this package — `windowsRegistryValue`, `checkMessageSize`,
+  `assertWorkerReachable`, `sanitizeRendererPayload`,
+  `HOST_TO_BROWSER_MAX_BYTES`, `BROWSER_TO_HOST_MAX_BYTES`,
+  `assertStdoutClean`, and `isStdinClosed`. The package writes a native-host
+  manifest and hosts nothing, so these were unreachable policy that read as
+  controls already in place. They belong with the host process.
+- `@ax-kit/daemon`: `discoveryFileName()` and `discoveryDirectory()`, both of
+  which had a caller-free equivalent already exported, and
+  `PageBridge.meta()` and `PageBridge.hasPending`, which had no caller at all.
+  `PageBridge` no longer takes a `DaemonInfo`; it existed only to feed
+  `meta()`. The pinned protocol version is now declared once and imported
+  where the discovery file is written.
