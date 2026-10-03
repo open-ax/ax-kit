@@ -17,7 +17,7 @@
 
 import type { InjectionRequest } from "./handlers.js";
 import { assertHandlerName, createInjectionRequest } from "./handlers.js";
-import type { ApprovalDetails, HitlKey } from "./hitl.js";
+import type { ApprovalDetails } from "./hitl.js";
 import {
 	ApprovalStore,
 	canonicalizeArgs,
@@ -434,9 +434,9 @@ async function handle(request: InjectionRequest): Promise<unknown> {
 		// answer is refusal. Falling through to ask again would train a person to
 		// click through, which defeats the control entirely — so it throws
 		// rather than re-prompting.
-		const moved = pending.find(
-			(candidate) => candidate !== binding && sameTarget(candidate, key),
-		);
+		const moved = approvals
+			.pendingBindingsFor(key)
+			.find((candidate) => candidate !== binding);
 		if (moved !== undefined) {
 			approvals.rejectApproval(moved);
 			filed.delete(moved);
@@ -649,30 +649,6 @@ function allowedArgKeys(callArgs: unknown, view: FrameToolView): string[] {
 	return Object.keys(callArgs as Record<string, unknown>).filter((key) =>
 		permitted.has(key),
 	);
-}
-
-/**
- * True when two bindings name the same target — tab, document, frame, and
- * tool — and differ only in what is being asked for.
- *
- * The binding's string form is a five-element JSON array, so the identity is
- * the first three elements plus the tool name at the fourth.
- */
-function sameTarget(binding: string, key: HitlKey): boolean {
-	try {
-		const parts: unknown = JSON.parse(binding);
-		if (!Array.isArray(parts) || parts.length !== 5) {
-			return false;
-		}
-		return (
-			parts[0] === key.tabId &&
-			parts[1] === key.documentId &&
-			parts[2] === key.frameId &&
-			parts[3] === key.toolName
-		);
-	} catch {
-		return false;
-	}
 }
 
 /**
