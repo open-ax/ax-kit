@@ -47,6 +47,7 @@ function render(entry) {
 	const card = document.createElement("div");
 	card.className = "request";
 	card.dataset.key = entry.key;
+	card.dataset.definitionVersion = entry.definitionVersion;
 
 	const heading = document.createElement("h2");
 	heading.textContent = entry.toolName;
@@ -81,9 +82,11 @@ function render(entry) {
 		button.type = "button";
 		button.textContent = label;
 		button.dataset.operation = operation;
-		// The click is the gesture. Nothing approves without one.
+		// The click is the gesture. Nothing approves without one. The displayed
+		// definition version travels with the decision so a stale card cannot
+		// approve a replacement definition it never showed.
 		button.addEventListener("click", () => {
-			void decide(operation, entry.key);
+			void decide(operation, entry.key, entry.definitionVersion);
 		});
 		card.appendChild(button);
 	}
@@ -105,10 +108,10 @@ function reportRefusal(reason) {
 	refused.hidden = false;
 }
 
-async function decide(operation, key) {
+async function decide(operation, key, definitionVersion) {
 	const reply = await chrome.runtime.sendMessage({
 		panel: operation,
-		args: { key },
+		args: { key, definitionVersion },
 	});
 	if (typeof reply !== "object" || reply === null || reply.ok !== true) {
 		const detail = typeof reply?.error === "string" ? reply.error : "";

@@ -96,7 +96,8 @@ nothing — the answer is `approve`, which only the panel's own click reaches.
 The panel shows the tool name, its description, and the exact arguments, so
 the click is informed. It holds no state of its own: every value it renders
 comes from the worker, so the panel and the thing that will execute cannot
-disagree.
+disagree. A decision carries the definition version the card displayed, and a
+stale card cannot approve a replacement definition it never showed.
 
 If a person was asked about one invocation and a different one arrives for
 the same tool on the same tab, the answer is **refusal**. Re-prompting would

@@ -149,7 +149,13 @@ async function approveInvocation(binding: string): Promise<void> {
 	await worker.evaluate((key: unknown) => {
 		const scope = globalThis as unknown as Record<string, unknown>;
 		const panel = scope["__axPanel"] as (op: string, args: unknown) => unknown;
-		panel("approve", { key });
+		const list = panel("list", {}) as {
+			pending?: ReadonlyArray<{ key: string; definitionVersion: string }>;
+		};
+		const entry = (list.pending ?? []).find(
+			(candidate) => candidate.key === key,
+		);
+		panel("approve", { key, definitionVersion: entry?.definitionVersion });
 	}, binding);
 }
 
@@ -165,10 +171,13 @@ async function clearPending(): Promise<void> {
 		const scope = globalThis as unknown as Record<string, unknown>;
 		const panel = scope["__axPanel"] as (op: string, args: unknown) => unknown;
 		const list = panel("list", {}) as {
-			pending?: ReadonlyArray<{ key: string }>;
+			pending?: ReadonlyArray<{ key: string; definitionVersion: string }>;
 		};
 		for (const entry of list.pending ?? []) {
-			panel("reject", { key: entry.key });
+			panel("reject", {
+				key: entry.key,
+				definitionVersion: entry.definitionVersion,
+			});
 		}
 	});
 }
@@ -188,6 +197,7 @@ async function preparePanel(panel: Page): Promise<void> {
 /** What the panel is currently showing. */
 interface ShownRequest {
 	readonly key: string;
+	readonly definitionVersion: string;
 	readonly toolName: string;
 	readonly description: string;
 	readonly args: string;
@@ -208,6 +218,8 @@ async function shown(panel: Page): Promise<ReadonlyArray<ShownRequest>> {
 	return (await panel.evaluate(() =>
 		[...document.querySelectorAll(".request")].map((card) => ({
 			key: (card as HTMLElement).dataset["key"] ?? "",
+			definitionVersion:
+				(card as HTMLElement).dataset["definitionVersion"] ?? "",
 			origin:
 				card.querySelector("[data-field='declared origin']")?.textContent ?? "",
 			frameOrigin:

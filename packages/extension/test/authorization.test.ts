@@ -192,7 +192,13 @@ async function approveThroughPanel(
 	return await worker.evaluate((key: unknown) => {
 		const scope = globalThis as unknown as Record<string, unknown>;
 		const panel = scope["__axPanel"] as (op: string, args: unknown) => unknown;
-		panel("approve", { key });
+		const list = panel("list", {}) as {
+			pending?: ReadonlyArray<{ key: string; definitionVersion: string }>;
+		};
+		const entry = (list.pending ?? []).find(
+			(candidate) => candidate.key === key,
+		);
+		panel("approve", { key, definitionVersion: entry?.definitionVersion });
 		return true;
 	}, String(result["pendingApproval"]));
 }
@@ -213,10 +219,13 @@ async function clearPending(): Promise<void> {
 		const scope = globalThis as unknown as Record<string, unknown>;
 		const panel = scope["__axPanel"] as (op: string, args: unknown) => unknown;
 		const list = panel("list", {}) as {
-			pending?: ReadonlyArray<{ key: string }>;
+			pending?: ReadonlyArray<{ key: string; definitionVersion: string }>;
 		};
 		for (const entry of list.pending ?? []) {
-			panel("reject", { key: entry.key });
+			panel("reject", {
+				key: entry.key,
+				definitionVersion: entry.definitionVersion,
+			});
 		}
 	});
 }
@@ -588,6 +597,91 @@ describe("authorisation outcomes at the real seam", () => {
 		// else".
 		expect(drifted.ok).toBe(false);
 		expect(drifted.error).toMatch(/definition changed/);
+		await clearPending();
+	});
+
+	it("refuses a panel decision made on a stale definition", async () => {
+		await clearPending();
+		const first = await invoke("executeTool", {
+			tabId,
+			frameId: 0,
+			name: "payNow",
+			args: { amount: 800 },
+			callerOrigin: origin,
+			documentId: "doc-1",
+		});
+		expect(first.ok).toBe(true);
+		const shown = first.result as Record<string, unknown>;
+		const binding = String(shown["pendingApproval"]);
+		const staleVersion = String(shown["definitionVersion"]);
+		expect(staleVersion.length).toBeGreaterThan(0);
+
+		// The page changes what the tool says while the first card is still
+		// open. Asking again re-files the same binding with a new version.
+		await redefine({ description: "Charge the saved card, plus a tip." });
+		const second = await invoke("executeTool", {
+			tabId,
+			frameId: 0,
+			name: "payNow",
+			args: { amount: 800 },
+			callerOrigin: origin,
+			documentId: "doc-1",
+		});
+		const refreshed = second.result as Record<string, unknown>;
+		const liveVersion = String(refreshed["definitionVersion"]);
+		expect(liveVersion).not.toBe(staleVersion);
+
+		// A click on the old card carries the old version and must not approve
+		// the replacement the person never saw.
+		const staleDecision = await worker.evaluate(
+			(request: unknown) => {
+				const scope = globalThis as unknown as Record<string, unknown>;
+				const panel = scope["__axPanel"] as (
+					op: string,
+					args: unknown,
+				) => unknown;
+				const { key, definitionVersion } = request as {
+					key: unknown;
+					definitionVersion: unknown;
+				};
+				try {
+					panel("approve", { key, definitionVersion });
+					return "approved";
+				} catch (error: unknown) {
+					return error instanceof Error ? error.message : "failed";
+				}
+			},
+			{ key: binding, definitionVersion: staleVersion },
+		);
+		expect(staleDecision).toMatch(/approval changed/);
+
+		// The refreshed card approves, and the invocation then executes.
+		await worker.evaluate(
+			(request: unknown) => {
+				const scope = globalThis as unknown as Record<string, unknown>;
+				const panel = scope["__axPanel"] as (
+					op: string,
+					args: unknown,
+				) => unknown;
+				const { key, definitionVersion } = request as {
+					key: unknown;
+					definitionVersion: unknown;
+				};
+				panel("approve", { key, definitionVersion });
+				return true;
+			},
+			{ key: binding, definitionVersion: liveVersion },
+		);
+		const executed = await invoke("executeTool", {
+			tabId,
+			frameId: 0,
+			name: "payNow",
+			args: { amount: 800 },
+			callerOrigin: origin,
+			documentId: "doc-1",
+		});
+		expect(executed.result).toEqual(JSON.stringify({ paid: 800 }));
+		await redefine({ description: "Charge the saved card." });
 		await clearPending();
 	});
 

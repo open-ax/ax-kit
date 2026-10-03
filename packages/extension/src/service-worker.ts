@@ -523,6 +523,7 @@ async function handle(request: InjectionRequest): Promise<unknown> {
 /** What the panel shows, and what a person's click decides on. */
 interface PanelApproval {
 	readonly key: string;
+	readonly definitionVersion: string;
 	readonly toolName: string;
 	readonly description: string;
 	readonly argsJson: string;
@@ -571,6 +572,7 @@ function fileApproval(details: ApprovalDetails): PanelApproval {
 	const binding = approvals.requestApproval(details);
 	const entry: PanelApproval = {
 		key: binding,
+		definitionVersion: details.definitionVersion,
 		toolName: details.toolName,
 		description: details.description,
 		argsJson: details.argsJson,
@@ -700,6 +702,19 @@ function panel(op: unknown, args: unknown): unknown {
 			: {};
 	if (op === "list") {
 		return { pending: pendingApprovals(), disclaimer: AUDIT_TRAIL_DISCLAIMER };
+	}
+	// A click decides on what it displayed. Re-filing replaces the pending
+	// entry under the same key when the definition changes, so the version on
+	// the card must match the pending version or the decision is stale: the
+	// person saw old words and must see the new ones before answering. A
+	// missing entry falls through so an unknown approval keeps its own error.
+	const shownVersion = record["definitionVersion"];
+	if (typeof shownVersion !== "string") {
+		throw new TypeError("approval changed");
+	}
+	const liveVersion = approvals.pendingDefinitionVersion(record["key"]);
+	if (liveVersion !== undefined && liveVersion !== shownVersion) {
+		throw new TypeError("approval changed");
 	}
 	if (op === "approve") {
 		approveApproval(record["key"]);
