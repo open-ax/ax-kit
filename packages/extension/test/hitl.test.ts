@@ -144,6 +144,19 @@ describe("hitl binding", () => {
 		).toThrow(TypeError);
 	});
 
+	it("reports the definition version a pending entry was filed with", () => {
+		const store = new ApprovalStore();
+		const key = store.requestApproval(details("doc-a"));
+		// The worker uses this to decide whether a pending card is stale: same
+		// binding but a new definition must re-file rather than reuse the card.
+		expect(store.pendingDefinitionVersion(key)).toBe("v1");
+		expect(store.pendingDefinitionVersion("missing")).toBeUndefined();
+		expect(() => store.pendingDefinitionVersion(42)).toThrow(TypeError);
+		// Re-filing the same binding with a new definition replaces the entry.
+		store.requestApproval({ ...details("doc-a"), definitionVersion: "v2" });
+		expect(store.pendingDefinitionVersion(key)).toBe("v2");
+	});
+
 	it("uses the side panel only", () => {
 		expect(CONFIRMATION_SURFACE).toBe("side-panel");
 	});

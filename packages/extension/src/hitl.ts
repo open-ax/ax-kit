@@ -412,6 +412,14 @@ export class ApprovalStore {
 		return [...this.pending.keys()];
 	}
 
+	/** The definition version a pending entry was filed with, if still pending. */
+	pendingDefinitionVersion(key: unknown): string | undefined {
+		if (typeof key !== "string") {
+			throw new TypeError("bad approval key");
+		}
+		return this.pending.get(key)?.definitionVersion;
+	}
+
 	/** Recent activity, oldest first. Observable and interruptible by the holder. */
 	activityLog(): ApprovalActivity[] {
 		return [...this.activity];

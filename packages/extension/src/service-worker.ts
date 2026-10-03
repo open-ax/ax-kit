@@ -448,11 +448,15 @@ async function handle(request: InjectionRequest): Promise<unknown> {
 			// The person has already been asked about this exact invocation. The
 			// binding is re-verified against live values here, not at the moment
 			// of the click, because the page has had time to move underneath it.
-			approvals.verifyAndConsume(binding, key, definitionVersion);
-			// The answer is spent, so the copy the panel rendered is spent too.
-			// Left here it would hold a page-supplied description and argument
-			// string for the life of the worker.
-			filed.delete(binding);
+			try {
+				approvals.verifyAndConsume(binding, key, definitionVersion);
+			} finally {
+				// Spent or invalidated, the copy the panel rendered goes either
+				// way. Left here it would hold a page-supplied description and
+				// argument string for the life of the worker.
+				filed.delete(binding);
+				announceChange();
+			}
 			trail.append({
 				key: binding,
 				toolName: name,
@@ -467,8 +471,12 @@ async function handle(request: InjectionRequest): Promise<unknown> {
 		}
 		// Asked and not yet answered: the person is the one who answers, so the
 		// question has to be on the panel. Filing is idempotent — asking twice
-		// must not raise a second card or clear an answer already given.
-		if (!pending.includes(binding)) {
+		// must not raise a second card or clear an answer already given. A
+		// definition change re-files so the card shows what will execute.
+		if (
+			!pending.includes(binding) ||
+			approvals.pendingDefinitionVersion(binding) !== definitionVersion
+		) {
 			fileApproval({
 				key,
 				toolName: name,
