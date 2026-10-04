@@ -9,42 +9,12 @@ import { securityError } from "./errors.js";
  * is best-effort where the platform hides the signal:
  *
  * - Fully active: a document with no window proxy has no browsing context.
- * - Origin-keyed: only `document.domain` drift is observable; the
- *   `Origin-Agent-Cluster` header is not. Anything else is assumed keyed.
  * - Allowed to use: when the Permissions Policy API is present it decides;
  *   otherwise the browser enforces denial and the polyfill assumes allowed.
  */
 
 export function isFullyActive(doc: Document): boolean {
 	return doc.defaultView !== null;
-}
-
-export function isOriginKeyed(doc: Document): boolean {
-	const location = doc.location;
-	if (location.protocol === "file:") {
-		return true;
-	}
-	// Hostless documents (about:blank and friends) inherit their origin: with
-	// no host to compare, drift is unobservable here. The top document that
-	// can be checked still reports it.
-	if (location.hostname === "") {
-		return true;
-	}
-	try {
-		if (doc.domain !== location.hostname) {
-			return false;
-		}
-	} catch {
-		return false;
-	}
-	return true;
-}
-
-export function originKeyedDiagnostic(doc: Document): string {
-	return (
-		`WebMCP unavailable: ${doc.location.href} is not origin-keyed ` +
-		`(domain drift or Origin-Agent-Cluster: ?0).`
-	);
 }
 
 export function isAllowedToUse(doc: Document): boolean {

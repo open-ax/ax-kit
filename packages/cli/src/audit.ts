@@ -88,15 +88,13 @@ function parseAuditContext(raw: unknown): AuditContextInput {
 	const record = raw as Record<string, unknown>;
 	if (
 		!Array.isArray(record.tools) ||
-		typeof record.policyAllowsTools !== "boolean" ||
-		typeof record.originKeyed !== "boolean"
+		typeof record.policyAllowsTools !== "boolean"
 	) {
 		throw new TypeError("bad audit context");
 	}
 	return {
 		tools: record.tools.map(parseAuditTool),
 		policyAllowsTools: record.policyAllowsTools,
-		originKeyed: record.originKeyed,
 	};
 }
 
@@ -119,7 +117,7 @@ export async function collectContext(
 			? undefined
 			: document) as unknown as Record<string, unknown> | undefined;
 		if (doc === undefined) {
-			return { tools: [], policyAllowsTools: true, originKeyed: true };
+			return { tools: [], policyAllowsTools: true };
 		}
 		let policyAllowsTools = true;
 		try {
@@ -157,30 +155,6 @@ export async function collectContext(
 		} catch {
 			policyAllowsTools = true;
 		}
-		let originKeyed = true;
-		try {
-			const location = doc.location as
-				| { protocol?: unknown; hostname?: unknown }
-				| undefined;
-			const protocol =
-				typeof location?.protocol === "string" ? location.protocol : "";
-			const hostname =
-				typeof location?.hostname === "string" ? location.hostname : "";
-			if (protocol === "file:") {
-				originKeyed = true;
-			} else if (hostname === "") {
-				originKeyed = true;
-			} else {
-				try {
-					const domain = doc.domain as unknown;
-					originKeyed = typeof domain !== "string" || domain === hostname;
-				} catch {
-					originKeyed = false;
-				}
-			}
-		} catch {
-			originKeyed = true;
-		}
 		const holder = doc;
 		const surface = holder.modelContext as unknown as
 			| {
@@ -192,7 +166,7 @@ export async function collectContext(
 			surface === null ||
 			typeof surface.getTools !== "function"
 		) {
-			return { tools: [], policyAllowsTools, originKeyed };
+			return { tools: [], policyAllowsTools };
 		}
 		const pending: unknown = (
 			surface.getTools as (...args: unknown[]) => unknown
@@ -203,7 +177,7 @@ export async function collectContext(
 			typeof (pending as { then?: unknown }).then === "function";
 		const finish = (listed: unknown): unknown => {
 			if (!Array.isArray(listed)) {
-				return { tools: [], policyAllowsTools, originKeyed };
+				return { tools: [], policyAllowsTools };
 			}
 			const tools: Record<string, unknown>[] = [];
 			for (const entry of listed) {
@@ -292,19 +266,18 @@ export async function collectContext(
 					maxParamDescription,
 				});
 			}
-			return { tools, policyAllowsTools, originKeyed };
+			return { tools, policyAllowsTools };
 		};
 		if (isThenable) {
 			return (pending as Promise<unknown>).then(finish, () => ({
 				tools: [],
 				policyAllowsTools,
-				originKeyed,
 			}));
 		}
 		try {
 			return finish(pending);
 		} catch {
-			return { tools: [], policyAllowsTools, originKeyed };
+			return { tools: [], policyAllowsTools };
 		}
 	});
 	const raw: unknown =

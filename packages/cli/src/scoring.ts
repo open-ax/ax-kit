@@ -3,8 +3,8 @@
 
 /**
  * In-page contract scoring: typed tools, schema validity, consequential
- * coverage, read-only sanity, exposure discipline, character budgets,
- * feature-policy posture, and origin-keyed cluster precondition.
+ * coverage, read-only sanity, exposure discipline, character budgets, and
+ * feature-policy posture.
  *
  * Everything here is ours, not draft-derived beyond the budget figures
  * quoted from the platform guidance: the draft defines the page surface,
@@ -28,7 +28,6 @@ export interface AuditToolInput {
 export interface AuditContextInput {
 	readonly tools: ReadonlyArray<AuditToolInput>;
 	readonly policyAllowsTools: boolean;
-	readonly originKeyed: boolean;
 }
 
 export interface AuditFinding {
@@ -136,24 +135,19 @@ function readTools(value: unknown): ReadonlyArray<AuditToolInput> {
 function readContext(context: unknown): {
 	tools: ReadonlyArray<AuditToolInput>;
 	policyAllowsTools: boolean;
-	originKeyed: boolean;
 } {
 	const tools = readTools(context);
 	const record = context as Record<string, unknown>;
 	const policyAllowsTools = record.policyAllowsTools;
-	const originKeyed = record.originKeyed;
-	if (
-		typeof policyAllowsTools !== "boolean" ||
-		typeof originKeyed !== "boolean"
-	) {
+	if (typeof policyAllowsTools !== "boolean") {
 		throw new TypeError("bad audit context");
 	}
-	return { tools, policyAllowsTools, originKeyed };
+	return { tools, policyAllowsTools };
 }
 
 /** Score one audited URL snapshot. Deterministic and side-effect free. */
 export function scoreAudit(context: unknown): AuditFinding[] {
-	const { tools, policyAllowsTools, originKeyed } = readContext(context);
+	const { tools, policyAllowsTools } = readContext(context);
 	const findings: AuditFinding[] = [];
 	for (const tool of tools) {
 		findings.push({
@@ -251,12 +245,6 @@ export function scoreAudit(context: unknown): AuditFinding[] {
 		detail: policyAllowsTools
 			? "feature policy allows tools"
 			: "tools denied by policy",
-	});
-	findings.push({
-		check: "cluster",
-		tool: null,
-		pass: originKeyed,
-		detail: originKeyed ? "origin-keyed cluster" : "cluster not origin-keyed",
 	});
 	return findings;
 }

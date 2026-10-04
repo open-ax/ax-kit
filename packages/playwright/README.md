@@ -2,7 +2,7 @@
 
 Runner-side companion for driving `document.modelContext` in tests.
 
-Pinned draft: WebMCP Draft Community Group Report, 29 September 2026, from
+Pinned draft: WebMCP Draft Community Group Report, 2 October 2026, from
 the W3C Web Machine Learning Community Group. The pin is exported as
 `SPEC_VERSION` from `@ax-kit/core` and repeated in every release note.
 
@@ -77,8 +77,8 @@ await page.ax.executeTool<T>(name, args?, { signal?: AbortSignal });
 Draft rejection families propagate unchanged: duplicate or malformed
 names reject with `InvalidStateError`, non-object arguments with
 `TypeError`, unknown tools at call time with `UnknownError`, and the
-remaining gates (inactive document, origin-keyed cluster, denied feature,
-untrustworthy origin entries, opaque origin) with their specified names.
+remaining gates (inactive document, denied feature, untrustworthy origin
+entries, opaque origin) with their specified names.
 A missing installation fails fast with a typed `AxMissingSurfaceError`
 instead of passing silently.
 
