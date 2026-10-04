@@ -104,6 +104,9 @@ jobs:
           fi
           echo "ok"
 
+      - name: Every published package says where it comes from
+        run: node .github/ci/check-manifests.mjs
+
       - name: Typecheck
         run: pnpm typecheck
 

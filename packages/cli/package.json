@@ -3,6 +3,13 @@
 	"version": "0.0.0",
 	"description": "Audit a page's document.modelContext contract in a real headless browser",
 	"license": "Apache-2.0",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/open-ax/ax-kit.git",
+		"directory": "packages/cli"
+	},
+	"homepage": "https://github.com/open-ax/ax-kit",
+	"bugs": "https://github.com/open-ax/ax-kit/issues",
 	"engines": {
 		"node": ">=24.19.0 <25"
 	},
