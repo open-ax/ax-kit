@@ -6,6 +6,8 @@ is written for someone who did not write the code.
 - [What gets released](#what-gets-released)
 - [Recording a change](#recording-a-change)
 - [Making a release](#making-a-release)
+- [Publishing without a long-lived secret](#publishing-without-a-long-lived-secret)
+- [Checks that must fail the build](#checks-that-must-fail-the-build)
 - [What the tool will not do for you](#what-the-tool-will-not-do-for-you)
 - [After the first release](#after-the-first-release)
 
@@ -78,6 +80,75 @@ whatever the changesets said.
 
 Publishing needs registry credentials and is **not reversible**. Do not run
 `pnpm release` to "see what happens"; run `pnpm changeset publish-plan` instead.
+
+The two halves are also available separately, and the release workflow uses the
+second one:
+
+| Command | Does |
+|---|---|
+| `pnpm release` | version, then publish. The one-shot for a human. |
+| `pnpm release:version` | `changeset version` alone |
+| `pnpm release:publish` | `changeset publish` alone |
+
+## Publishing without a long-lived secret
+
+`.github/workflows/release.yml` publishes by presenting an identity token that
+the registry checks against a **trusted publisher** configured per package. No
+token is stored in this repository, and none is written to the runner.
+
+The workflow asks for one elevated permission, `id-token: write`, plus
+`contents: read`. That is the whole grant: it identifies the run and produces
+provenance, and it cannot write to this repository.
+
+Three things about it are load-bearing and are easy to get wrong:
+
+- **The workflow filename is part of the binding.** The trusted publisher names
+  this repository *and* `release.yml`. Renaming the file breaks publishing with
+  an error that does not mention file names. Change the trusted publisher in the
+  same commit.
+- **Staged publishing is the usual first-run surprise.** A newly created trusted
+  publisher may default to a mode that authenticates successfully and publishes
+  nothing. The run reports success, because it genuinely did succeed at
+  authenticating. Check the mode is set to publish, not stage.
+- **Only a merged commit can publish.** The workflow triggers on a push to `main`
+  and on manual dispatch. A feature-branch push does not match the trigger, and
+  the registry holds no trusted publisher for an unmerged branch.
+
+### Registry setup, once, by a human
+
+This cannot be done from the repository; it needs an account with access to the
+`@ax-kit` scope. For **each** of the nine packages — `@ax-kit/cli`, `core`,
+`daemon`, `extension`, `playwright`, `react`, `svelte`, `vue`, `zod`:
+
+1. Create a trusted publisher on the package, configured for **GitHub Actions**.
+2. Set the organization to `open-ax` and the repository to `ax-kit`.
+3. Set the workflow filename to `release.yml`.
+4. **Set the publishing mode to publish, not stage.**
+5. Confirm the package's `repository.url` matches the repository exactly. It is
+   `https://github.com/open-ax/ax-kit.git`, and
+   `node .github/ci/check-manifests.mjs` fails the build if it drifts.
+
+`@ax-kit/tsconfig` gets none of this: it is private and is never published.
+
+Provenance is produced by the publishing run from the same identity token and is
+verifiable from the published artifact. Nothing in this repository asserts it.
+
+## Checks that must fail the build
+
+A gate that reports a problem and blocks nothing is worse than no gate, because
+it reads as coverage. Two checks were audited for this:
+
+- **`publint` runs with `--strict`.** Without it, `publint` prints warnings and
+  exits 0. A malformed `repository.url` — the field publishing authentication
+  binds to — was reported and the build stayed green. `--strict` promotes every
+  warning to an error, and all nine packages pass it.
+- **`attw` runs with `--profile node16` deliberately.** attw's own default is
+  `strict`, which also analyses legacy `node10` resolution. These packages use
+  subpath `exports`, and `node10` cannot resolve subpaths at all, so under
+  `strict` every subpath entry reports `NoResolution`. The `node10` rows shown
+  under `node16` are marked *ignored* because the packages do not claim that
+  resolution mode, not because a real finding was suppressed. `node16` does
+  block: a broken `exports` types path fails it.
 
 ## What the tool will not do for you
 
