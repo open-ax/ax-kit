@@ -42,7 +42,7 @@
 		"typecheck": "tsc --noEmit -p tsconfig.json",
 		"test": "playwright test",
 		"size": "echo \"no size gate for runner adapter\"",
-		"publint": "publint",
+		"publint": "publint --strict",
 		"attw": "attw --pack . --profile node16"
 	},
 	"devDependencies": {

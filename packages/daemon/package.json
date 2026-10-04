@@ -43,7 +43,7 @@
 		"typecheck": "tsc --noEmit -p tsconfig.json",
 		"test": "vitest run",
 		"size": "echo \"no size gate for daemon bridge\"",
-		"publint": "publint",
+		"publint": "publint --strict",
 		"attw": "attw --pack . --profile node16"
 	},
 	"devDependencies": {

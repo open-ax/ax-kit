@@ -1,0 +1,86 @@
+name: release
+
+# Publishes to the registry using the platform's trust relationship with this
+# repository. There is no long-lived credential here to leak, expire, or be used
+# from a laptop: the run proves who it is by presenting an identity token, and
+# the registry checks it against the trusted publisher configured for each
+# package.
+#
+# ---------------------------------------------------------------------------
+# THE FILENAME IS PART OF THE TRUST RELATIONSHIP
+# ---------------------------------------------------------------------------
+# A trusted publisher on the registry names this repository AND this workflow
+# file. Renaming `release.yml` therefore breaks publishing, and the resulting
+# error does not mention file names. If you rename it, change the trusted
+# publisher on every package at the same time. See docs/releasing.md.
+#
+# ---------------------------------------------------------------------------
+# STAGED PUBLISHING IS THE USUAL FIRST-RUN SURPRISE
+# ---------------------------------------------------------------------------
+# A newly created trusted publisher can default to a staged mode that does not
+# publish on the first run and reports success. Nothing in this file can detect
+# that, because the run genuinely did succeed at authenticating. Check the mode
+# is set to publish, not stage, before assuming a failure here is a bug.
+#
+# Provenance is produced by the publishing run itself, from the same identity
+# token, and is verifiable from the published artifact. It is not asserted
+# anywhere in this repository.
+
+on:
+  # Only a merged, reviewed commit can publish. A push to a feature branch does
+  # not match this trigger, and the registry holds no trusted publisher for an
+  # unmerged branch, so there is no path from a branch push to a published
+  # package.
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  # The only elevated permission in this file, and the entire point of the
+  # mechanism: it lets the run identify itself to the registry. It grants no
+  # ability to write to this repository, and no token is issued to the runner.
+  id-token: write
+
+concurrency:
+  group: release
+  # Never cancel a release half way through publishing.
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      # Pinned to SHA (version in trailing comment). Full history: the release
+      # tool reads tags and history to decide what is already published.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      # Pinned to SHA (version in trailing comment). Reads the pnpm version
+      # from the packageManager field.
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4
+
+      # Pinned to SHA (version in trailing comment). No registry-url and no
+      # token: authentication is the identity token from the permission above,
+      # not a credential. Writing an auth token into the runner's .npmrc is
+      # exactly what this mechanism exists to avoid.
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: ".nvmrc"
+          cache: "pnpm"
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      # Publish only. The version bumps and changelogs are already committed by
+      # the reviewed release change that triggered this run, so there is nothing
+      # to version here — `pnpm release` would correctly decide there is nothing
+      # to do and exit without publishing.
+      - name: Publish
+        run: pnpm release:publish

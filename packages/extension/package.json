@@ -39,7 +39,7 @@
 		"typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.test.json",
 		"test": "vitest run",
 		"size": "echo \"no size gate for extension bridge\"",
-		"publint": "publint",
+		"publint": "publint --strict",
 		"attw": "attw --pack . --profile node16"
 	},
 	"devDependencies": {
