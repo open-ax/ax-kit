@@ -15,11 +15,14 @@
 		"test": "turbo run test",
 		"size": "turbo run size",
 		"publint": "turbo run publint",
-		"attw": "turbo run attw"
+		"attw": "turbo run attw",
+		"changeset": "changeset",
+		"release": "node scripts/release.mjs"
 	},
 	"devDependencies": {
 		"@arethetypeswrong/cli": "0.18.5",
 		"@biomejs/biome": "2.5.14",
+		"@changesets/cli": "3.0.3",
 		"@vitest/browser-playwright": "5.0.2",
 		"happy-dom": "20.14.5",
 		"playwright": "1.63.0",

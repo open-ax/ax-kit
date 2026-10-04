@@ -26,3 +26,12 @@ exported as `SPEC_VERSION` from `@ax-kit/core`.
 <p align="center">
   <sub>Part of <a href="https://github.com/open-ax">OpenAX</a> &nbsp;·&nbsp; Apache-2.0</sub>
 </p>
+
+---
+
+## Documentation
+
+- [Releasing a version](docs/releasing.md) — how a version is made and published
+- [Conformance baseline](docs/conformance-baseline.md) — which draft, and what
+  the expected failures are
+- [Decision records](docs/adr/) — choices that would be expensive to reverse
