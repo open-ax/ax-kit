@@ -15,8 +15,10 @@ Pinned draft: WebMCP Draft Community Group Report, 2 October 2026
   `document.modelContext` - `EventTarget` semantics, `AbortSignal` races, the
   error taxonomy, Permissions Policy gating, origin logic, per-frame
   isolation. Run with `pnpm test`; the `chromium` project needs a Playwright
-  Chromium install (`pnpm exec playwright install chromium`).- Official layer (WPT `/webmcp`): the specification's own suite. The signal is
-  the diff against the expected-failure list, not the raw count.
+  Chromium install (`pnpm exec playwright install chromium`).
+- Official layer (WPT `/webmcp`): the specification's own suite, run against the
+  built bundle. The signal is the diff against the expected-failure list, not
+  the raw count. See [Official layer](#official-layer-wpt-webmcp) below.
 
 ## Decided behaviors
 
@@ -47,6 +49,52 @@ Pinned draft: WebMCP Draft Community Group Report, 2 October 2026
   eligibility rejects with `UnknownError`. Target-only unload aborts the
   callback signal while the caller still observes `UnknownError`. Decided
   2026-09-28 from review.
+
+## Official layer (WPT `/webmcp`)
+
+The specification's own suite lives in the **web-platform-tests** repository,
+under `webmcp/` — not in the proposal repository, which holds only `index.bs`
+and prose.
+
+Pinned revision: **`fe52996d4465f23617bce91927bdd58e6ce8f541`**, recorded in
+`WPT_SHA` in `packages/playwright/src/wpt.ts`. That WPT commit is
+*"[WebMCP] Remove origin-keyed agent cluster requirement"*, committed
+2026-09-30 — the same change, on the same day, as `SPEC_VERSION.commit`
+`d61d0e6` in the proposal repository. The two halves of the suite move
+together, so a run at this revision tests the draft this package claims.
+
+How to obtain it, so it is not rediscovered:
+
+    browse  https://github.com/web-platform-tests/wpt/tree/<SHA>/webmcp
+    raw     https://raw.githubusercontent.com/web-platform-tests/wpt/<SHA>/<path>
+
+To move the pin, find the WPT commit whose message names the same change as the
+new `SPEC_VERSION.commit`. Do not float the pin to a branch.
+
+Files are fetched at that immutable revision and cached on disk, so a repeat run
+is byte-identical. The suite file itself is served unmodified; integration goes
+through `resources/testharnessreport.js`, which upstream documents as the file
+"intended for vendors to implement code needed to integrate testharness.js tests
+with their own test systems".
+
+### Reading a run
+
+`harness status` is the harness's own completion code and reads **0 even when
+every subtest fails**. It is not a pass aggregate. The verdict is per subtest.
+
+### Known divergences
+
+`imperative/object-arguments.https.html` asserts that a tool returning the
+JavaScript string `"Success"` makes `executeTool` resolve to `"Success"`. The
+draft says otherwise: the IDL is `Promise<DOMString>`, and the algorithm
+resolves with *"the result of serializing a JavaScript value to a JSON
+string"*, which for that value is `"\"Success\""`. **This implementation follows
+the draft; the upstream assertion does not.** It belongs upstream as an issue,
+not here as a code change. Pinned by a test so it cannot be forgotten.
+
+`imperative/getTools.https.html` fails with an **empty** failure message —
+observed, cause not yet established. Do not record it as an expected failure
+until someone has read why.
 
 ## Expected failures (seed)
 
