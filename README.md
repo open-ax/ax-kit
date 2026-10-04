@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/ax-mark-dark.png" />
-    <img src="docs/assets/ax-mark-light.png" alt="ax-kit" height="64" />
+    <source media="(prefers-color-scheme: dark)" srcset="assets/ax-mark-dark.png" />
+    <img src="assets/ax-mark-light.png" alt="ax-kit" height="64" />
   </picture>
 </p>
 
