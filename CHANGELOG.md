@@ -60,6 +60,10 @@ Then commit the generated `.changeset/*.md` file.
   check fails.
 - `@ax-kit/zod`: validation-library to input-schema conversion over the
   first-party JSON-Schema output with subset caps and boundary stringify.
+- All published packages: `repository`, `homepage`, and `bugs`, so a registry
+  page links back to its source and a scanner that reads those fields can see
+  the package at all. `homepage` points at the repository until a documentation
+  site exists to point at.
 
 No published package yet. Entries above describe the in-tree API; versioned
 releases will be cut with Changesets.

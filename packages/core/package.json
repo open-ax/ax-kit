@@ -3,6 +3,13 @@
 	"version": "0.0.0",
 	"description": "Correct, tiny, dependency-free WebMCP ModelContext implementation",
 	"license": "Apache-2.0",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/open-ax/ax-kit.git",
+		"directory": "packages/core"
+	},
+	"homepage": "https://github.com/open-ax/ax-kit",
+	"bugs": "https://github.com/open-ax/ax-kit/issues",
 	"engines": {
 		"node": ">=24.19.0 <25"
 	},
