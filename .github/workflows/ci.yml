@@ -33,7 +33,12 @@ jobs:
       - name: Required files are present
         run: |
           set -euo pipefail
-          for f in LICENSE NOTICE CHANGELOG.md README.md .gitignore .nvmrc; do
+          # The brand marks are here because README.md references them by
+          # relative path. No other check resolves that reference, so without
+          # this a moved or deleted mark renders as a broken image and a green
+          # build. See docs/adr/0005-brand-assets-and-application-layout.md.
+          for f in LICENSE NOTICE CHANGELOG.md README.md .gitignore .nvmrc \
+                   assets/ax-mark-dark.png assets/ax-mark-light.png; do
             if [ ! -f "$f" ]; then
               echo "::error::Required file missing: $f"
               exit 1
