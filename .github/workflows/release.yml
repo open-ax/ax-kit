@@ -75,6 +75,22 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
+      # The gates run here, before anything is published, and this is
+      # deliberate. The `ci` workflow runs them on the pull request, but branch
+      # protection is a setting someone can relax, and a release that publishes
+      # from a tree whose tests or size budget are red is exactly the failure
+      # this workflow must not be able to make. Found by rehearsing a release:
+      # nothing in the original version of this file stopped a publish.
+      - name: Verify
+        run: |
+          pnpm typecheck
+          pnpm lint
+          pnpm test
+          pnpm size
+          pnpm publint
+          pnpm attw
+          node .github/ci/check-manifests.mjs
+
       - name: Build
         run: pnpm build
 

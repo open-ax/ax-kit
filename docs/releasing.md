@@ -70,8 +70,56 @@ for a pipeline, because a red check nobody can explain gets ignored.
 To see what a release would do without doing any of it:
 
 ```sh
-pnpm changeset publish-plan     # which packages would be published, and at what version
+pnpm run release -- --dry-run     # version, then print what would be published
 ```
+
+The dry run stops one step short of publishing. Use it, not `pnpm release`, to
+find out what would happen.
+
+### Packing without publishing
+
+To produce the exact tarballs a release would ship and inspect them:
+
+```sh
+pnpm exec changeset pack --out-dir <dir>
+```
+
+**The tarballs land in `<dir>/packages/`, not `<dir>/`.** This surprised the
+first rehearsal, so it is written down. The same command also writes
+`<dir>/publish-plan.json`.
+
+Inspect the tarballs rather than the working tree: a file present in the
+checkout but missing from `files` never ships, and that is invisible until you
+unpack. At minimum, for each tarball, confirm the exact file list, that every
+path in `main`, `module`, `types`, `exports` and `bin` exists inside it, that
+both `dist/index.d.mts` and `dist/index.d.cts` ship next to `dist/index.mjs` and
+`dist/index.cjs`, and that any declared binary starts with a shebang.
+
+### One caveat about the size gate locally
+
+`pnpm size` can report a **stale success** after the budget in a package's
+`package.json` changes, because the task runner serves a cached result whose log
+still shows the previous limit. It looks exactly like the gate passing:
+
+    @ax-kit/core:size: cache hit, replaying logs a5ec589af63f0ed2
+    @ax-kit/core:size:   Size limit: 5 kB        <- the old limit, replayed
+    exit 0
+
+The gate itself is sound — run the package's task directly, or bypass the cache,
+and it refuses:
+
+    pnpm --filter @ax-kit/core run size
+      Package size limit has exceeded by 3.82 kB
+      Exit status 1
+
+    pnpm size --force
+      Tasks: 9 successful, 14 total
+      Failed: @ax-kit/core#size
+
+Continuous integration is not affected: the cache directory is gitignored, so a
+fresh checkout has no cache and the task always runs. This matters locally when
+you *tighten* the budget, because that is exactly when you want to see it fail.
+Use `--force` after changing a limit.
 
 `changeset version` rewrites the package manifests, the lockfile, and adds a
 `CHANGELOG.md` under each released package. **Review that diff before
@@ -152,8 +200,10 @@ it reads as coverage. Two checks were audited for this:
 
 ## What the tool will not do for you
 
-- **It does not check that the release is safe to make.** Run the full suite
-  first: `pnpm typecheck lint test build size publint attw`. In particular
+- **It does not check that the release is safe to make.** The release workflow
+  does this for you: it runs typecheck, lint, test, the size gate, both packaging
+  checks and the manifest check before it publishes. When publishing by hand,
+  run the same set first.
   `pnpm size` — the core size gate is a hard failure and must never be raised to
   make a build pass.
 - **It does not pick the bump type.** A wrong bump type is a wrong public
