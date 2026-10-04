@@ -5,7 +5,6 @@ import {
 	invalidState,
 	notAllowed,
 	notSupported,
-	securityError,
 	unknownError,
 } from "./errors.js";
 import { fireToolActivated, fireToolCancel, fireToolChange } from "./events.js";
@@ -13,8 +12,6 @@ import {
 	isAbortSignal,
 	isAllowedToUse,
 	isFullyActive,
-	isOriginKeyed,
-	originKeyedDiagnostic,
 	parseOriginList,
 	warnDiagnostic,
 } from "./gates.js";
@@ -81,17 +78,13 @@ export function ensureState(doc: Document): DocumentState {
 const NAME_PATTERN = /^[A-Za-z0-9_.-]+$/;
 
 /**
- * The precondition triple every entry point enforces, in draft order, with
- * the specified errors. Shared so the root methods and the opt-in entry
- * cannot drift apart.
+ * The precondition pair every entry point enforces, in draft order, with the
+ * specified errors. Shared so the root methods and the opt-in entry cannot
+ * drift apart.
  */
 export function checkCallerGates(doc: Document): void {
 	if (!isFullyActive(doc)) {
 		throw invalidState("inactive document");
-	}
-	if (!isOriginKeyed(doc)) {
-		warnDiagnostic(originKeyedDiagnostic(doc));
-		throw securityError("cluster not origin-keyed");
 	}
 	if (!isAllowedToUse(doc)) {
 		throw notAllowed("tools not allowed");

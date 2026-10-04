@@ -354,8 +354,11 @@ describe("secure context and policy gates", () => {
 	});
 });
 
-describe("origin-keyed gate", () => {
-	it("rejects registration after document.domain drift", async () => {
+describe("agent cluster keying", () => {
+	// The 2 October 2026 draft removed the origin-keyed agent cluster
+	// precondition from registerTool, getTools and executeTool. A document
+	// whose document.domain has drifted is therefore an ordinary document.
+	it("registers, discovers and invokes a tool after document.domain drift", async () => {
 		const win = new Window({ url: "https://www.example.com/" });
 		try {
 			const mc = installModelContext(docOf(win));
@@ -363,24 +366,29 @@ describe("origin-keyed gate", () => {
 				throw new Error("expected an installed context");
 			}
 			// happy-dom exposes domain as getter-only: shadow it with an own
-			// property to simulate a drifted document at the exact signal
-			// the gate reads. Real setter behavior belongs to the browser.
+			// property to simulate a drifted document at the exact signal the
+			// removed gate used to read. Real setter behaviour belongs to the
+			// browser.
 			Object.defineProperty(win.document, "domain", {
 				value: "example.com",
 				configurable: true,
 			});
-			expect(
-				errorName(
-					await errorOf(
-						mc.registerTool({
-							name: "drifted",
-							description: "drifted",
-							execute: async () => null,
-						}),
-					),
-				),
-			).toBe("SecurityError");
-			expect(errorName(await errorOf(mc.getTools()))).toBe("SecurityError");
+
+			await mc.registerTool({
+				name: "drifted",
+				description: "drifted",
+				execute: async () => ({ ok: true }),
+			});
+
+			const tools = await mc.getTools();
+			expect(tools.map((tool) => tool.name)).toEqual(["drifted"]);
+
+			const tool = tools[0];
+			if (tool === undefined) {
+				throw new Error("expected the registered tool to be listed");
+			}
+			const result = await mc.executeTool(tool, {});
+			expect(JSON.parse(result)).toEqual({ ok: true });
 		} finally {
 			void win.happyDOM?.close();
 		}

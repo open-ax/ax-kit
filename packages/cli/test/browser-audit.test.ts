@@ -136,7 +136,13 @@ describe("audit under real headless Chromium", () => {
 		expect(findingPass(context, "read-only-sanity")).toBe(true);
 		expect(findingPass(context, "consequential-coverage")).toBe(true);
 		expect(findingPass(context, "policy")).toBe(true);
-		expect(findingPass(context, "cluster")).toBe(true);
+		// The 2 October 2026 draft removed the origin-keyed agent cluster
+		// precondition, so the audit must not grade it. A cluster finding in
+		// either output would be a site owner being told they failed a
+		// requirement that no longer exists.
+		expect(scoreAudit(context).map((entry) => entry.check)).not.toContain(
+			"cluster",
+		);
 		expect(countFailures(scoreAudit(context))).toBe(0);
 	});
 

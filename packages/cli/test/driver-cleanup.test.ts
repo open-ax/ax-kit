@@ -53,7 +53,6 @@ vi.mock("playwright", () => ({
 							evaluate: async (): Promise<unknown> => ({
 								tools: [],
 								policyAllowsTools: true,
-								originKeyed: true,
 							}),
 						}),
 						close: async (): Promise<void> => {

@@ -4,19 +4,18 @@ Conformance here means one thing: zero unexpected failures against the pinned
 draft named below. It never means blanket green, because the reference browser
 itself does not pass the whole official suite.
 
-Pinned draft: WebMCP Draft Community Group Report, 29 September 2026
-(upstream `57d396f`), exported as `SPEC_VERSION` from `@ax-kit/core`.
+Pinned draft: WebMCP Draft Community Group Report, 2 October 2026
+(upstream `d61d0e6`), exported as `SPEC_VERSION` from `@ax-kit/core`.
 
 ## Layers
 
 - Fast layer (`happy-dom`): pure logic — name validation, schema rejection,
   serialization edges, sorting, gate wiring.
 - Browser layer (real Chromium via Vitest Browser Mode): everything touching
-  `document.modelContext` — `EventTarget` semantics, `AbortSignal` races, the
+  `document.modelContext` - `EventTarget` semantics, `AbortSignal` races, the
   error taxonomy, Permissions Policy gating, origin logic, per-frame
   isolation. Run with `pnpm test`; the `chromium` project needs a Playwright
-  Chromium install (`pnpm exec playwright install chromium`).
-- Official layer (WPT `/webmcp`): the specification's own suite. The signal is
+  Chromium install (`pnpm exec playwright install chromium`).- Official layer (WPT `/webmcp`): the specification's own suite. The signal is
   the diff against the expected-failure list, not the raw count.
 
 ## Decided behaviors
@@ -68,6 +67,15 @@ so re-verify before quoting any figure.
 A failure not on this list is unexpected and blocks. A listed failure that
 starts passing is evidence the draft or the reference browser moved: refresh
 the list, note the date, and say which source changed.
+
+### Not yet re-verified against the 2 October 2026 draft
+
+The list above was seeded on 2026-09-27 and has **not** been re-run against the
+2 October draft. The draft removed a precondition from `registerTool`,
+`getTools` and `executeTool`, so any official test that asserted a refusal under
+that precondition should now be expected to *pass*, and those entries need
+re-verifying before any conformance figure is quoted. Treat the list as carried
+over, not as re-confirmed.
 
 ## Upgrade path
 

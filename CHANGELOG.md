@@ -38,7 +38,7 @@ See docs/releasing.md for the full procedure.
   discovery, invocation, lifecycle events, and unloading cleanup, plus an
   opt-in `@ax-kit/core/ax` entry with removal, lookup, parsed-result, and
   change-diff conveniences. Pinned draft (`SPEC_VERSION`): Draft Community
-  Group Report, 29 September 2026.
+  Group Report, 2 October 2026.
 - `@ax-kit/react`: `useAxTool` (full definition or name plus handler),
   `AxProvider`, and `isAxSupported` for lifecycle-native tool registration
   with namespacing and execution middleware.
@@ -56,7 +56,7 @@ See docs/releasing.md for the full procedure.
   hint with a bounded guard and match by name in code-unit order; execution
   resolves a fresh handle per call and parses the string result at the
   boundary. Pinned draft (`SPEC_VERSION`): Draft Community Group Report,
-  29 September 2026.
+  2 October 2026.
 - `@ax-kit/extension`: worker-side bridge driving `document.modelContext`
   from a service worker over injection-only transport with enumerated
   handlers, side-panel confirmation bound to tab, document, frame, tool
@@ -75,6 +75,13 @@ See docs/releasing.md for the full procedure.
   page links back to its source and a scanner that reads those fields can see
   the package at all. `homepage` points at the repository until a documentation
   site exists to point at.
+- `@ax-kit/core`, `@ax-kit/react`, `@ax-kit/vue`, `@ax-kit/svelte`,
+  `@ax-kit/playwright`: pinned draft moves to Draft Community Group Report,
+  2 October 2026 (upstream `d61d0e6`).
+- `@ax-kit/cli`: `ax-kit audit` no longer reports an `origin-keyed cluster`
+  finding. The 2 October 2026 draft dropped that precondition, so a site that
+  satisfied it was being told it had failed a requirement that no longer
+  exists. The remaining checks and the report format are unchanged.
 
 No published package yet. Entries above describe the in-tree API; versioned
 releases will be cut with Changesets.
@@ -92,6 +99,17 @@ releases will be cut with Changesets.
   consequential call through with the check silently not run.
 
 ### Removed
+
+- `@ax-kit/core`: the origin-keyed agent cluster precondition on
+  `document.modelContext`. A page whose `document.domain` has drifted from its
+  host used to have `registerTool`, `getTools` and `executeTool` reject with a
+  `SecurityError` and log a `WebMCP unavailable` warning; the draft removed that
+  requirement, and such a page is now an ordinary page. Restrictions on *which
+  origins may see and invoke a given tool* are a separate mechanism and are
+  unchanged: `exposedTo`, `fromOrigins`, untrustworthy and opaque origin entries
+  all still reject with the errors the draft defines.
+- `@ax-kit/core` / `@ax-kit/cli`: diagnostics and audit plumbing that existed
+  only to report the precondition above.
 
 - `@ax-kit/daemon`: native-messaging and stdio checks that guarded no code
   path in this package — `windowsRegistryValue`, `checkMessageSize`,

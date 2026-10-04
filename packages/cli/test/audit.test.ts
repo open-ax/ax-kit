@@ -28,18 +28,16 @@ describe("cli audit", () => {
 		const good = scoreAudit({
 			tools: [tool()],
 			policyAllowsTools: true,
-			originKeyed: true,
 		});
 		expect(countFailures(good)).toBe(1);
 		const bad = scoreAudit({
 			tools: [tool({ hasInputSchema: false, schemaValid: false })],
 			policyAllowsTools: true,
-			originKeyed: true,
 		});
 		expect(countFailures(bad)).toBeGreaterThan(countFailures(good));
 	});
 
-	it("flags budget, exposure, policy, and cluster findings", () => {
+	it("flags budget, exposure, and policy findings", () => {
 		const overName = "x".repeat(BUDGETS.toolName + 1);
 		const findings = scoreAudit({
 			tools: [
@@ -58,7 +56,6 @@ describe("cli audit", () => {
 				}),
 			],
 			policyAllowsTools: false,
-			originKeyed: false,
 		});
 		const byCheck = new Map(
 			findings.map((entry) => [
@@ -72,14 +69,12 @@ describe("cli audit", () => {
 		expect(byCheck.get(`exposure:${overName}`)?.pass).toBe(false);
 		expect(byCheck.get(`read-only-sanity:${overName}`)?.pass).toBe(false);
 		expect(byCheck.get("policy:site")?.pass).toBe(false);
-		expect(byCheck.get("cluster:site")?.pass).toBe(false);
 	});
 
 	it("names its lane explicitly and never an unqualified score", () => {
 		const text = auditSnapshot("https://shop.example", {
 			tools: [tool()],
 			policyAllowsTools: true,
-			originKeyed: true,
 		});
 		expect(text).toContain(LANE_STATEMENT);
 		expect(text).toContain("audit https://shop.example");
@@ -125,7 +120,6 @@ describe("cli audit", () => {
 				tool({ name: "wild", exposedOrigins: ["*"] }),
 			],
 			policyAllowsTools: true,
-			originKeyed: true,
 		});
 		const byCheck = new Map(
 			over.map((entry) => [`${entry.check}:${entry.tool}`, entry]),
@@ -135,7 +129,6 @@ describe("cli audit", () => {
 		const empty = scoreAudit({
 			tools: [],
 			policyAllowsTools: true,
-			originKeyed: true,
 		});
 		expect(
 			empty.find((entry) => entry.check === "consequential-coverage")?.pass,
@@ -185,26 +178,23 @@ describe("cli audit", () => {
 		// verdict, so each rejects instead of being coerced.
 		const { collectContext } = await import("../src/audit.js");
 		const hostile: ReadonlyArray<unknown> = [
-			{ tools: {}, policyAllowsTools: true, originKeyed: true },
-			{ tools: [], policyAllowsTools: "yes", originKeyed: true },
-			{ tools: [], policyAllowsTools: true, originKeyed: 1 },
-			{ policyAllowsTools: true, originKeyed: true },
+			{ tools: {}, policyAllowsTools: true },
+			{ tools: [], policyAllowsTools: "yes" },
+			{ tools: [], policyAllowsTools: 1 },
+			{ policyAllowsTools: true },
 			{
 				tools: [{ name: "viewCart" }],
 				policyAllowsTools: true,
-				originKeyed: true,
 			},
 			{
 				tools: [{ ...tool(), exposedOrigins: "https://shop.example" }],
 				policyAllowsTools: true,
-				originKeyed: true,
 			},
 			{
 				tools: [{ ...tool(), schemaValid: "true" }],
 				policyAllowsTools: true,
-				originKeyed: true,
 			},
-			{ tools: [null], policyAllowsTools: true, originKeyed: true },
+			{ tools: [null], policyAllowsTools: true },
 			["not", "a", "snapshot"],
 		];
 		for (const snapshot of hostile) {
@@ -231,7 +221,6 @@ describe("cli audit", () => {
 				return {
 					tools: [tool({ title: "View cart" })],
 					policyAllowsTools: false,
-					originKeyed: true,
 				} as Awaited<T>;
 			},
 		});
