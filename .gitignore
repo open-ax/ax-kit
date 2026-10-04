@@ -9,6 +9,9 @@ dist/
 build/
 .turbo/
 *.tsbuildinfo
+# Framework caches written beside the sources by an application member.
+.next/
+.astro/
 
 # Logs
 npm-debug.log*
