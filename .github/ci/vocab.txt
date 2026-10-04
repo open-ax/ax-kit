@@ -39,7 +39,21 @@ EXCLUDE_PATHS='.github/ci/vocab.txt'
 # The boundary class also excludes "/", so a legitimate directory that happens
 # to carry such a name is not flagged. Referring in prose is the finding;
 # a path segment is not. A path-shaped reference is caught by PATH_PATTERN below.
-PATTERN='planning|(^|[^[:alnum:]/])plans?([^[:alnum:]/]|$)|roadmap|(^|[^[:alnum:]/])phases?([^[:alnum:]/]|$)|milestone'
+#
+# "plans?" additionally excludes "-" from its LEADING boundary, and only that one
+# word does. A hyphenated compound ending in "plan" is overwhelmingly a tool or
+# package name that cannot be renamed: `changeset publish-plan` is a real
+# subcommand of the release tool, and `@changesets/apply-release-plan` is a real
+# installed package. Flagging either would make the guard impossible to satisfy
+# without abandoning the release tool or hand-editing a lockfile, and a guard
+# that cannot be satisfied gets switched off rather than obeyed.
+#
+# What that costs, stated plainly: prose referring to private material as a
+# hyphenated compound ending in "-plan" would not be caught by this word. Every
+# other word keeps its original boundary, and PATH_PATTERN still catches a
+# path-shaped reference such as "Plan/". The ordinary spaced or capitalised word
+# is still flagged.
+PATTERN='planning|(^|[^[:alnum:]/-])plans?([^[:alnum:]/]|$)|roadmap|(^|[^[:alnum:]/])phases?([^[:alnum:]/]|$)|milestone'
 
 # A local checkout path, the local overlay filename, a drive-qualified path to
 # private material, or a bare path-shaped reference to a private document.

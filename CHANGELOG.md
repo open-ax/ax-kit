@@ -6,17 +6,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!--
-Manual entries under [Unreleased] are permitted until the first release;
-after that this file will be maintained by Changesets.
-Do not edit released sections by hand beyond this scaffolding entry.
+This file is the hand-maintained record of what exists before the first
+published release. Manual entries under [Unreleased] are permitted until then.
 
-To record a change after the toolchain lands, add a changeset:
+After the first release this file stops being the source of truth. Changesets
+writes a CHANGELOG.md per package, under packages/<name>/, and never touches
+this one — verified, not assumed. So from the first release onward:
 
-    npx changeset
+  - packages/<name>/CHANGELOG.md  generated; do not hand-edit
+  - this file                      an index, linking the per-package changelogs
+
+To record a change that needs a release, add a changeset:
+
+    pnpm changeset
     # choose the packages affected, the bump type, and write one sentence
     # describing the change from a user's point of view
 
-Then commit the generated `.changeset/*.md` file.
+Then commit the generated `.changeset/*.md` file. `pnpm changeset` runs the
+pinned devDependency. Do not write `npx changeset`: the unscoped `changeset`
+package on npm is an unrelated LevelDB JSON-diff library last released in 2021,
+so `npx` would fetch that instead of the release tool.
+
+See docs/releasing.md for the full procedure.
 -->
 
 ## [Unreleased]
