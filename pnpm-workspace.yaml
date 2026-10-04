@@ -1,2 +1,9 @@
+# The single workspace declaration.
+#
+# This file is authoritative. `package.json` also accepted a "workspaces" field,
+# and carrying both meant a member added to one and not the other was installed
+# by half the toolchain and skipped by the other — with a green build over the
+# half that was never checked. Do not reintroduce a second declaration.
 packages:
   - "packages/*"
+  - "applications/*"
