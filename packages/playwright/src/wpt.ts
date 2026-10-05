@@ -191,9 +191,34 @@ interface ContentsEntry {
 	readonly path: string;
 }
 
+/**
+ * The enumeration headers.
+ *
+ * Unauthenticated GitHub API callers get sixty requests an hour per IP, and
+ * every directory in the suite costs one, repeated by each browser project. A
+ * developer iterating on the scorer can spend that in an afternoon and then read
+ * "cannot enumerate" — a registry rate limit reported as a suite problem. So a
+ * token is used when the environment offers one and the request is made exactly
+ * as before when it does not.
+ *
+ * `GITHUB_TOKEN` is read from the environment because that is the name a caller
+ * sets it under, in CI or on a laptop. GitHub Actions does not put
+ * `secrets.GITHUB_TOKEN` into the environment on its own, so an unconfigured run
+ * stays unauthenticated rather than silently publishing a token to the suite.
+ */
+function contentsHeaders(): Record<string, string> {
+	const token = process.env["GITHUB_TOKEN"];
+	return token === undefined || token === ""
+		? { accept: "application/vnd.github+json" }
+		: {
+				accept: "application/vnd.github+json",
+				authorization: `Bearer ${token}`,
+			};
+}
+
 async function listDirectory(path: string): Promise<readonly ContentsEntry[]> {
 	const response = await fetch(`${CONTENTS_API}/${path}?ref=${WPT_SHA}`, {
-		headers: { accept: "application/vnd.github+json" },
+		headers: contentsHeaders(),
 	});
 	if (!response.ok) {
 		throw new Error(
