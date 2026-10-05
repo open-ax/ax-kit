@@ -192,6 +192,41 @@ test("an entry with no explanation at all is rejected", () => {
 	);
 });
 
+/**
+ * Regression. A unit-wide entry was written for a file that reports nothing at
+ * all, and it was matching any failure in that unit including one with a
+ * `subtest`. A file that starts completing would then have its new named
+ * failures absorbed by the entry written for the old behaviour, and the run
+ * would stay green while a divergence went unreported.
+ */
+test("a unit-wide entry does not cover a named failing subtest", () => {
+	const score = scoreRun(
+		run([
+			file({
+				unit: "webmcp/imperative/b.https.html",
+				results: [{ name: "a named subtest", status: "FAIL", message: "new" }],
+			}),
+		]),
+		list.browsers.chromium,
+	);
+	expect(score.unexpected.map((entry) => entry.subtest)).toEqual([
+		"a named subtest",
+	]);
+});
+
+test("a unit-wide entry is reported as stale when the file starts passing", () => {
+	// The unit-level case is still covered, so an entry nobody has re-derived
+	// cannot survive a file that completes.
+	const score = scoreRun(
+		run([file({ unit: "webmcp/imperative/b.https.html", status: "pass" })]),
+		list.browsers.chromium,
+	);
+	expect(score.unexpected).toEqual([]);
+	expect(score.nowPassing.map((entry) => entry.unit)).toEqual([
+		"webmcp/imperative/b.https.html",
+	]);
+});
+
 test("the same unit and subtest listed twice is rejected", () => {
 	const repeated = structuredClone(LIST) as {
 		browsers: {

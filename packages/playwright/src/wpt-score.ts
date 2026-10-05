@@ -152,8 +152,15 @@ function key(unit: string, subtest: string | undefined): string {
 }
 
 /**
- * Score one browser's run. An entry with no `subtest` covers every failure in
- * its unit, which is what a file that never reported needs.
+ * Score one browser's run. An entry with no `subtest` covers a failure of its
+ * unit *as a unit*, which is what a file that never reported needs.
+ *
+ * It deliberately does not cover a named subtest. A unit-wide entry exists
+ * because the file produced no subtests to name; if the file starts completing
+ * and reporting, it is a different file with a different expectation, and the
+ * unit-wide entry absorbing its named failures would hide a new divergence
+ * behind an entry written for the old behaviour — the one thing this module's
+ * "zero unexpected failures" claim cannot survive.
  */
 export function scoreRun(
 	run: SuiteRun,
@@ -168,7 +175,10 @@ export function scoreRun(
 				entry.unit === failure.unit && entry.subtest === failure.subtest,
 		);
 		const unitWide = expectations.expectedFailures.find(
-			(entry) => entry.unit === failure.unit && entry.subtest === undefined,
+			(entry) =>
+				entry.unit === failure.unit &&
+				entry.subtest === undefined &&
+				failure.subtest === undefined,
 		);
 		const entry = exact ?? unitWide;
 		if (entry === undefined) {
