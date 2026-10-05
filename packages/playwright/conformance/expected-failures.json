@@ -130,25 +130,7 @@
 				},
 				{
 					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "Document interface: attribute modelContext",
-					"kind": "known-gap",
-					"cause": "model-context-is-not-on-document-prototype"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
 					"subtest": "ModelContext interface object length",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ModelContext interface object length",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ModelContext interface object name",
 					"kind": "known-gap",
 					"cause": "interface-objects-not-exposed"
 				},
@@ -166,25 +148,7 @@
 				},
 				{
 					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ModelContext interface: attribute ontoolactivated",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
 					"subtest": "ModelContext interface: attribute ontoolcancel",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ModelContext interface: attribute ontoolcancel",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ModelContext interface: attribute ontoolchange",
 					"kind": "known-gap",
 					"cause": "interface-objects-not-exposed"
 				},
@@ -202,25 +166,7 @@
 				},
 				{
 					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ModelContext interface: existence and properties of interface object",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
 					"subtest": "ModelContext interface: existence and properties of interface prototype object",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ModelContext interface: existence and properties of interface prototype object",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ModelContext interface: existence and properties of interface prototype object's \"constructor\" property",
 					"kind": "known-gap",
 					"cause": "interface-objects-not-exposed"
 				},
@@ -238,25 +184,7 @@
 				},
 				{
 					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ModelContext interface: existence and properties of interface prototype object's @@unscopables property",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
 					"subtest": "ModelContext interface: operation executeTool(RegisteredTool, optional any, optional ModelContextExecuteToolOptions)",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ModelContext interface: operation executeTool(RegisteredTool, optional any, optional ModelContextExecuteToolOptions)",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ModelContext interface: operation getTools(optional ModelContextGetToolOptions)",
 					"kind": "known-gap",
 					"cause": "interface-objects-not-exposed"
 				},
@@ -274,25 +202,7 @@
 				},
 				{
 					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ModelContext interface: operation registerTool(ModelContextTool, optional ModelContextRegisterToolOptions)",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
 					"subtest": "ToolActivatedEvent interface object length",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ToolActivatedEvent interface object length",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ToolActivatedEvent interface object name",
 					"kind": "known-gap",
 					"cause": "interface-objects-not-exposed"
 				},
@@ -310,25 +220,7 @@
 				},
 				{
 					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ToolActivatedEvent interface: attribute toolName",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
 					"subtest": "ToolActivatedEvent interface: existence and properties of interface object",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ToolActivatedEvent interface: existence and properties of interface object",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ToolActivatedEvent interface: existence and properties of interface prototype object",
 					"kind": "known-gap",
 					"cause": "interface-objects-not-exposed"
 				},
@@ -346,25 +238,7 @@
 				},
 				{
 					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ToolActivatedEvent interface: existence and properties of interface prototype object's \"constructor\" property",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
 					"subtest": "ToolActivatedEvent interface: existence and properties of interface prototype object's @@unscopables property",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ToolActivatedEvent interface: existence and properties of interface prototype object's @@unscopables property",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ToolCancelEvent interface object length",
 					"kind": "known-gap",
 					"cause": "interface-objects-not-exposed"
 				},
@@ -382,25 +256,7 @@
 				},
 				{
 					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ToolCancelEvent interface object name",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
 					"subtest": "ToolCancelEvent interface: attribute toolName",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ToolCancelEvent interface: attribute toolName",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ToolCancelEvent interface: existence and properties of interface object",
 					"kind": "known-gap",
 					"cause": "interface-objects-not-exposed"
 				},
@@ -418,25 +274,7 @@
 				},
 				{
 					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ToolCancelEvent interface: existence and properties of interface prototype object",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
 					"subtest": "ToolCancelEvent interface: existence and properties of interface prototype object's \"constructor\" property",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ToolCancelEvent interface: existence and properties of interface prototype object's \"constructor\" property",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ToolCancelEvent interface: existence and properties of interface prototype object's @@unscopables property",
 					"kind": "known-gap",
 					"cause": "interface-objects-not-exposed"
 				},
@@ -763,25 +601,7 @@
 				},
 				{
 					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "Document interface: attribute modelContext",
-					"kind": "known-gap",
-					"cause": "model-context-is-not-on-document-prototype"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
 					"subtest": "ModelContext interface object length",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ModelContext interface object length",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ModelContext interface object name",
 					"kind": "known-gap",
 					"cause": "interface-objects-not-exposed"
 				},
@@ -799,25 +619,7 @@
 				},
 				{
 					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ModelContext interface: attribute ontoolactivated",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
 					"subtest": "ModelContext interface: attribute ontoolcancel",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ModelContext interface: attribute ontoolcancel",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ModelContext interface: attribute ontoolchange",
 					"kind": "known-gap",
 					"cause": "interface-objects-not-exposed"
 				},
@@ -835,25 +637,7 @@
 				},
 				{
 					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ModelContext interface: existence and properties of interface object",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
 					"subtest": "ModelContext interface: existence and properties of interface prototype object",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ModelContext interface: existence and properties of interface prototype object",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ModelContext interface: existence and properties of interface prototype object's \"constructor\" property",
 					"kind": "known-gap",
 					"cause": "interface-objects-not-exposed"
 				},
@@ -871,25 +655,7 @@
 				},
 				{
 					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ModelContext interface: existence and properties of interface prototype object's @@unscopables property",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
 					"subtest": "ModelContext interface: operation executeTool(RegisteredTool, optional any, optional ModelContextExecuteToolOptions)",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ModelContext interface: operation executeTool(RegisteredTool, optional any, optional ModelContextExecuteToolOptions)",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ModelContext interface: operation getTools(optional ModelContextGetToolOptions)",
 					"kind": "known-gap",
 					"cause": "interface-objects-not-exposed"
 				},
@@ -907,25 +673,7 @@
 				},
 				{
 					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ModelContext interface: operation registerTool(ModelContextTool, optional ModelContextRegisterToolOptions)",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
 					"subtest": "ToolActivatedEvent interface object length",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ToolActivatedEvent interface object length",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ToolActivatedEvent interface object name",
 					"kind": "known-gap",
 					"cause": "interface-objects-not-exposed"
 				},
@@ -943,25 +691,7 @@
 				},
 				{
 					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ToolActivatedEvent interface: attribute toolName",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
 					"subtest": "ToolActivatedEvent interface: existence and properties of interface object",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ToolActivatedEvent interface: existence and properties of interface object",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ToolActivatedEvent interface: existence and properties of interface prototype object",
 					"kind": "known-gap",
 					"cause": "interface-objects-not-exposed"
 				},
@@ -979,25 +709,7 @@
 				},
 				{
 					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ToolActivatedEvent interface: existence and properties of interface prototype object's \"constructor\" property",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
 					"subtest": "ToolActivatedEvent interface: existence and properties of interface prototype object's @@unscopables property",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ToolActivatedEvent interface: existence and properties of interface prototype object's @@unscopables property",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ToolCancelEvent interface object length",
 					"kind": "known-gap",
 					"cause": "interface-objects-not-exposed"
 				},
@@ -1015,25 +727,7 @@
 				},
 				{
 					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ToolCancelEvent interface object name",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
 					"subtest": "ToolCancelEvent interface: attribute toolName",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ToolCancelEvent interface: attribute toolName",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ToolCancelEvent interface: existence and properties of interface object",
 					"kind": "known-gap",
 					"cause": "interface-objects-not-exposed"
 				},
@@ -1051,25 +745,7 @@
 				},
 				{
 					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ToolCancelEvent interface: existence and properties of interface prototype object",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
 					"subtest": "ToolCancelEvent interface: existence and properties of interface prototype object's \"constructor\" property",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ToolCancelEvent interface: existence and properties of interface prototype object's \"constructor\" property",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ToolCancelEvent interface: existence and properties of interface prototype object's @@unscopables property",
 					"kind": "known-gap",
 					"cause": "interface-objects-not-exposed"
 				},
@@ -1396,25 +1072,7 @@
 				},
 				{
 					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "Document interface: attribute modelContext",
-					"kind": "known-gap",
-					"cause": "model-context-is-not-on-document-prototype"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
 					"subtest": "ModelContext interface object length",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ModelContext interface object length",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ModelContext interface object name",
 					"kind": "known-gap",
 					"cause": "interface-objects-not-exposed"
 				},
@@ -1432,25 +1090,7 @@
 				},
 				{
 					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ModelContext interface: attribute ontoolactivated",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
 					"subtest": "ModelContext interface: attribute ontoolcancel",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ModelContext interface: attribute ontoolcancel",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ModelContext interface: attribute ontoolchange",
 					"kind": "known-gap",
 					"cause": "interface-objects-not-exposed"
 				},
@@ -1468,25 +1108,7 @@
 				},
 				{
 					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ModelContext interface: existence and properties of interface object",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
 					"subtest": "ModelContext interface: existence and properties of interface prototype object",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ModelContext interface: existence and properties of interface prototype object",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ModelContext interface: existence and properties of interface prototype object's \"constructor\" property",
 					"kind": "known-gap",
 					"cause": "interface-objects-not-exposed"
 				},
@@ -1504,25 +1126,7 @@
 				},
 				{
 					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ModelContext interface: existence and properties of interface prototype object's @@unscopables property",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
 					"subtest": "ModelContext interface: operation executeTool(RegisteredTool, optional any, optional ModelContextExecuteToolOptions)",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ModelContext interface: operation executeTool(RegisteredTool, optional any, optional ModelContextExecuteToolOptions)",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ModelContext interface: operation getTools(optional ModelContextGetToolOptions)",
 					"kind": "known-gap",
 					"cause": "interface-objects-not-exposed"
 				},
@@ -1540,25 +1144,7 @@
 				},
 				{
 					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ModelContext interface: operation registerTool(ModelContextTool, optional ModelContextRegisterToolOptions)",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
 					"subtest": "ToolActivatedEvent interface object length",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ToolActivatedEvent interface object length",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ToolActivatedEvent interface object name",
 					"kind": "known-gap",
 					"cause": "interface-objects-not-exposed"
 				},
@@ -1576,25 +1162,7 @@
 				},
 				{
 					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ToolActivatedEvent interface: attribute toolName",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
 					"subtest": "ToolActivatedEvent interface: existence and properties of interface object",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ToolActivatedEvent interface: existence and properties of interface object",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ToolActivatedEvent interface: existence and properties of interface prototype object",
 					"kind": "known-gap",
 					"cause": "interface-objects-not-exposed"
 				},
@@ -1612,25 +1180,7 @@
 				},
 				{
 					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ToolActivatedEvent interface: existence and properties of interface prototype object's \"constructor\" property",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
 					"subtest": "ToolActivatedEvent interface: existence and properties of interface prototype object's @@unscopables property",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ToolActivatedEvent interface: existence and properties of interface prototype object's @@unscopables property",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ToolCancelEvent interface object length",
 					"kind": "known-gap",
 					"cause": "interface-objects-not-exposed"
 				},
@@ -1648,25 +1198,7 @@
 				},
 				{
 					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ToolCancelEvent interface object name",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
 					"subtest": "ToolCancelEvent interface: attribute toolName",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ToolCancelEvent interface: attribute toolName",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ToolCancelEvent interface: existence and properties of interface object",
 					"kind": "known-gap",
 					"cause": "interface-objects-not-exposed"
 				},
@@ -1684,25 +1216,7 @@
 				},
 				{
 					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ToolCancelEvent interface: existence and properties of interface prototype object",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
 					"subtest": "ToolCancelEvent interface: existence and properties of interface prototype object's \"constructor\" property",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ToolCancelEvent interface: existence and properties of interface prototype object's \"constructor\" property",
-					"kind": "known-gap",
-					"cause": "interface-objects-not-exposed"
-				},
-				{
-					"unit": "webmcp/idlharness.https.window.js",
-					"subtest": "ToolCancelEvent interface: existence and properties of interface prototype object's @@unscopables property",
 					"kind": "known-gap",
 					"cause": "interface-objects-not-exposed"
 				},

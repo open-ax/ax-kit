@@ -192,6 +192,21 @@ test("an entry with no explanation at all is rejected", () => {
 	);
 });
 
+test("the same unit and subtest listed twice is rejected", () => {
+	const repeated = structuredClone(LIST) as {
+		browsers: {
+			chromium: { expectedFailures: Record<string, unknown>[] };
+		};
+	};
+	repeated.browsers.chromium.expectedFailures.push({
+		unit: "webmcp/imperative/a.https.html",
+		subtest: "one",
+		kind: "known-gap",
+		cause: "known",
+	});
+	expect(() => parseExpectedFailureList(repeated)).toThrow(/twice/);
+});
+
 test("a reason is reported in full, never as a bare key", () => {
 	const entry = list.exclusions[0];
 	expect(resolveReason(entry, list.causes)).toBe(LIST.causes.known);
