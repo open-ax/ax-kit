@@ -1,0 +1,2021 @@
+{
+	"pinned": {
+		"draft": "Draft Community Group Report, 2 October 2026",
+		"wptRevision": "fe52996d4465f23617bce91927bdd58e6ce8f541"
+	},
+	"causes": {
+		"declarative-section-is-a-placeholder": "Section 4.3 of the pinned draft reads, in full, 'This section is entirely a TODO.' The declarative files assert on form-derived schemas, pseudo-classes, respondWith and auto-submit, none of which the draft describes, so there is no normative text to implement against and nothing for a run to measure. Excluded rather than listed as expected failures: an expected failure is a claim that a failure is understood, and there is no implementation here to have failed.",
+		"no-non-secure-origin-is-served": "The runner serves three loopback origins, and the platform classifies the whole of 127.0.0.0/8 as potentially trustworthy, so every document it can open is a secure context. A non-secure context is only reachable through a name that does not resolve to loopback, which needs a resolver override this runner does not implement. Excluded for want of an environment, not because the behaviour is untested: the surface's secure-context gate is covered by the hand-written suite.",
+		"interface-objects-not-exposed": "The draft's IDL declares 'interface ModelContext : EventTarget', 'interface ToolActivatedEvent' and 'interface ToolCancelEvent', so each is a global constructor. This implementation exposes the surface on document.modelContext and dispatches plain Event objects, and defines none of the three globals. The interface-definition harness reports every member of all three interfaces as missing, and the four event files fail at 'is not defined'. The behaviour they assert is implemented; the named types the draft declares for it are not.",
+		"model-context-is-not-on-document-prototype": "The draft's IDL reads 'partial interface Document { [SecureContext, SameObject] readonly attribute ModelContext modelContext; }'. An ordinary attribute is an accessor on Document.prototype. This implementation installs an own, non-writable, non-configurable data property on the document instance instead, so the interface-definition harness finds no modelContext on the prototype. The two are observably different: a prototype accessor is reachable from a document that never had the bundle run against it.",
+		"tools-are-not-shared-across-documents": "The draft requires getTools() to resolve to 'a list of registered tools from this document and its descendants that are exposed to this document'. The registry is a WeakMap held inside the installed script, so each document that evaluates the bundle gets its own, and a document cannot see tools registered in another. Every failure listed under this cause is that one gap seen from a different angle: a test registers a tool in a frame or a second window and asserts the other document can see it, and is told it cannot. The same gap also stops three files from completing at all; that symptom is recorded separately, because a file that does not report and a file that fails an assertion are different things to read.",
+		"results-are-json-encoded": "The draft's executeTool algorithm says 'Let serializedResult be the result of serializing a JavaScript value to a JSON string given v', and the IDL return type is Promise<DOMString>. For a tool returning the JavaScript string \"Success\" that is the nine-character string \"\\\"Success\\\"\". These assertions compare against the unencoded value, so the upstream test contradicts the draft's text. This implementation encodes, which follows the draft. The contradiction belongs upstream as an issue against the proposal's test suite, not here as a change to the source.",
+		"suite-file-has-no-body-element": "The file declares no body element: its scripts sit directly under the document, so the parser never creates one and document.body is null when these two tests run. document.body.append(iframe) therefore throws before any WebMCP behaviour is reached. Measured on all three browsers, which is what a defect in the test file looks like rather than a divergence in the implementation.",
+		"opaque-origin-is-not-refused": "The file is served under 'Content-Security-Policy: sandbox allow-scripts', which gives the document an opaque origin, and it asserts that getTools() reports a tool origin of \"null\" and that executeTool() then rejects with NotSupportedError. The document's own origin check passes, so the header took effect; the tool's origin is still reported as the serving origin, and execution is therefore permitted. An opaque document has no usable origin string, and the code path that refuses one is not reached.",
+		"registered-tool-members-are-not-conversion-checked": "The draft's dictionary reads 'required USVString origin;' alongside 'required Window window;'. WebIDL rejects a dictionary that omits a required member with a TypeError before the algorithm runs, which is what this assertion expects. The implementation validates the member itself and refuses with a NotSupportedError instead, so the failure arrives as the wrong exception name rather than as no exception.",
+		"schema-serialisation-rejects-what-the-draft-allows": "Both failures are the schema serialiser refusing values the draft's algorithm has no rule against. One registers a tool whose annotations carry values the implementation requires to be booleans; the other registers an inputSchema whose toJSON yields undefined, for which the draft's 'serializing a JavaScript value to a JSON string' has no stated outcome. What the draft does require is that a missing or empty description be refused, and that part passes elsewhere in the suite.",
+		"registration-abort-before-settle-is-not-observed": "Both tests call registerTool and abort the signal in the same synchronous turn, then require the returned promise to reject. The promise resolves instead. Aborting later does unregister the tool, and an already-aborted signal does reject, so the gap is the window between the call and the promise settling, not the signal handling itself.",
+		"toolchange-is-observed-after-the-register-promise": "The draft's own worked example states that 'Register promise resolved will always log after' the toolchange events, because the algorithm queues a task to fire toolchange and resolves afterwards. This implementation resolves the registration promise first and fires toolchange from the queued task, so the listener runs later and the assertion sees the opposite order. Queuing the notification rather than firing it synchronously is deliberate and matches the draft; the relative order against the promise is the divergence.",
+		"permissions-policy-signal-is-not-observable": "Chromium treats 'tools' as an origin-trial-controlled permissions-policy feature and logs 'Origin trial controlled feature not enabled' for the allow attribute these tests set. The implementation's gate reads document.permissionsPolicy, and where that member is absent it assumes the feature is allowed rather than refusing on a signal it cannot see. These tests need the browser itself to deny the feature in a frame whose policy does not cover it, which is not available on an origin without the trial.",
+		"cross-origin-child-never-sees-a-tool": "Three files wait on a message that a frame only sends after it observes a tool in another document, so none of them reports completion. The window a frame shares with its opener or its embedder is a second browsing context with its own registry, so the observation never arrives. Same underlying gap as tools-are-not-shared-across-documents, recorded separately because a file that does not complete is a different symptom from a file that fails an assertion, and a reader scanning a report should be able to tell them apart."
+	},
+	"exclusions": [
+		{
+			"unit": "webmcp/declarative/duplicate-tool-name.https.html",
+			"cause": "declarative-section-is-a-placeholder"
+		},
+		{
+			"unit": "webmcp/declarative/execute_tool_change_event.https.html",
+			"cause": "declarative-section-is-a-placeholder"
+		},
+		{
+			"unit": "webmcp/declarative/execute_tool_submit_from_js.https.html",
+			"cause": "declarative-section-is-a-placeholder"
+		},
+		{
+			"unit": "webmcp/declarative/executeTool-abort.https.html",
+			"cause": "declarative-section-is-a-placeholder"
+		},
+		{
+			"unit": "webmcp/declarative/executeTool-detach-toolactivated.https.html",
+			"cause": "declarative-section-is-a-placeholder"
+		},
+		{
+			"unit": "webmcp/declarative/executeTool-flexible-types.https.html",
+			"cause": "declarative-section-is-a-placeholder"
+		},
+		{
+			"unit": "webmcp/declarative/executeTool-invalid-input.https.html",
+			"cause": "declarative-section-is-a-placeholder"
+		},
+		{
+			"unit": "webmcp/declarative/executeTool-navigation.https.html",
+			"cause": "declarative-section-is-a-placeholder"
+		},
+		{
+			"unit": "webmcp/declarative/executeTool-no-autosubmit.https.html",
+			"cause": "declarative-section-is-a-placeholder"
+		},
+		{
+			"unit": "webmcp/declarative/executeTool-pseudo-classes.https.html",
+			"cause": "declarative-section-is-a-placeholder"
+		},
+		{
+			"unit": "webmcp/declarative/executeTool-respondWith-circular-object.https.html",
+			"cause": "declarative-section-is-a-placeholder"
+		},
+		{
+			"unit": "webmcp/declarative/executeTool-respondWith-reject.https.html",
+			"cause": "declarative-section-is-a-placeholder"
+		},
+		{
+			"unit": "webmcp/declarative/executeTool-respondWith.https.html",
+			"cause": "declarative-section-is-a-placeholder"
+		},
+		{
+			"unit": "webmcp/declarative/form_removal_submit_crash.https.html",
+			"cause": "declarative-section-is-a-placeholder"
+		},
+		{
+			"unit": "webmcp/declarative/getTools-declarative-schema.https.html",
+			"cause": "declarative-section-is-a-placeholder"
+		},
+		{
+			"unit": "webmcp/declarative/no-frame-documents.https.html",
+			"cause": "declarative-section-is-a-placeholder"
+		},
+		{
+			"unit": "webmcp/declarative/opaque-origin-tools.https.html",
+			"cause": "declarative-section-is-a-placeholder"
+		},
+		{
+			"unit": "webmcp/declarative/sandboxed-iframe.https.html",
+			"cause": "declarative-section-is-a-placeholder"
+		},
+		{
+			"unit": "webmcp/declarative/select-multiple-events.https.html",
+			"cause": "declarative-section-is-a-placeholder"
+		},
+		{
+			"unit": "webmcp/declarative/toolchange-on-attribute-mutation.https.html",
+			"cause": "declarative-section-is-a-placeholder"
+		},
+		{
+			"unit": "webmcp/declarative/toolchange-on-control-add-remove.https.html",
+			"cause": "declarative-section-is-a-placeholder"
+		},
+		{
+			"unit": "webmcp/declarative/toolchange-on-name-change.https.html",
+			"cause": "declarative-section-is-a-placeholder"
+		},
+		{
+			"unit": "webmcp/declarative/unregister-during-executeTool.https.html",
+			"cause": "declarative-section-is-a-placeholder"
+		},
+		{
+			"unit": "webmcp/imperative/non-secure.html",
+			"cause": "no-non-secure-origin-is-served"
+		}
+	],
+	"browsers": {
+		"chromium": {
+			"engine": "Playwright's bundled Chromium",
+			"version": "153.0.8010.12",
+			"expectedFailures": [
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "Document interface: attribute modelContext",
+					"kind": "known-gap",
+					"cause": "model-context-is-not-on-document-prototype"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "Document interface: attribute modelContext",
+					"kind": "known-gap",
+					"cause": "model-context-is-not-on-document-prototype"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface object length",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface object length",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface object name",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface object name",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface: attribute ontoolactivated",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface: attribute ontoolactivated",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface: attribute ontoolcancel",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface: attribute ontoolcancel",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface: attribute ontoolchange",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface: attribute ontoolchange",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface: existence and properties of interface object",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface: existence and properties of interface object",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface: existence and properties of interface prototype object",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface: existence and properties of interface prototype object",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface: existence and properties of interface prototype object's \"constructor\" property",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface: existence and properties of interface prototype object's \"constructor\" property",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface: existence and properties of interface prototype object's @@unscopables property",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface: existence and properties of interface prototype object's @@unscopables property",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface: operation executeTool(RegisteredTool, optional any, optional ModelContextExecuteToolOptions)",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface: operation executeTool(RegisteredTool, optional any, optional ModelContextExecuteToolOptions)",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface: operation getTools(optional ModelContextGetToolOptions)",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface: operation getTools(optional ModelContextGetToolOptions)",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface: operation registerTool(ModelContextTool, optional ModelContextRegisterToolOptions)",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface: operation registerTool(ModelContextTool, optional ModelContextRegisterToolOptions)",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolActivatedEvent interface object length",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolActivatedEvent interface object length",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolActivatedEvent interface object name",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolActivatedEvent interface object name",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolActivatedEvent interface: attribute toolName",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolActivatedEvent interface: attribute toolName",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolActivatedEvent interface: existence and properties of interface object",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolActivatedEvent interface: existence and properties of interface object",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolActivatedEvent interface: existence and properties of interface prototype object",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolActivatedEvent interface: existence and properties of interface prototype object",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolActivatedEvent interface: existence and properties of interface prototype object's \"constructor\" property",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolActivatedEvent interface: existence and properties of interface prototype object's \"constructor\" property",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolActivatedEvent interface: existence and properties of interface prototype object's @@unscopables property",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolActivatedEvent interface: existence and properties of interface prototype object's @@unscopables property",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolCancelEvent interface object length",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolCancelEvent interface object length",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolCancelEvent interface object name",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolCancelEvent interface object name",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolCancelEvent interface: attribute toolName",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolCancelEvent interface: attribute toolName",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolCancelEvent interface: existence and properties of interface object",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolCancelEvent interface: existence and properties of interface object",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolCancelEvent interface: existence and properties of interface prototype object",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolCancelEvent interface: existence and properties of interface prototype object",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolCancelEvent interface: existence and properties of interface prototype object's \"constructor\" property",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolCancelEvent interface: existence and properties of interface prototype object's \"constructor\" property",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolCancelEvent interface: existence and properties of interface prototype object's @@unscopables property",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolCancelEvent interface: existence and properties of interface prototype object's @@unscopables property",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/imperative/executeTool-abort.https.html",
+					"subtest": "caller abort propagates to tool callback options.signal",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/imperative/executeTool-abort.https.html",
+					"subtest": "concurrent executions of the same tool have independent AbortSignals",
+					"kind": "upstream-gap",
+					"cause": "results-are-json-encoded"
+				},
+				{
+					"unit": "webmcp/imperative/executeTool-abort.https.html",
+					"subtest": "executeTool() provides a non-aborted default AbortSignal when called without options",
+					"kind": "upstream-gap",
+					"cause": "results-are-json-encoded"
+				},
+				{
+					"unit": "webmcp/imperative/executeTool-caller-navigate-abort.https.html",
+					"subtest": "executeTool() aborts target signal when the invoker document (cross-origin) navigates away",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/imperative/executeTool-caller-navigate-abort.https.html",
+					"subtest": "executeTool() aborts target signal when the invoker document (same-origin) navigates away",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/imperative/executeTool-detach-toolactivated.https.html",
+					"subtest": "toolactivated is not dispatched when a tool execute callback detaches its own document",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/imperative/executeTool-detach-toolactivated.https.html",
+					"subtest": "toolactivated is not dispatched when a tool execute callback from another realm detaches the tool document",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/imperative/executeTool-detach-toolcancel.https.html",
+					"subtest": "toolcancel is not dispatched when a tool abort handler detaches its own document",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/imperative/executeTool-detach-toolcancel.https.html",
+					"subtest": "toolcancel is not dispatched when a tool abort handler from another realm detaches the tool document",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/imperative/executeTool-events.https.html",
+					"subtest": "toolactivated and toolcancel events are dispatched on document.modelContext during tool execution and cancellation",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/imperative/executeTool-events.https.html",
+					"subtest": "toolactivated is dispatched at the ModelContext of the tool target document",
+					"kind": "upstream-gap",
+					"cause": "suite-file-has-no-body-element"
+				},
+				{
+					"unit": "webmcp/imperative/executeTool-events.https.html",
+					"subtest": "toolcancel is dispatched at the ModelContext of the tool target document",
+					"kind": "upstream-gap",
+					"cause": "suite-file-has-no-body-element"
+				},
+				{
+					"unit": "webmcp/imperative/executeTool-invalid-dictionary.https.html",
+					"subtest": "executeTool() rejects with TypeError when the required 'origin' dictionary member is omitted",
+					"kind": "known-gap",
+					"cause": "registered-tool-members-are-not-conversion-checked"
+				},
+				{
+					"unit": "webmcp/imperative/executeTool-signal-cross-origin.https.html",
+					"subtest": "caller abort in cross-origin iframe propagates to options.signal in parent document tool",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/imperative/executeTool-signal-cross-origin.https.html",
+					"subtest": "caller abort in parent document propagates to options.signal in cross-origin iframe tool",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/imperative/executeTool-target-detachment.https.html",
+					"subtest": "executeTool() abort cleanly handles synchronous frame detachment inside options.signal abort listener",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/imperative/executeTool-target-detachment.https.html",
+					"subtest": "executeTool() rejects cleanly when tool callback synchronously detaches its own frame",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/imperative/executeTool-target-detachment.https.html",
+					"subtest": "executeTool() rejects when target frame is detached before execution",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/imperative/executeTool-target-detachment.https.html",
+					"subtest": "executeTool() rejects when target frame is detached mid-execution",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/imperative/executeTool-target-navigation.https.html",
+					"subtest": "executeTool() rejects when target document navigates away",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/imperative/exposedTo-cross-origin-child.https.html",
+					"kind": "known-gap",
+					"cause": "cross-origin-child-never-sees-a-tool"
+				},
+				{
+					"unit": "webmcp/imperative/exposedTo-defaults-same-origin.https.html",
+					"subtest": "Parent tool with empty `exposedTo` array is visible to same-origin iframe",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/imperative/exposedTo-defaults-same-origin.https.html",
+					"subtest": "Parent tool with missing `exposedTo` array is visible to same-origin iframe",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/imperative/exposedTo-defaults-same-origin.https.html",
+					"subtest": "Same-origin iframe tool with default exposure is visible to parent",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/imperative/exposedTo-defaults-same-origin.https.html",
+					"subtest": "Same-origin iframe tool with empty exposedTo array is visible to parent",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/imperative/exposedTo-invalid-origins.https.html",
+					"subtest": "Aborting a signal from a rejected registration must not unregister a later valid tool with the same name",
+					"kind": "upstream-gap",
+					"cause": "results-are-json-encoded"
+				},
+				{
+					"unit": "webmcp/imperative/exposedTo-multiple-children.https.html",
+					"subtest": "Multi-origin setup with mixed exposure lists",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/imperative/exposedTo-window-open.https.html",
+					"kind": "known-gap",
+					"cause": "cross-origin-child-never-sees-a-tool"
+				},
+				{
+					"unit": "webmcp/imperative/getTools-filtering.https.html",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/imperative/model_context.https.html",
+					"subtest": "document.modelContext instanceof ModelContext",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/imperative/object-arguments.https.html",
+					"subtest": "tool execution requires a JSON Object input argument; and Arrays are Objects",
+					"kind": "upstream-gap",
+					"cause": "results-are-json-encoded"
+				},
+				{
+					"unit": "webmcp/imperative/opaque-origin-tools.https.html",
+					"subtest": "An opaque origin document can register but not execute its own tools",
+					"kind": "known-gap",
+					"cause": "opaque-origin-is-not-refused"
+				},
+				{
+					"unit": "webmcp/imperative/opaque-origin-tools.https.html",
+					"subtest": "executeTool() rejects synchronously for origin \"null\" that fails to parse as a URL",
+					"kind": "known-gap",
+					"cause": "opaque-origin-is-not-refused"
+				},
+				{
+					"unit": "webmcp/imperative/permissions-policy.https.html",
+					"subtest": "executeTool() throws NotAllowedError in iframe when permissions policy is disabled",
+					"kind": "accepted-deviation",
+					"cause": "permissions-policy-signal-is-not-observable"
+				},
+				{
+					"unit": "webmcp/imperative/permissions-policy.https.html",
+					"subtest": "getTools() throws NotAllowedError in iframe when permissions policy is disabled",
+					"kind": "accepted-deviation",
+					"cause": "permissions-policy-signal-is-not-observable"
+				},
+				{
+					"unit": "webmcp/imperative/permissions-policy.https.html",
+					"subtest": "registerTool() rejects in iframe, after navigation to an origin not covered by permissions policy",
+					"kind": "accepted-deviation",
+					"cause": "permissions-policy-signal-is-not-observable"
+				},
+				{
+					"unit": "webmcp/imperative/register_tool_signal.https.html",
+					"subtest": "register tool promise rejects with AbortError when signal gets aborted",
+					"kind": "known-gap",
+					"cause": "registration-abort-before-settle-is-not-observed"
+				},
+				{
+					"unit": "webmcp/imperative/register_tool_signal.https.html",
+					"subtest": "register tool promise rejects with error when signal gets aborted",
+					"kind": "known-gap",
+					"cause": "registration-abort-before-settle-is-not-observed"
+				},
+				{
+					"unit": "webmcp/imperative/register_tool_toolchange.https.html",
+					"subtest": "registerTool triggers toolchange before promise resolves",
+					"kind": "known-gap",
+					"cause": "toolchange-is-observed-after-the-register-promise"
+				},
+				{
+					"unit": "webmcp/imperative/register_tool_with_schema.https.html",
+					"subtest": "register and unregister script tool",
+					"kind": "known-gap",
+					"cause": "schema-serialisation-rejects-what-the-draft-allows"
+				},
+				{
+					"unit": "webmcp/imperative/register_tool_with_schema.https.html",
+					"subtest": "registerTool succeeds when inputSchema.toJSON() returns 'undefined'",
+					"kind": "known-gap",
+					"cause": "schema-serialisation-rejects-what-the-draft-allows"
+				},
+				{
+					"unit": "webmcp/imperative/unregister-during-executeTool.https.html",
+					"subtest": "Pending executeTool() Promise resolves successfully when target same-document tool is unregistered mid-execution",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/imperative/unregister-during-executeTool.https.html",
+					"subtest": "Pending executeTool() Promise resolves successfully when the target cross-origin tool is unregistered mid-execution",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/tool-activated-event.https.html",
+					"subtest": "ontoolactivated is invoked for synthetic toolactivated events dispatched at ModelContext",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/tool-activated-event.https.html",
+					"subtest": "ontoolactivated is invoked when a tool is activated",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/tool-activated-event.https.html",
+					"subtest": "ToolActivatedEvent constructor with an event init dictionary",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/tool-activated-event.https.html",
+					"subtest": "ToolActivatedEvent constructor with default event init dictionary",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/tool-cancel-event.https.html",
+					"subtest": "ontoolcancel is invoked for synthetic toolcancel events dispatched at ModelContext",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/tool-cancel-event.https.html",
+					"subtest": "ontoolcancel is invoked when a tool invocation is canceled",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/tool-cancel-event.https.html",
+					"subtest": "ToolCancelEvent constructor with an event init dictionary",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/tool-cancel-event.https.html",
+					"subtest": "ToolCancelEvent constructor with default event init dictionary",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				}
+			]
+		},
+		"firefox": {
+			"engine": "Playwright's bundled Firefox",
+			"version": "155.0",
+			"expectedFailures": [
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "Document interface: attribute modelContext",
+					"kind": "known-gap",
+					"cause": "model-context-is-not-on-document-prototype"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "Document interface: attribute modelContext",
+					"kind": "known-gap",
+					"cause": "model-context-is-not-on-document-prototype"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface object length",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface object length",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface object name",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface object name",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface: attribute ontoolactivated",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface: attribute ontoolactivated",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface: attribute ontoolcancel",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface: attribute ontoolcancel",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface: attribute ontoolchange",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface: attribute ontoolchange",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface: existence and properties of interface object",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface: existence and properties of interface object",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface: existence and properties of interface prototype object",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface: existence and properties of interface prototype object",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface: existence and properties of interface prototype object's \"constructor\" property",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface: existence and properties of interface prototype object's \"constructor\" property",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface: existence and properties of interface prototype object's @@unscopables property",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface: existence and properties of interface prototype object's @@unscopables property",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface: operation executeTool(RegisteredTool, optional any, optional ModelContextExecuteToolOptions)",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface: operation executeTool(RegisteredTool, optional any, optional ModelContextExecuteToolOptions)",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface: operation getTools(optional ModelContextGetToolOptions)",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface: operation getTools(optional ModelContextGetToolOptions)",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface: operation registerTool(ModelContextTool, optional ModelContextRegisterToolOptions)",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface: operation registerTool(ModelContextTool, optional ModelContextRegisterToolOptions)",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolActivatedEvent interface object length",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolActivatedEvent interface object length",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolActivatedEvent interface object name",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolActivatedEvent interface object name",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolActivatedEvent interface: attribute toolName",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolActivatedEvent interface: attribute toolName",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolActivatedEvent interface: existence and properties of interface object",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolActivatedEvent interface: existence and properties of interface object",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolActivatedEvent interface: existence and properties of interface prototype object",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolActivatedEvent interface: existence and properties of interface prototype object",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolActivatedEvent interface: existence and properties of interface prototype object's \"constructor\" property",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolActivatedEvent interface: existence and properties of interface prototype object's \"constructor\" property",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolActivatedEvent interface: existence and properties of interface prototype object's @@unscopables property",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolActivatedEvent interface: existence and properties of interface prototype object's @@unscopables property",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolCancelEvent interface object length",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolCancelEvent interface object length",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolCancelEvent interface object name",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolCancelEvent interface object name",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolCancelEvent interface: attribute toolName",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolCancelEvent interface: attribute toolName",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolCancelEvent interface: existence and properties of interface object",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolCancelEvent interface: existence and properties of interface object",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolCancelEvent interface: existence and properties of interface prototype object",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolCancelEvent interface: existence and properties of interface prototype object",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolCancelEvent interface: existence and properties of interface prototype object's \"constructor\" property",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolCancelEvent interface: existence and properties of interface prototype object's \"constructor\" property",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolCancelEvent interface: existence and properties of interface prototype object's @@unscopables property",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolCancelEvent interface: existence and properties of interface prototype object's @@unscopables property",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/imperative/executeTool-abort.https.html",
+					"subtest": "caller abort propagates to tool callback options.signal",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/imperative/executeTool-abort.https.html",
+					"subtest": "concurrent executions of the same tool have independent AbortSignals",
+					"kind": "upstream-gap",
+					"cause": "results-are-json-encoded"
+				},
+				{
+					"unit": "webmcp/imperative/executeTool-abort.https.html",
+					"subtest": "executeTool() provides a non-aborted default AbortSignal when called without options",
+					"kind": "upstream-gap",
+					"cause": "results-are-json-encoded"
+				},
+				{
+					"unit": "webmcp/imperative/executeTool-caller-navigate-abort.https.html",
+					"subtest": "executeTool() aborts target signal when the invoker document (cross-origin) navigates away",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/imperative/executeTool-caller-navigate-abort.https.html",
+					"subtest": "executeTool() aborts target signal when the invoker document (same-origin) navigates away",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/imperative/executeTool-detach-toolactivated.https.html",
+					"subtest": "toolactivated is not dispatched when a tool execute callback detaches its own document",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/imperative/executeTool-detach-toolactivated.https.html",
+					"subtest": "toolactivated is not dispatched when a tool execute callback from another realm detaches the tool document",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/imperative/executeTool-detach-toolcancel.https.html",
+					"subtest": "toolcancel is not dispatched when a tool abort handler detaches its own document",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/imperative/executeTool-detach-toolcancel.https.html",
+					"subtest": "toolcancel is not dispatched when a tool abort handler from another realm detaches the tool document",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/imperative/executeTool-events.https.html",
+					"subtest": "toolactivated and toolcancel events are dispatched on document.modelContext during tool execution and cancellation",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/imperative/executeTool-events.https.html",
+					"subtest": "toolactivated is dispatched at the ModelContext of the tool target document",
+					"kind": "upstream-gap",
+					"cause": "suite-file-has-no-body-element"
+				},
+				{
+					"unit": "webmcp/imperative/executeTool-events.https.html",
+					"subtest": "toolcancel is dispatched at the ModelContext of the tool target document",
+					"kind": "upstream-gap",
+					"cause": "suite-file-has-no-body-element"
+				},
+				{
+					"unit": "webmcp/imperative/executeTool-invalid-dictionary.https.html",
+					"subtest": "executeTool() rejects with TypeError when the required 'origin' dictionary member is omitted",
+					"kind": "known-gap",
+					"cause": "registered-tool-members-are-not-conversion-checked"
+				},
+				{
+					"unit": "webmcp/imperative/executeTool-signal-cross-origin.https.html",
+					"subtest": "caller abort in cross-origin iframe propagates to options.signal in parent document tool",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/imperative/executeTool-signal-cross-origin.https.html",
+					"subtest": "caller abort in parent document propagates to options.signal in cross-origin iframe tool",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/imperative/executeTool-target-detachment.https.html",
+					"subtest": "executeTool() abort cleanly handles synchronous frame detachment inside options.signal abort listener",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/imperative/executeTool-target-detachment.https.html",
+					"subtest": "executeTool() rejects cleanly when tool callback synchronously detaches its own frame",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/imperative/executeTool-target-detachment.https.html",
+					"subtest": "executeTool() rejects when target frame is detached before execution",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/imperative/executeTool-target-detachment.https.html",
+					"subtest": "executeTool() rejects when target frame is detached mid-execution",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/imperative/executeTool-target-navigation.https.html",
+					"subtest": "executeTool() rejects when target document navigates away",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/imperative/exposedTo-cross-origin-child.https.html",
+					"kind": "known-gap",
+					"cause": "cross-origin-child-never-sees-a-tool"
+				},
+				{
+					"unit": "webmcp/imperative/exposedTo-defaults-same-origin.https.html",
+					"subtest": "Parent tool with empty `exposedTo` array is visible to same-origin iframe",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/imperative/exposedTo-defaults-same-origin.https.html",
+					"subtest": "Parent tool with missing `exposedTo` array is visible to same-origin iframe",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/imperative/exposedTo-defaults-same-origin.https.html",
+					"subtest": "Same-origin iframe tool with default exposure is visible to parent",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/imperative/exposedTo-defaults-same-origin.https.html",
+					"subtest": "Same-origin iframe tool with empty exposedTo array is visible to parent",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/imperative/exposedTo-invalid-origins.https.html",
+					"subtest": "Aborting a signal from a rejected registration must not unregister a later valid tool with the same name",
+					"kind": "upstream-gap",
+					"cause": "results-are-json-encoded"
+				},
+				{
+					"unit": "webmcp/imperative/exposedTo-multiple-children.https.html",
+					"subtest": "Multi-origin setup with mixed exposure lists",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/imperative/exposedTo-window-open.https.html",
+					"kind": "known-gap",
+					"cause": "cross-origin-child-never-sees-a-tool"
+				},
+				{
+					"unit": "webmcp/imperative/getTools-filtering.https.html",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/imperative/model_context.https.html",
+					"subtest": "document.modelContext instanceof ModelContext",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/imperative/object-arguments.https.html",
+					"subtest": "tool execution requires a JSON Object input argument; and Arrays are Objects",
+					"kind": "upstream-gap",
+					"cause": "results-are-json-encoded"
+				},
+				{
+					"unit": "webmcp/imperative/opaque-origin-tools.https.html",
+					"subtest": "An opaque origin document can register but not execute its own tools",
+					"kind": "known-gap",
+					"cause": "opaque-origin-is-not-refused"
+				},
+				{
+					"unit": "webmcp/imperative/opaque-origin-tools.https.html",
+					"subtest": "executeTool() rejects synchronously for origin \"null\" that fails to parse as a URL",
+					"kind": "known-gap",
+					"cause": "opaque-origin-is-not-refused"
+				},
+				{
+					"unit": "webmcp/imperative/permissions-policy.https.html",
+					"subtest": "executeTool() throws NotAllowedError in iframe when permissions policy is disabled",
+					"kind": "accepted-deviation",
+					"cause": "permissions-policy-signal-is-not-observable"
+				},
+				{
+					"unit": "webmcp/imperative/permissions-policy.https.html",
+					"subtest": "getTools() throws NotAllowedError in iframe when permissions policy is disabled",
+					"kind": "accepted-deviation",
+					"cause": "permissions-policy-signal-is-not-observable"
+				},
+				{
+					"unit": "webmcp/imperative/permissions-policy.https.html",
+					"subtest": "registerTool() rejects in iframe, after navigation to an origin not covered by permissions policy",
+					"kind": "accepted-deviation",
+					"cause": "permissions-policy-signal-is-not-observable"
+				},
+				{
+					"unit": "webmcp/imperative/register_tool_signal.https.html",
+					"subtest": "register tool promise rejects with AbortError when signal gets aborted",
+					"kind": "known-gap",
+					"cause": "registration-abort-before-settle-is-not-observed"
+				},
+				{
+					"unit": "webmcp/imperative/register_tool_signal.https.html",
+					"subtest": "register tool promise rejects with error when signal gets aborted",
+					"kind": "known-gap",
+					"cause": "registration-abort-before-settle-is-not-observed"
+				},
+				{
+					"unit": "webmcp/imperative/register_tool_toolchange.https.html",
+					"subtest": "registerTool triggers toolchange before promise resolves",
+					"kind": "known-gap",
+					"cause": "toolchange-is-observed-after-the-register-promise"
+				},
+				{
+					"unit": "webmcp/imperative/register_tool_with_schema.https.html",
+					"subtest": "register and unregister script tool",
+					"kind": "known-gap",
+					"cause": "schema-serialisation-rejects-what-the-draft-allows"
+				},
+				{
+					"unit": "webmcp/imperative/register_tool_with_schema.https.html",
+					"subtest": "registerTool succeeds when inputSchema.toJSON() returns 'undefined'",
+					"kind": "known-gap",
+					"cause": "schema-serialisation-rejects-what-the-draft-allows"
+				},
+				{
+					"unit": "webmcp/imperative/unregister-during-executeTool.https.html",
+					"subtest": "Pending executeTool() Promise resolves successfully when target same-document tool is unregistered mid-execution",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/imperative/unregister-during-executeTool.https.html",
+					"subtest": "Pending executeTool() Promise resolves successfully when the target cross-origin tool is unregistered mid-execution",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/tool-activated-event.https.html",
+					"subtest": "ontoolactivated is invoked for synthetic toolactivated events dispatched at ModelContext",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/tool-activated-event.https.html",
+					"subtest": "ontoolactivated is invoked when a tool is activated",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/tool-activated-event.https.html",
+					"subtest": "ToolActivatedEvent constructor with an event init dictionary",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/tool-activated-event.https.html",
+					"subtest": "ToolActivatedEvent constructor with default event init dictionary",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/tool-cancel-event.https.html",
+					"subtest": "ontoolcancel is invoked for synthetic toolcancel events dispatched at ModelContext",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/tool-cancel-event.https.html",
+					"subtest": "ontoolcancel is invoked when a tool invocation is canceled",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/tool-cancel-event.https.html",
+					"subtest": "ToolCancelEvent constructor with an event init dictionary",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/tool-cancel-event.https.html",
+					"subtest": "ToolCancelEvent constructor with default event init dictionary",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				}
+			]
+		},
+		"webkit": {
+			"engine": "Playwright's bundled WebKit",
+			"version": "26.6",
+			"expectedFailures": [
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "Document interface: attribute modelContext",
+					"kind": "known-gap",
+					"cause": "model-context-is-not-on-document-prototype"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "Document interface: attribute modelContext",
+					"kind": "known-gap",
+					"cause": "model-context-is-not-on-document-prototype"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface object length",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface object length",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface object name",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface object name",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface: attribute ontoolactivated",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface: attribute ontoolactivated",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface: attribute ontoolcancel",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface: attribute ontoolcancel",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface: attribute ontoolchange",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface: attribute ontoolchange",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface: existence and properties of interface object",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface: existence and properties of interface object",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface: existence and properties of interface prototype object",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface: existence and properties of interface prototype object",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface: existence and properties of interface prototype object's \"constructor\" property",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface: existence and properties of interface prototype object's \"constructor\" property",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface: existence and properties of interface prototype object's @@unscopables property",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface: existence and properties of interface prototype object's @@unscopables property",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface: operation executeTool(RegisteredTool, optional any, optional ModelContextExecuteToolOptions)",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface: operation executeTool(RegisteredTool, optional any, optional ModelContextExecuteToolOptions)",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface: operation getTools(optional ModelContextGetToolOptions)",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface: operation getTools(optional ModelContextGetToolOptions)",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface: operation registerTool(ModelContextTool, optional ModelContextRegisterToolOptions)",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ModelContext interface: operation registerTool(ModelContextTool, optional ModelContextRegisterToolOptions)",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolActivatedEvent interface object length",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolActivatedEvent interface object length",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolActivatedEvent interface object name",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolActivatedEvent interface object name",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolActivatedEvent interface: attribute toolName",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolActivatedEvent interface: attribute toolName",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolActivatedEvent interface: existence and properties of interface object",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolActivatedEvent interface: existence and properties of interface object",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolActivatedEvent interface: existence and properties of interface prototype object",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolActivatedEvent interface: existence and properties of interface prototype object",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolActivatedEvent interface: existence and properties of interface prototype object's \"constructor\" property",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolActivatedEvent interface: existence and properties of interface prototype object's \"constructor\" property",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolActivatedEvent interface: existence and properties of interface prototype object's @@unscopables property",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolActivatedEvent interface: existence and properties of interface prototype object's @@unscopables property",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolCancelEvent interface object length",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolCancelEvent interface object length",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolCancelEvent interface object name",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolCancelEvent interface object name",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolCancelEvent interface: attribute toolName",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolCancelEvent interface: attribute toolName",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolCancelEvent interface: existence and properties of interface object",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolCancelEvent interface: existence and properties of interface object",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolCancelEvent interface: existence and properties of interface prototype object",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolCancelEvent interface: existence and properties of interface prototype object",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolCancelEvent interface: existence and properties of interface prototype object's \"constructor\" property",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolCancelEvent interface: existence and properties of interface prototype object's \"constructor\" property",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolCancelEvent interface: existence and properties of interface prototype object's @@unscopables property",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/idlharness.https.window.js",
+					"subtest": "ToolCancelEvent interface: existence and properties of interface prototype object's @@unscopables property",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/imperative/executeTool-abort.https.html",
+					"subtest": "caller abort propagates to tool callback options.signal",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/imperative/executeTool-abort.https.html",
+					"subtest": "concurrent executions of the same tool have independent AbortSignals",
+					"kind": "upstream-gap",
+					"cause": "results-are-json-encoded"
+				},
+				{
+					"unit": "webmcp/imperative/executeTool-abort.https.html",
+					"subtest": "executeTool() provides a non-aborted default AbortSignal when called without options",
+					"kind": "upstream-gap",
+					"cause": "results-are-json-encoded"
+				},
+				{
+					"unit": "webmcp/imperative/executeTool-caller-navigate-abort.https.html",
+					"subtest": "executeTool() aborts target signal when the invoker document (cross-origin) navigates away",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/imperative/executeTool-caller-navigate-abort.https.html",
+					"subtest": "executeTool() aborts target signal when the invoker document (same-origin) navigates away",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/imperative/executeTool-detach-toolactivated.https.html",
+					"subtest": "toolactivated is not dispatched when a tool execute callback detaches its own document",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/imperative/executeTool-detach-toolactivated.https.html",
+					"subtest": "toolactivated is not dispatched when a tool execute callback from another realm detaches the tool document",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/imperative/executeTool-detach-toolcancel.https.html",
+					"subtest": "toolcancel is not dispatched when a tool abort handler detaches its own document",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/imperative/executeTool-detach-toolcancel.https.html",
+					"subtest": "toolcancel is not dispatched when a tool abort handler from another realm detaches the tool document",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/imperative/executeTool-events.https.html",
+					"subtest": "toolactivated and toolcancel events are dispatched on document.modelContext during tool execution and cancellation",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/imperative/executeTool-events.https.html",
+					"subtest": "toolactivated is dispatched at the ModelContext of the tool target document",
+					"kind": "upstream-gap",
+					"cause": "suite-file-has-no-body-element"
+				},
+				{
+					"unit": "webmcp/imperative/executeTool-events.https.html",
+					"subtest": "toolcancel is dispatched at the ModelContext of the tool target document",
+					"kind": "upstream-gap",
+					"cause": "suite-file-has-no-body-element"
+				},
+				{
+					"unit": "webmcp/imperative/executeTool-invalid-dictionary.https.html",
+					"subtest": "executeTool() rejects with TypeError when the required 'origin' dictionary member is omitted",
+					"kind": "known-gap",
+					"cause": "registered-tool-members-are-not-conversion-checked"
+				},
+				{
+					"unit": "webmcp/imperative/executeTool-signal-cross-origin.https.html",
+					"subtest": "caller abort in cross-origin iframe propagates to options.signal in parent document tool",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/imperative/executeTool-signal-cross-origin.https.html",
+					"subtest": "caller abort in parent document propagates to options.signal in cross-origin iframe tool",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/imperative/executeTool-target-detachment.https.html",
+					"subtest": "executeTool() abort cleanly handles synchronous frame detachment inside options.signal abort listener",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/imperative/executeTool-target-detachment.https.html",
+					"subtest": "executeTool() rejects cleanly when tool callback synchronously detaches its own frame",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/imperative/executeTool-target-detachment.https.html",
+					"subtest": "executeTool() rejects when target frame is detached before execution",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/imperative/executeTool-target-detachment.https.html",
+					"subtest": "executeTool() rejects when target frame is detached mid-execution",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/imperative/executeTool-target-navigation.https.html",
+					"subtest": "executeTool() rejects when target document navigates away",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/imperative/exposedTo-cross-origin-child.https.html",
+					"kind": "known-gap",
+					"cause": "cross-origin-child-never-sees-a-tool"
+				},
+				{
+					"unit": "webmcp/imperative/exposedTo-defaults-same-origin.https.html",
+					"subtest": "Parent tool with empty `exposedTo` array is visible to same-origin iframe",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/imperative/exposedTo-defaults-same-origin.https.html",
+					"subtest": "Parent tool with missing `exposedTo` array is visible to same-origin iframe",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/imperative/exposedTo-defaults-same-origin.https.html",
+					"subtest": "Same-origin iframe tool with default exposure is visible to parent",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/imperative/exposedTo-defaults-same-origin.https.html",
+					"subtest": "Same-origin iframe tool with empty exposedTo array is visible to parent",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/imperative/exposedTo-invalid-origins.https.html",
+					"subtest": "Aborting a signal from a rejected registration must not unregister a later valid tool with the same name",
+					"kind": "upstream-gap",
+					"cause": "results-are-json-encoded"
+				},
+				{
+					"unit": "webmcp/imperative/exposedTo-multiple-children.https.html",
+					"subtest": "Multi-origin setup with mixed exposure lists",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/imperative/exposedTo-window-open.https.html",
+					"kind": "known-gap",
+					"cause": "cross-origin-child-never-sees-a-tool"
+				},
+				{
+					"unit": "webmcp/imperative/getTools-filtering.https.html",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/imperative/model_context.https.html",
+					"subtest": "document.modelContext instanceof ModelContext",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/imperative/object-arguments.https.html",
+					"subtest": "tool execution requires a JSON Object input argument; and Arrays are Objects",
+					"kind": "upstream-gap",
+					"cause": "results-are-json-encoded"
+				},
+				{
+					"unit": "webmcp/imperative/opaque-origin-tools.https.html",
+					"subtest": "An opaque origin document can register but not execute its own tools",
+					"kind": "known-gap",
+					"cause": "opaque-origin-is-not-refused"
+				},
+				{
+					"unit": "webmcp/imperative/opaque-origin-tools.https.html",
+					"subtest": "executeTool() rejects synchronously for origin \"null\" that fails to parse as a URL",
+					"kind": "known-gap",
+					"cause": "opaque-origin-is-not-refused"
+				},
+				{
+					"unit": "webmcp/imperative/permissions-policy.https.html",
+					"subtest": "executeTool() throws NotAllowedError in iframe when permissions policy is disabled",
+					"kind": "accepted-deviation",
+					"cause": "permissions-policy-signal-is-not-observable"
+				},
+				{
+					"unit": "webmcp/imperative/permissions-policy.https.html",
+					"subtest": "getTools() throws NotAllowedError in iframe when permissions policy is disabled",
+					"kind": "accepted-deviation",
+					"cause": "permissions-policy-signal-is-not-observable"
+				},
+				{
+					"unit": "webmcp/imperative/permissions-policy.https.html",
+					"subtest": "registerTool() rejects in iframe, after navigation to an origin not covered by permissions policy",
+					"kind": "accepted-deviation",
+					"cause": "permissions-policy-signal-is-not-observable"
+				},
+				{
+					"unit": "webmcp/imperative/register_tool_signal.https.html",
+					"subtest": "register tool promise rejects with AbortError when signal gets aborted",
+					"kind": "known-gap",
+					"cause": "registration-abort-before-settle-is-not-observed"
+				},
+				{
+					"unit": "webmcp/imperative/register_tool_signal.https.html",
+					"subtest": "register tool promise rejects with error when signal gets aborted",
+					"kind": "known-gap",
+					"cause": "registration-abort-before-settle-is-not-observed"
+				},
+				{
+					"unit": "webmcp/imperative/register_tool_toolchange.https.html",
+					"subtest": "registerTool triggers toolchange before promise resolves",
+					"kind": "known-gap",
+					"cause": "toolchange-is-observed-after-the-register-promise"
+				},
+				{
+					"unit": "webmcp/imperative/register_tool_with_schema.https.html",
+					"subtest": "register and unregister script tool",
+					"kind": "known-gap",
+					"cause": "schema-serialisation-rejects-what-the-draft-allows"
+				},
+				{
+					"unit": "webmcp/imperative/register_tool_with_schema.https.html",
+					"subtest": "registerTool succeeds when inputSchema.toJSON() returns 'undefined'",
+					"kind": "known-gap",
+					"cause": "schema-serialisation-rejects-what-the-draft-allows"
+				},
+				{
+					"unit": "webmcp/imperative/unregister-during-executeTool.https.html",
+					"subtest": "Pending executeTool() Promise resolves successfully when target same-document tool is unregistered mid-execution",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/imperative/unregister-during-executeTool.https.html",
+					"subtest": "Pending executeTool() Promise resolves successfully when the target cross-origin tool is unregistered mid-execution",
+					"kind": "known-gap",
+					"cause": "tools-are-not-shared-across-documents"
+				},
+				{
+					"unit": "webmcp/tool-activated-event.https.html",
+					"subtest": "ontoolactivated is invoked for synthetic toolactivated events dispatched at ModelContext",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/tool-activated-event.https.html",
+					"subtest": "ontoolactivated is invoked when a tool is activated",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/tool-activated-event.https.html",
+					"subtest": "ToolActivatedEvent constructor with an event init dictionary",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/tool-activated-event.https.html",
+					"subtest": "ToolActivatedEvent constructor with default event init dictionary",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/tool-cancel-event.https.html",
+					"subtest": "ontoolcancel is invoked for synthetic toolcancel events dispatched at ModelContext",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/tool-cancel-event.https.html",
+					"subtest": "ontoolcancel is invoked when a tool invocation is canceled",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/tool-cancel-event.https.html",
+					"subtest": "ToolCancelEvent constructor with an event init dictionary",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				},
+				{
+					"unit": "webmcp/tool-cancel-event.https.html",
+					"subtest": "ToolCancelEvent constructor with default event init dictionary",
+					"kind": "known-gap",
+					"cause": "interface-objects-not-exposed"
+				}
+			]
+		}
+	}
+}

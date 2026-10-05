@@ -13,6 +13,7 @@
 		"typecheck": "turbo run typecheck",
 		"lint": "biome check .",
 		"test": "turbo run test",
+		"test:conformance": "turbo run test:conformance",
 		"size": "turbo run size",
 		"publint": "turbo run publint",
 		"attw": "turbo run attw",

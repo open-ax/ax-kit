@@ -40,7 +40,8 @@
 	"scripts": {
 		"build": "tsdown",
 		"typecheck": "tsc --noEmit -p tsconfig.json",
-		"test": "playwright test",
+		"test": "playwright test --project=chromium",
+		"test:conformance": "playwright test --project=conformance-chromium --project=conformance-firefox --project=conformance-webkit",
 		"size": "echo \"no size gate for runner adapter\"",
 		"publint": "publint --strict",
 		"attw": "attw --pack . --profile node16"
