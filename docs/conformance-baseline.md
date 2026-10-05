@@ -17,8 +17,12 @@ Pinned draft: WebMCP Draft Community Group Report, 2 October 2026
   isolation. Run with `pnpm test`; the `chromium` project needs a Playwright
   Chromium install (`pnpm exec playwright install chromium`).
 - Official layer (WPT `/webmcp`): the specification's own suite, run against the
-  built bundle. The signal is the diff against the expected-failure list, not
-  the raw count. See [Official layer](#official-layer-wpt-webmcp) below.
+  built bundle on every engine this project claims results for. Scored as zero
+  *unexpected* failures against a per-browser expected-failure list. Run with
+  `pnpm test:conformance`; see [Official layer](#official-layer-wpt-webmcp)
+  below. This is separate from `pnpm test` because it takes minutes rather than
+  seconds and needs all three engines installed
+  (`pnpm exec playwright install chromium firefox webkit`).
 
 ## Decided behaviors
 
@@ -80,56 +84,160 @@ with their own test systems".
 ### Reading a run
 
 `harness status` is the harness's own completion code and reads **0 even when
-every subtest fails**. It is not a pass aggregate. The verdict is per subtest.
+every subtest fails**. It is not a pass aggregate. The verdict is per subtest,
+and a file is reported failing when any subtest it reported is not `PASS`.
 
-### Known divergences
+The bundle is injected into every document the runner serves, ahead of the
+document's own scripts, rather than through a browser-context init script alone.
+That is not a preference. A context init script reaches subframes inconsistently
+across engines — measured, Firefox intermittently left a same-origin child
+document without the surface — and a suite whose results depend on which
+mechanism won the race is not a suite. The response injection is also what makes
+a `window.open` document and a cross-origin frame document instrumented at all.
 
-`imperative/object-arguments.https.html` asserts that a tool returning the
-JavaScript string `"Success"` makes `executeTool` resolve to `"Success"`. The
-draft says otherwise: the IDL is `Promise<DOMString>`, and the algorithm
-resolves with *"the result of serializing a JavaScript value to a JSON
-string"*, which for that value is `"\"Success\""`. **This implementation follows
-the draft; the upstream assertion does not.** It belongs upstream as an issue,
-not here as a code change. Pinned by a test so it cannot be forgotten.
+Two files are substituted, and both are files upstream designates for the job:
+`resources/testharnessreport.js`, described in its own header as "intended for
+vendors to implement code needed to integrate testharness.js tests with their own
+test systems", and `common/get-host-info.sub.js`, a template the WPT server fills
+in with the ports and hostnames of whichever machine runs the suite. The three
+origins it names are all loopback, which the platform also treats as potentially
+trustworthy, so a secure context is what those names still describe. No test file
+is edited, wrapped or reordered.
 
-`imperative/getTools.https.html` fails with an **empty** failure message —
-observed, cause not yet established. Do not record it as an expected failure
-until someone has read why.
+### The measured result
 
-## Expected failures (seed)
+Every runnable file in the pinned revision, on every engine this project claims,
+against the built bundle:
 
-Seeded 2026-09-27 from the Edge 156 experimental/master run set. Run sets are
-volatile — Chrome runs presently return no results and file counts drift —
-so re-verify before quoting any figure.
+| Engine | Build | Units run | Files passing | Subtests passing | Expected failures |
+|---|---|---|---|---|---|
+| Chromium | 153.0.8010.12 | 48 | 22 | 64 | 105 |
+| Firefox | 155.0 | 48 | 22 | 64 | 105 |
+| WebKit | 26.6 | 48 | 22 | 64 | 105 |
 
-- `declarative/executeTool-abort` 0/1
-- `declarative/executeTool-pseudo-classes` 1/2
-- `imperative/executeTool-abort` 1/5
-- `imperative/executeTool-events` 0/2
-- `tool-activated-event` 0/4
-- `declarative/sandboxed-iframe` 0/1
-- `exposedTo-defaults-same-origin` 2/4
-- `getTools-imperative-annotations` 1/4
-- IDL harness 22/22 (Edge only); Firefox and Safari report no results.
+72 files are runnable at this revision. 24 are excluded with a written reason
+and 48 are run. The three lists are separate and each carries its own engine and
+version, because a browser that fails what another passes has a different
+expectation and one shared list would hide that. **They currently agree.** That
+is a measured fact about this revision and this implementation, not a shortcut:
+the accounting is per browser, so an engine that diverges produces a red run
+rather than a silently shared entry.
 
-A failure not on this list is unexpected and blocks. A listed failure that
-starts passing is evidence the draft or the reference browser moved: refresh
-the list, note the date, and say which source changed.
+The claim this repository makes is therefore narrow and is the only one
+available: **zero unexpected failures against the pinned revision, on each named
+engine.** It is not "the suite is green". It is not "fully conforming". The
+reference browser does not pass the whole suite either, and neither does this.
 
-### Not yet re-verified against the 2 October 2026 draft
+### Known gaps
 
-The list above was seeded on 2026-09-27 and has **not** been re-run against the
-2 October draft. The draft removed a precondition from `registerTool`,
-`getTools` and `executeTool`, so any official test that asserted a refusal under
-that precondition should now be expected to *pass*, and those entries need
-re-verifying before any conformance figure is quoted. Treat the list as carried
-over, not as re-confirmed.
+These are the draft describing something this implementation does not do. They
+are listed so that they cannot be mistaken for conformance, and each carries its
+reason in `packages/playwright/conformance/expected-failures.json`. Three of
+them account for most of the list.
+
+**The registry is per realm, so tools are not shared across documents.** The
+draft requires `getTools()` to resolve to "a list of registered tools from this
+document and its descendants that are exposed to this document". The registry is
+a `WeakMap` held inside the installed script, and each document that evaluates
+the bundle gets its own. A frame therefore registers a tool the parent never
+learns of. This is the largest single cause of failure in the list, and it is
+also why three files do not complete at all: they wait for a `toolchange` that
+the other document's registry cannot raise.
+
+**The interface objects the draft's IDL declares are absent.** The draft declares
+`interface ModelContext : EventTarget`, `interface ToolActivatedEvent` and
+`interface ToolCancelEvent`, so each is a global constructor. This project
+exposes the surface on `document.modelContext` and dispatches plain `Event`
+objects. The behaviour the event files assert is implemented; the named types
+the draft declares for it are not.
+
+**`modelContext` is an own property, not a prototype accessor.** The draft reads
+`partial interface Document { [SecureContext, SameObject] readonly attribute
+ModelContext modelContext; }`. An ordinary attribute is an accessor on
+`Document.prototype`. This project installs an own, non-writable,
+non-configurable data property on the document instance, which the
+interface-definition harness reports as a missing prototype member.
+
+One entry is an **upstream gap** rather than ours. `imperative/object-arguments`
+asserts that a tool returning the JavaScript string `"Success"` makes
+`executeTool` resolve to `"Success"`. The draft's algorithm says "Let
+serializedResult be the result of serializing a JavaScript value to a JSON
+string", and the IDL return type is `Promise<DOMString>`, so the correct value
+is `"\"Success\""`. This implementation encodes. **The upstream assertion
+contradicts the draft's text** and belongs in an issue against the proposal's
+test suite, not here as a change to the source. Three other files assert the
+same thing incidentally.
+
+The list's vocabulary also admits a `runner-limitation` kind, for a test the
+harness cannot express in this environment. **No entry currently uses it**: the
+three candidates for it when this was first measured — a `window.open` document,
+a frame's initial `about:blank`, and a same-origin subframe — became runnable
+once the bundle was injected through the response.
+
+### A caveat about a passing file
+
+`imperative/exposedTo-defaults-cross-origin` passes, and it is worth saying why
+that is weaker evidence than it looks. It asserts that a cross-origin frame sees
+**no** tools from its embedder. The registry gap above makes every frame see no
+tools from any other document, so the assertion is true for the wrong reason. A
+passing file is only evidence when a working implementation would also pass it,
+and this one would not distinguish the two.
+
+### Expected failures
+
+`packages/playwright/conformance/expected-failures.json`, one list per browser,
+each entry keyed on a unit and a subtest name and each carrying a kind and a
+reason. Reasons are held once in a `causes` table and referenced, because the
+interface-definition harness alone produces two dozen failures from a single
+cause and twenty-four copies of a paragraph would rot the first time one of them
+was edited. A reference that resolves to nothing is a typed failure, so an entry
+cannot lose its explanation quietly.
+
+Three kinds, because "the proposal contradicts itself" and "we do not do this
+yet" call for different responses and a list that cannot tell them apart is a
+list nobody can act on:
+
+| Kind | Meaning |
+|---|---|
+| `upstream-gap` | The draft has no text, or the upstream assertion contradicts the text that exists. The fix belongs in the proposal. |
+| `known-gap` | The draft describes it and this implementation does not do it. A real divergence, listed so it is visible. |
+| `accepted-deviation` | The implementation deliberately differs, or cannot differ, and the difference is recorded as a decision. |
+| `runner-limitation` | The harness cannot express the test here. Unused at present. |
+
+Three rules govern the list, and each is a check rather than a convention:
+
+- A failure with no entry is **unexpected** and fails the run.
+- A listed failure that **starts passing** is reported, not removed. The list has
+  gone stale and someone has to decide whether the entry or the implementation
+  moved.
+- The engine build is recorded and **asserted**. A different browser build can
+  produce different results, so the response to a Playwright upgrade is to
+  re-derive the list, not to accept a run it was never written for.
+
+Re-deriving means: run `pnpm test:conformance`, read the report, and decide each
+new failure. Nothing derives the list automatically, on purpose — a list written
+by the thing it is meant to check is not evidence.
+
+### Files not run
+
+23 declarative files and `imperative/non-secure.html`, each with a written reason
+in the list. The declarative reason is the draft's own: section 4.3 reads, in
+full, "This section is entirely a TODO." There is no normative text to implement
+against and nothing for a run to measure. The other is environmental: every
+origin the runner serves is a loopback address, which the platform classifies as
+potentially trustworthy, so a non-secure context is not reachable without a
+resolver override the runner does not implement.
+
+Excluded is not the same as passing, and neither is the same as expected to fail.
+An expected failure is a claim that a failure is understood. An exclusion is a
+claim that there is nothing to measure.
 
 ## Upgrade path
 
-When the draft re-dates, `SPEC_VERSION` moves with it in the same commit as
-any behavior change, the list above is re-verified, and the release note names
-the new draft. The scheduled drift job (`.github/workflows/spec-drift.yml`)
-opens an issue when the published document changes; the baseline hash lives in
-`.github/spec-drift.sha256`. If the draft looks wrong, that is an upstream
-issue, never a rename in the source.
+When the draft re-dates, `SPEC_VERSION` moves with it in the same commit as any
+behaviour change, `WPT_SHA` moves to the suite revision that carries the same
+change, the expected-failure lists are re-derived on every engine, and the
+release note names the new draft. The scheduled drift job
+(`.github/workflows/spec-drift.yml`) opens an issue when the published document
+changes; the baseline hash lives in `.github/spec-drift.sha256`. If the draft
+looks wrong, that is an upstream issue, never a rename in the source.
