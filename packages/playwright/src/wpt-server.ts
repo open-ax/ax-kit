@@ -226,14 +226,27 @@ export async function startSuiteServer(
 		response.end(served);
 	};
 
+	// `runSuite` awaits this before its `try/finally`, so a server left listening
+	// by a failed startup is never closed by that cleanup: the open handle keeps
+	// the worker's Node process alive and the run hangs instead of failing. Bind
+	// all three, then close whatever did come up before rethrowing.
 	const self = createServer(handler);
-	const selfPort = await listen(self, "127.0.0.1", 0);
-	// A different loopback address on the same port: a different site, because a
-	// site is computed from the scheme and the address without the port.
 	const other = createServer(handler);
-	await listen(other, "127.0.0.2", selfPort);
 	const remote = createServer(handler);
-	const remotePort = await listen(remote, "127.0.0.1", 0);
+	let selfPort: number;
+	let remotePort: number;
+	try {
+		selfPort = await listen(self, "127.0.0.1", 0);
+		// A different loopback address on the same port: a different site, because a
+		// site is computed from the scheme and the address without the port.
+		await listen(other, "127.0.0.2", selfPort);
+		remotePort = await listen(remote, "127.0.0.1", 0);
+	} catch (error) {
+		await Promise.all(
+			[self, other, remote].filter((server) => server.listening).map(close),
+		);
+		throw error;
+	}
 
 	const origins: SuiteOrigins = {
 		self: `http://127.0.0.1:${selfPort}`,
