@@ -162,11 +162,42 @@ Three things about it are load-bearing and are easy to get wrong:
   and on manual dispatch. A feature-branch push does not match the trigger, and
   the registry holds no trusted publisher for an unmerged branch.
 
+### The first publication, by a human
+
+Trusted publishing cannot bootstrap itself. A trusted publisher is configured in
+**that package's** settings on npmjs.com, so a package that has never been
+published has no settings page to configure one on — and the workflow cannot
+publish it either, because the workflow authenticates as a trusted publisher that
+does not exist yet. Something has to create the package on the registry first.
+
+For each of the nine packages:
+
+1. Run `pnpm release:version` and commit the bump, so the version to be published
+   is a real one and not `0.0.0`.
+2. Produce the tarball with `pnpm exec changeset pack --out-dir <dir>` and publish
+   it by hand with an access token that can write to `@ax-kit`, completing the
+   2FA challenge:
+
+   ```sh
+   npm publish --access public --otp <code> <dir>/packages/<name>-<version>.tgz
+   ```
+
+3. Revoke the token once the package is on the registry. From here on the
+   workflow publishes it, and a token that outlived its one use is a credential
+   this repository no longer needs.
+
+Do this once per package, not once per cohort: a package that exists and a
+package that does not are different states, and the guard in `release.yml` only
+speaks for the ones that exist.
+
 ### Registry setup, once, by a human
 
 This cannot be done from the repository; it needs an account with access to the
-`@ax-kit` scope. For **each** of the nine packages — `@ax-kit/cli`, `core`,
-`daemon`, `extension`, `playwright`, `react`, `svelte`, `vue`, `zod`:
+`@ax-kit` scope. Each package must already be on the registry — see
+[the first publication](#the-first-publication-by-a-human) above — so this
+section is about the packages that exist. For **each** of the nine packages —
+`@ax-kit/cli`, `core`, `daemon`, `extension`, `playwright`, `react`, `svelte`,
+`vue`, `zod`:
 
 1. Create a trusted publisher on the package, configured for **GitHub Actions**.
 2. Set the organization to `open-ax` and the repository to `ax-kit`.
