@@ -1,9 +1,6 @@
 // Copyright 2026 Utpal Sen
 // SPDX-License-Identifier: Apache-2.0
 
-import { mkdtempSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import type { Page } from "@playwright/test";
 import { expect, test } from "@playwright/test";
 import { resolveInitScriptPath } from "../src/paths.js";
@@ -11,6 +8,7 @@ import {
 	fetchSuiteFile,
 	HARNESS_PATH,
 	HARNESS_REPORT_PATH,
+	suiteCacheDir,
 	WPT_SHA,
 } from "../src/wpt.js";
 
@@ -48,7 +46,7 @@ interface HarnessReport {
 	readonly results: readonly SubtestResult[];
 }
 
-const cacheDir = mkdtempSync(join(tmpdir(), "ax-wpt-"));
+const cacheDir = suiteCacheDir();
 
 /** Serve one suite file at a virtual origin. No real network, no real server. */
 async function serveSuiteFile(
