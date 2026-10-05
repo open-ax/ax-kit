@@ -295,19 +295,28 @@ export function parseExpectedFailureList(value: unknown): ExpectedFailureList {
 		asRecord(root["browsers"], "browsers"),
 	)) {
 		const record = asRecord(entry, `browsers.${name}`);
+		const where = `browsers.${name}.expectedFailures`;
+		const expectedFailures = asArray(record["expectedFailures"], where).map(
+			(item, index) => parseExpectedFailure(item, `${where}[${index}]`, causes),
+		);
+		// One entry per failure. Coverage is keyed on `unit` and `subtest`, so a
+		// repeated key is silently dropped at scoring time and changes no verdict
+		// — it only inflates the count this list is read for. Nothing else would
+		// notice it arriving.
+		const seen = new Set<string>();
+		for (const listed of expectedFailures) {
+			const listedKey = key(listed.unit, listed.subtest);
+			if (seen.has(listedKey)) {
+				return fail(
+					`${where} lists ${listed.unit} and "${listed.subtest ?? "(the file as a whole)"}" twice`,
+				);
+			}
+			seen.add(listedKey);
+		}
 		browsers[name] = {
 			engine: asString(record["engine"], `browsers.${name}.engine`),
 			version: asString(record["version"], `browsers.${name}.version`),
-			expectedFailures: asArray(
-				record["expectedFailures"],
-				`browsers.${name}.expectedFailures`,
-			).map((item, index) =>
-				parseExpectedFailure(
-					item,
-					`browsers.${name}.expectedFailures[${index}]`,
-					causes,
-				),
-			),
+			expectedFailures,
 		};
 	}
 	return {
