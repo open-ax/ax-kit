@@ -206,6 +206,14 @@ it reads as coverage. Two checks were audited for this:
   run the same set first.
   `pnpm size` — the core size gate is a hard failure and must never be raised to
   make a build pass.
+- **It does not refuse to publish an unversioned cohort.** `changeset publish`
+  decides what to publish by asking the registry, not by reading pending
+  changesets, so it would publish every package whose version is not on npm at
+  whatever version the manifest carries — `0.0.0` today, for all nine. The
+  release workflow therefore runs the manifest check with `--require-versioned`,
+  which refuses in that state. `node .github/ci/check-manifests.mjs` without the
+  flag leaves it out on purpose, so the ordinary pull-request check stays green
+  while the cohort is unversioned.
 - **It does not pick the bump type.** A wrong bump type is a wrong public
   version number, and it cannot be withdrawn.
 - **It does not publish `@ax-kit/tsconfig`.** Check `publish-plan` if in doubt.

@@ -22,6 +22,16 @@ name: release
 # that, because the run genuinely did succeed at authenticating. Check the mode
 # is set to publish, not stage, before assuming a failure here is a bug.
 #
+# ---------------------------------------------------------------------------
+# THE COHORT HAS TO BE VERSIONED BEFORE ANYTHING PUBLISHES
+# ---------------------------------------------------------------------------
+# `changeset publish` decides what to publish by asking the registry, not by
+# reading pending changesets, so it publishes every publishable package whose
+# version is not already on npm — at whatever version the manifest carries. Until
+# `pnpm release:version` has been run and committed, that is `0.0.0` for all nine,
+# and a published version can never be reused. The Verify step therefore runs the
+# manifest check with `--require-versioned`, which refuses on that state.
+#
 # Provenance is produced by the publishing run itself, from the same identity
 # token, and is verifiable from the published artifact. It is not asserted
 # anywhere in this repository.
@@ -75,6 +85,14 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
+      # `pnpm test` runs the Chromium Playwright project, and the browser binary is
+      # a separate installation from the npm dependencies: a runner that has
+      # completed `pnpm install` has the test runner and not the browser. Without
+      # this the Verify step fails for a reason that has nothing to do with the
+      # tree, which is how a release ends blocked by a missing download.
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
       # The gates run here, before anything is published, and this is
       # deliberate. The `ci` workflow runs them on the pull request, but branch
       # protection is a setting someone can relax, and a release that publishes
@@ -89,7 +107,10 @@ jobs:
           pnpm size
           pnpm publint
           pnpm attw
-          node .github/ci/check-manifests.mjs
+          # `--require-versioned` is the release-path invariant and is off by
+          # default, so it is asked for here rather than by the pull-request
+          # check: it refuses to let a merge publish an unversioned cohort.
+          node .github/ci/check-manifests.mjs --require-versioned
 
       - name: Build
         run: pnpm build
