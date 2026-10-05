@@ -208,7 +208,7 @@ list nobody can act on:
 | `accepted-deviation` | The implementation deliberately differs, or cannot differ, and the difference is recorded as a decision. |
 | `runner-limitation` | The harness cannot express the test here. Unused at present. |
 
-Three rules govern the list, and each is a check rather than a convention:
+Five rules govern the list, and each is a check rather than a convention:
 
 - A failure with no entry is **unexpected** and fails the run.
 - A listed failure that **starts passing** is reported, not removed. The list has
@@ -217,6 +217,17 @@ Three rules govern the list, and each is a check rather than a convention:
 - The engine build is recorded and **asserted**. A different browser build can
   produce different results, so the response to a Playwright upgrade is to
   re-derive the list, not to accept a run it was never written for.
+- An entry with **no subtest** covers a failure of its unit *as a unit*, which is
+  what a file that never reported has. It does not cover a named subtest: if such
+  a file starts completing and reporting, it has a different expectation, and the
+  run says so rather than absorbing the new failure behind the old entry.
+- The same unit and subtest cannot be listed **twice** in one browser. Coverage is
+  keyed on that pair, so a repeat entry changes no verdict and only inflates the
+  count this list is read for.
+
+So the count above is the number of distinct entries, and it is also the number of
+subtests the run actually failed. A list that reported a larger number would be
+reporting duplicates.
 
 Re-deriving means: run `pnpm test:conformance`, read the report, and decide each
 new failure. Nothing derives the list automatically, on purpose — a list written
