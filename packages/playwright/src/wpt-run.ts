@@ -241,6 +241,14 @@ async function instrument(target: Page | BrowserContext): Promise<void> {
 	await target.addInitScript(OBSERVER);
 }
 
+/**
+ * Why a crash-kind file is recorded as surviving.
+ *
+ * `signal` is the event the runner did observe, so it is named as observed.
+ * Printing it as the event that did *not* arrive reports the opposite of what
+ * happened, and the settle reason is the only thing a reader of the report has
+ * to go on.
+ */
 function describeCrashObservation(
 	navigated: boolean,
 	signal: string | undefined,
@@ -250,7 +258,7 @@ function describeCrashObservation(
 	}
 	return signal === undefined
 		? "no frame navigation and no event"
-		: `no frame navigation, and an event other than ${signal}`;
+		: `no frame navigation, and a ${signal} event`;
 }
 
 function survivedNote(
