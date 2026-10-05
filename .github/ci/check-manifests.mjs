@@ -187,10 +187,26 @@ if (
 // manifests quietly pointing somewhere else.
 // ---------------------------------------------------------------------------
 
+// A remote reduced to `host/path`, so the forms a clone can legitimately take
+// compare equal.
+//
+// `origin` is whatever the developer cloned with, and the canonical SSH remote
+// is `git@github.com:open-ax/ax-kit.git` — not an HTTPS URL. Comparing that
+// string to `REPO_WEB_URL` directly reports a checkout of the right repository
+// as pointing somewhere else, and the finding names the wrong problem. Dropping
+// the scheme, the user and the port leaves the repository identity, which is
+// the thing that must match.
 function normaliseRemote(url) {
-	return url
-		.trim()
-		.replace(/\.git\/?$/, "")
+	const trimmed = url.trim().replace(/\.git\/?$/, "");
+	// `scp`-style SSH, `user@host:path`, which has no scheme to strip.
+	const scpLike = /^[^/]+@([^/:]+):(.+)$/.exec(trimmed);
+	if (scpLike !== null) {
+		return `${scpLike[1]}/${scpLike[2]}`.replace(/\/$/, "").toLowerCase();
+	}
+	return trimmed
+		.replace(/^[a-z][a-z0-9+.-]*:\/\//i, "")
+		.replace(/^[^/@]*@/, "")
+		.replace(/:\d+\//, "/")
 		.replace(/\/$/, "")
 		.toLowerCase();
 }
