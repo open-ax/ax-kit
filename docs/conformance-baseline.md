@@ -75,8 +75,12 @@ How to obtain it, so it is not rediscovered:
 To move the pin, find the WPT commit whose message names the same change as the
 new `SPEC_VERSION.commit`. Do not float the pin to a branch.
 
-Files are fetched at that immutable revision and cached on disk, so a repeat run
-is byte-identical. The suite file itself is served unmodified; integration goes
+Files are fetched at that immutable revision and cached on disk in one directory
+shared by every run and every engine, keyed by the pin, so a repeat run is
+byte-identical and needs no network. No test file is edited, wrapped or
+reordered. The one change made to a served document is a `<script>` tag inserted
+into each HTML document so that the bundle is installed before the document's own
+scripts; it is described under [Reading a run](#reading-a-run). Integration goes
 through `resources/testharnessreport.js`, which upstream documents as the file
 "intended for vendors to implement code needed to integrate testharness.js tests
 with their own test systems".
@@ -111,9 +115,9 @@ against the built bundle:
 
 | Engine | Build | Units run | Files passing | Subtests passing | Expected failures |
 |---|---|---|---|---|---|
-| Chromium | 153.0.8010.12 | 48 | 22 | 64 | 105 |
-| Firefox | 155.0 | 48 | 22 | 64 | 105 |
-| WebKit | 26.6 | 48 | 22 | 64 | 105 |
+| Chromium | 153.0.8010.12 | 48 | 22 | 64 | 78 |
+| Firefox | 155.0 | 48 | 22 | 64 | 78 |
+| WebKit | 26.6 | 48 | 22 | 64 | 78 |
 
 72 files are runnable at this revision. 24 are excluded with a written reason
 and 48 are run. The three lists are separate and each carries its own engine and
@@ -193,7 +197,7 @@ cause and twenty-four copies of a paragraph would rot the first time one of them
 was edited. A reference that resolves to nothing is a typed failure, so an entry
 cannot lose its explanation quietly.
 
-Three kinds, because "the proposal contradicts itself" and "we do not do this
+Four kinds, because "the proposal contradicts itself" and "we do not do this
 yet" call for different responses and a list that cannot tell them apart is a
 list nobody can act on:
 
