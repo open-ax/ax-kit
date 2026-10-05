@@ -9,8 +9,13 @@
 // not exist.
 //
 //   node .github/ci/check-manifests.mjs
+//   node .github/ci/check-manifests.mjs --require-versioned
 //
 // Exits 0 when every invariant holds, 1 with the findings listed otherwise.
+//
+// `--require-versioned` adds the one invariant that only the release path cares
+// about, so that the ordinary pull-request check stays green while the cohort is
+// still unversioned. See section 5.
 //
 // No dependencies. The runtime range is deliberately NOT range-checked here:
 // `.npmrc` sets `engine-strict=true`, so a Node that does not satisfy a declared
@@ -232,6 +237,37 @@ if (origin === null) {
 		"workspace",
 		`origin is ${JSON.stringify(origin)}, manifests declare ${JSON.stringify(REPO_WEB_URL)}`,
 	);
+}
+
+// ---------------------------------------------------------------------------
+// 5. Every publishable package declares a version a registry will accept once.
+//
+// Release path only, behind `--require-versioned`.
+//
+// `changeset publish` decides what to publish by asking the registry, not by
+// reading pending changesets: every publishable package whose version is not
+// already published is published at whatever version the manifest carries. Two
+// pending changesets cover two packages and say nothing about the other seven, so
+// with the cohort at `0.0.0` a merge to `main` claims `0.0.0` for all nine. A
+// published version can never be reused, so that is not recoverable by publishing
+// again.
+//
+// The guard is deliberately narrow. It refuses while any manifest is at
+// `0.0.0` and clears itself the moment `pnpm release:version` has been run and
+// committed, which is the reviewed release change the workflow already assumes.
+// It is not on by default because the ordinary pull-request check has to stay
+// green for the whole time the cohort is still unversioned.
+// ---------------------------------------------------------------------------
+
+if (process.argv.includes("--require-versioned")) {
+	for (const { relativePath, manifest } of publishable) {
+		if (manifest.version === "0.0.0") {
+			fail(
+				`${manifest.name} (${relativePath})`,
+				"declares version 0.0.0; publishing would claim that version permanently. Run `pnpm release:version` and commit the bump.",
+			);
+		}
+	}
 }
 
 // ---------------------------------------------------------------------------
