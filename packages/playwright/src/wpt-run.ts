@@ -14,13 +14,15 @@ import { IDL_HARNESS_PAGE_PATH, startSuiteServer } from "./wpt-server.js";
  * installed through an init script so the surface exists before any suite script
  * runs. Not source, not a development build, and not a test-only entry.
  *
- * Suite files are served byte-identical to upstream. Two files are replaced, and
- * both replacements are files upstream designates for the job:
- * `resources/testharnessreport.js`, described in its own header as "intended for
- * vendors to implement code needed to integrate testharness.js tests with their
- * own test systems", and `common/get-host-info.sub.js`, a template the WPT
- * server fills in with the ports and hostnames of the machine running the
- * suite. No test file is edited, wrapped or reordered.
+ * No test file is edited, wrapped or reordered. The one change made to a served
+ * document is a `<script>` tag inserted into each HTML body by
+ * `injectInstallTag`, so the bundle is installed ahead of the document's own
+ * scripts. Two files are replaced outright, and both replacements are files
+ * upstream designates for the job: `resources/testharnessreport.js`, described in
+ * its own header as "intended for vendors to implement code needed to integrate
+ * testharness.js tests with their own test systems", and
+ * `common/get-host-info.sub.js`, a template the WPT server fills in with the
+ * ports and hostnames of the machine running the suite.
  *
  * Waiting is by callback. The reporter calls a page binding once the harness
  * completes, and the runner awaits that call. There is no polling, and no timer
