@@ -1,7 +1,14 @@
 // Copyright 2026 Utpal Sen
 // SPDX-License-Identifier: Apache-2.0
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+	existsSync,
+	mkdirSync,
+	readFileSync,
+	renameSync,
+	writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 /**
@@ -90,6 +97,22 @@ export function rawUrl(path: string): string {
 }
 
 /**
+ * The on-disk suite cache, shared by every process that runs the suite.
+ *
+ * Stable across runs, and every file in it is named after `WPT_SHA`, so moving
+ * the pin cannot read a previous pin's bytes. A per-call temporary directory
+ * would make the cache write-only — nothing would ever be found in it, every run
+ * would download the whole suite again, and the temporary directories would pile
+ * up for the life of the machine.
+ *
+ * Shared means concurrent writers, so `fetchSuiteFile` puts a file in place with
+ * a rename rather than by writing it in situ.
+ */
+export function suiteCacheDir(): string {
+	return join(tmpdir(), "ax-wpt-cache");
+}
+
+/**
  * Fetch a suite file at the pinned revision, caching it on disk so a repeat run
  * is reproducible and does not depend on the network. A cached file is only
  * reused when it is non-empty, so a truncated download cannot become the pin.
@@ -117,7 +140,12 @@ export async function fetchSuiteFile(
 	if (contents.length === 0 && options.allowEmpty !== true) {
 		throw new Error(`wpt: ${path} was empty at ${WPT_SHA}`);
 	}
-	writeFileSync(cached, contents);
+	// Written under a name of this process's own and renamed into place. Three
+	// browser projects share this directory and would otherwise be able to read
+	// each other's half-written files.
+	const partial = `${cached}.${process.pid}.tmp`;
+	writeFileSync(partial, contents);
+	renameSync(partial, cached);
 	return contents;
 }
 

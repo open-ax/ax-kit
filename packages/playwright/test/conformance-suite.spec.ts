@@ -1,9 +1,7 @@
 // Copyright 2026 Utpal Sen
 // SPDX-License-Identifier: Apache-2.0
 
-import { mkdtempSync, readFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { readFileSync } from "node:fs";
 import { SPEC_VERSION } from "@ax-kit/core";
 import { expect, test } from "@playwright/test";
 import {
@@ -14,6 +12,7 @@ import {
 	isRunnableSuiteFile,
 	listSuiteFiles,
 	SUPPORT_PATHS,
+	suiteCacheDir,
 	WPT_SHA,
 } from "../src/wpt.js";
 import { runSuite, type SuiteRun } from "../src/wpt-run.js";
@@ -90,10 +89,11 @@ function loadSuite(): Promise<LoadedSuite> {
 			list.exclusions.map((entry) => [entry.unit, entry]),
 		);
 		const servable = files.filter((path) => !path.endsWith(".yml"));
-		const bodies = await fetchSuiteFiles(
-			mkdtempSync(join(tmpdir(), "ax-wpt-")),
-			[...servable, ...SUPPORT_PATHS, ...INTERFACE_PATHS],
-		);
+		const bodies = await fetchSuiteFiles(suiteCacheDir(), [
+			...servable,
+			...SUPPORT_PATHS,
+			...INTERFACE_PATHS,
+		]);
 		return {
 			bodies,
 			runnable,
