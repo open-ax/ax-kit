@@ -40,7 +40,8 @@ import {
  * route interception, so cross-origin documents, frame documents and response
  * headers are all expressible. Two files are substituted, and both are files
  * upstream designates for the job: the vendor reporter and the host-info
- * template. No test file is edited.
+ * template. No test file is edited. The one change made to a served document is
+ * a `<script>` tag inserted into each HTML body to install the bundle.
  *
  * Per browser, because a browser that fails what another passes has a different
  * expectation and one shared list would hide that. Keyed on subtest names inside
@@ -184,8 +185,14 @@ test.describe(`WebMCP suite at WPT ${WPT_SHA.slice(0, 7)}`, () => {
 			// An exclusion is a claim that this file cannot be run and why. A
 			// one-line reason is not a reason, so require prose.
 			expect(resolveReason(entry, list.causes).length).toBeGreaterThan(120);
-			// An exclusion must name a file the enumeration contains. Without
-			// this a typo would silently shrink the run instead of failing.
+		}
+		// Checked against `list.exclusions`, not against `notRun`. `notRun` is
+		// built by filtering `runnable` against the exclusion list, so every unit
+		// in it is in `runnable` by construction and the check could not fail —
+		// which is exactly the case that matters: an exclusion naming a file the
+		// enumeration does not contain, whether upstream renamed it or the list
+		// has a typo, is dropped from both halves and the run quietly shrinks.
+		for (const entry of list.exclusions) {
 			expect(runnable).toContain(entry.unit);
 		}
 		// Nothing may be dropped between the enumeration and the run. A gap here
