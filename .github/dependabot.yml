@@ -19,6 +19,16 @@ updates:
       interval: weekly
       day: monday
     open-pull-requests-limit: 10
+    # `@types/node` tracks the Node major, and this repository supports the
+    # Node 24 line only (`engines.node`, `.nvmrc`, and the runtime baseline in
+    # docs/adr/0001-toolchain-and-runtime-baseline.md all agree). A major bump
+    # here makes the typechecker describe a runtime the project does not run:
+    # `node:quic`, `node:vfs` and `node:ffi` all typecheck clean against the
+    # Node 26 definitions and all throw ERR_UNKNOWN_BUILTIN_MODULE on Node 24.
+    # Raised deliberately alongside a change to `engines.node`, never by a
+    # routine sweep.
+    ignore:
+      - dependency-name: "@types/node"
     # Grouped by intent rather than by package, so a routine dependency sweep
     # arrives as a few reviewable diffs instead of fifteen single-line bumps.
     # NOTE: groups.patterns matches dependency names, not filenames, so there
