@@ -43,7 +43,7 @@
 		"attw": "attw --pack . --profile node16"
 	},
 	"devDependencies": {
-		"@types/node": "^26.6.4",
+		"@types/node": "^24.19.0",
 		"playwright": "1.63.0",
 		"tsdown": "0.23.0",
 		"typescript": "6.0.3",
