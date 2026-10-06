@@ -52,9 +52,9 @@
 	},
 	"devDependencies": {
 		"@ax-kit/core": "workspace:*",
-		"@types/node": "^24.19.0",
-		"@types/react": "19.2.0",
-		"@types/react-dom": "19.2.0",
+		"@types/node": "^26.6.4",
+		"@types/react": "19.3.0",
+		"@types/react-dom": "19.3.0",
 		"@vitest/browser-playwright": "5.0.2",
 		"happy-dom": "20.14.5",
 		"playwright": "1.63.0",
