@@ -185,11 +185,19 @@ For each of the nine packages:
    is packed.
 3. Produce the tarball with `pnpm exec changeset pack --out-dir <dir>` and publish
    it by hand with an access token that can write to `@ax-kit`, completing the
-   2FA challenge:
+   2FA challenge.
+
+   **The filename is not the package name.** A scoped package loses its leading
+   `@` and its `/` becomes `-`, so `@ax-kit/core` is written
+   `ax-kit-core-<version>.tgz`:
 
    ```sh
-   npm publish --access public --otp <code> <dir>/packages/<name>-<version>.tgz
+   npm publish --access public --otp <code> <dir>/packages/ax-kit-core-<version>.tgz
    ```
+
+   Guessing that path from the package name produces a file that does not exist.
+   Every entry in `<dir>/publish-plan.json` records the real one under
+   `tarball.path`, relative to `<dir>`, so read it rather than composing it.
 
 4. Revoke the token once the package is on the registry. From here on the
    workflow publishes it, and a token that outlived its one use is a credential
