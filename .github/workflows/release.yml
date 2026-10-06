@@ -28,9 +28,14 @@ name: release
 # `changeset publish` decides what to publish by asking the registry, not by
 # reading pending changesets, so it publishes every publishable package whose
 # version is not already on npm — at whatever version the manifest carries. Until
-# `pnpm release:version` has been run and committed, that is `0.0.0` for all nine,
-# and a published version can never be reused. The Verify step therefore runs the
-# manifest check with `--require-versioned`, which refuses on that state.
+# every one of them has been bumped off `0.0.0`, that is nine irreversible
+# publications of `0.0.0`, and a published version can never be reused.
+#
+# `changeset version` bumps only what a changeset names, so this is not satisfied
+# by running the release command once: each package being published needs a
+# changeset naming it first. The Verify step therefore runs the manifest check
+# with `--require-versioned`, which refuses on that state and names each package
+# still at `0.0.0`.
 #
 # Provenance is produced by the publishing run itself, from the same identity
 # token, and is verifiable from the published artifact. It is not asserted

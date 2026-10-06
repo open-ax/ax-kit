@@ -252,9 +252,13 @@ if (origin === null) {
 // published version can never be reused, so that is not recoverable by publishing
 // again.
 //
-// The guard is deliberately narrow. It refuses while any manifest is at
-// `0.0.0` and clears itself the moment `pnpm release:version` has been run and
-// committed, which is the reviewed release change the workflow already assumes.
+// The guard is deliberately narrow, and it refuses on the manifest rather than on
+// the release tool's behaviour. `changeset version` bumps only the packages a
+// changeset names, so running it over the two changesets that exist today moves
+// `@ax-kit/core` and `@ax-kit/cli` and leaves seven packages at `0.0.0` — at
+// which point the guard still fails, and correctly so. It clears only when every
+// publishable manifest is off `0.0.0`, which means a changeset per package.
+//
 // It is not on by default because the ordinary pull-request check has to stay
 // green for the whole time the cohort is still unversioned.
 // ---------------------------------------------------------------------------
@@ -264,7 +268,7 @@ if (process.argv.includes("--require-versioned")) {
 		if (manifest.version === "0.0.0") {
 			fail(
 				`${manifest.name} (${relativePath})`,
-				"declares version 0.0.0; publishing would claim that version permanently. Run `pnpm release:version` and commit the bump.",
+				"declares version 0.0.0; publishing would claim that version permanently. Every package being published needs a changeset naming it before `pnpm release:version` runs, because a package no changeset names is not bumped.",
 			);
 		}
 	}

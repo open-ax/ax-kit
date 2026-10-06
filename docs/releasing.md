@@ -172,9 +172,18 @@ does not exist yet. Something has to create the package on the registry first.
 
 For each of the nine packages:
 
-1. Run `pnpm release:version` and commit the bump, so the version to be published
-   is a real one and not `0.0.0`.
-2. Produce the tarball with `pnpm exec changeset pack --out-dir <dir>` and publish
+1. Add a changeset for **every** package that needs its first publication, not
+   only the ones this change happens to touch. `changeset version` bumps a
+   package only when a changeset names it, so a package nobody wrote one for
+   stays at `0.0.0` and gets published at `0.0.0`. The two changesets currently
+   in the repository name `@ax-kit/core` and `@ax-kit/cli` and nothing else, so
+   running the command as it stands today would move two of the nine and leave
+   seven behind.
+2. Run `pnpm release:version` and commit the bumps. Then **read the versions**:
+   `git diff --stat` is not enough, because a package left behind produces no
+   diff at all. Every publishable manifest must be off `0.0.0` before anything
+   is packed.
+3. Produce the tarball with `pnpm exec changeset pack --out-dir <dir>` and publish
    it by hand with an access token that can write to `@ax-kit`, completing the
    2FA challenge:
 
@@ -182,9 +191,21 @@ For each of the nine packages:
    npm publish --access public --otp <code> <dir>/packages/<name>-<version>.tgz
    ```
 
-3. Revoke the token once the package is on the registry. From here on the
+4. Revoke the token once the package is on the registry. From here on the
    workflow publishes it, and a token that outlived its one use is a credential
    this repository no longer needs.
+
+**The check that matters is the manifest, not the command's exit code.** The
+release workflow runs `check-manifests.mjs --require-versioned`, which refuses
+while any publishable manifest is at `0.0.0`, and it names each one. Run it
+before the first publish:
+
+```sh
+node .github/ci/check-manifests.mjs --require-versioned   # must exit 0
+```
+
+`@ax-kit/tsconfig` is meant to stay at `0.0.0`: it is private and listed in
+`.changeset/config.json` `ignore`, so it is not part of this.
 
 Do this once per package, not once per cohort: a package that exists and a
 package that does not are different states, and the guard in `release.yml` only
@@ -245,6 +266,13 @@ it reads as coverage. Two checks were audited for this:
   which refuses in that state. `node .github/ci/check-manifests.mjs` without the
   flag leaves it out on purpose, so the ordinary pull-request check stays green
   while the cohort is unversioned.
+
+  Note what that guard does **not** do: it does not make `pnpm release:version`
+  sufficient. That command bumps only the packages a changeset names, so running
+  it over a partial set of changesets leaves the rest at `0.0.0` and the guard
+  still refuses. See
+  [the first publication](#the-first-publication-by-a-human) for the complete
+  sequence.
 - **It does not pick the bump type.** A wrong bump type is a wrong public
   version number, and it cannot be withdrawn.
 - **It does not publish `@ax-kit/tsconfig`.** Check `publish-plan` if in doubt.
