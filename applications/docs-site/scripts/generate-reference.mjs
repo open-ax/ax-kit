@@ -72,11 +72,52 @@ function kindLabel(kind) {
 	if (kind === "const" || kind === "let") {
 		return "value";
 	}
+	// A name re-exported from another module with no local declaration. Its kind is
+	// not knowable from this package's declarations, and guessing is what put
+	// `expect` — a runtime value re-exported from `@playwright/test` — in the
+	// types table.
+	if (kind === "unknown") {
+		return "re-exported";
+	}
 	return kind;
 }
 
-/** Kind groups, in the order a reader wants them: callable things, then types. */
-const KIND_ORDER = ["function", "const", "class", "interface", "type"];
+/**
+ * Plural labels, where appending `s` is wrong.
+ *
+ * `class` is the only one English breaks with a suffix, and it broke visibly:
+ * the generated page read `### classs (2)` for four packages. It is spelled out
+ * rather than computed because a one-entry map is shorter than the rule that
+ * would produce it correctly for the other four kinds.
+ */
+const KIND_PLURAL = { class: "classes" };
+
+/**
+ * Kinds that exist only in the type system.
+ *
+ * A copyable import example has to compile, and `import { SomeInterface }` is an
+ * error under `isolatedModules` and most bundlers' verbatim-module-syntax
+ * handling. The first `@ax-kit/cli` member is `AuditContextInput`, a type, so the
+ * generated page offered a snippet that would not build.
+ */
+const TYPE_ONLY_KINDS = new Set(["interface", "type"]);
+
+/**
+ * Kind groups, in the order a reader wants them: callable things, then types,
+ * then names whose kind this package's declarations do not state.
+ *
+ * `unknown` is last and always present in the list rather than appended on demand,
+ * because a name dropped from the page is worse than a name shown under a label
+ * admitting the label is all we know.
+ */
+const KIND_ORDER = [
+	"function",
+	"const",
+	"class",
+	"interface",
+	"type",
+	"unknown",
+];
 
 function packageSection(entry) {
 	const entryPoints = Object.entries(entry.entries);
@@ -103,12 +144,16 @@ function packageSection(entry) {
 		const specifier = isRoot(subpath)
 			? entry.name
 			: `${entry.name}/${subpath.replace(/^\.\//, "")}`;
-		// The import is spelled with a named member rather than an ellipsis. A
-		// reference a reader copies has to compile, and `import { … }` does not.
+		// The import is spelled with a named member rather than an ellipsis.
+		// A reference a reader copies has to compile, and `import { … }` does not.
+		// A type-only member additionally needs `import type`, or the snippet is
+		// an error rather than merely a value the runtime cannot find.
+		const first = value.members[0];
+		const keyword = TYPE_ONLY_KINDS.has(first?.kind) ? "import type" : "import";
 		const example =
-			value.members.length === 0
+			first === undefined
 				? `\`import "${specifier}"\``
-				: `\`import { ${value.members[0].name} } from "${specifier}"\``;
+				: `\`${keyword} { ${first.name} } from "${specifier}"\``;
 		lines.push(
 			`| \`${cell(subpath)}\` | ${value.members.length} | ${example} |`,
 		);
@@ -130,7 +175,11 @@ function packageSection(entry) {
 		if (group.length === 0) {
 			continue;
 		}
-		const label = `${kindLabel(kind)}${group.length === 1 ? "" : "s"}`;
+		// Singular for one member, the irregular plural where English has one, and a
+		// plain `s` otherwise.
+		const singular = kindLabel(kind);
+		const label =
+			group.length === 1 ? singular : (KIND_PLURAL[kind] ?? `${singular}s`);
 		lines.push(`### ${label} (${group.length})`, "");
 		lines.push("| Name | Entry point |");
 		lines.push("|---|---|");
@@ -147,6 +196,14 @@ function packageSection(entry) {
 			lines.push(`| \`${cell(member.name)}\` | ${reachable} |`);
 		}
 		lines.push("");
+		if (kind === "unknown") {
+			lines.push(
+				"These are re-exported from another module, so this package's own",
+				"declarations do not state whether each is a value or a type. They are",
+				"listed rather than guessed at, and grouped here rather than with the types.",
+				"",
+			);
+		}
 	}
 
 	return lines.join("\n");
@@ -190,9 +247,13 @@ const front = [
 	"  default import.",
 	"- **No parameter types appear here.** They are in the `.d.ts` files, which is what a",
 	"  consumer's compiler reads; a table paraphrasing them would be a worse copy.",
-	"- **Verification is never defined.** Call `installModelContext(document)` yourself. A package",
-	"  that installs on import as a side effect cannot be tree-shaken, and a polyfill that runs",
-	"  when a bundler happens to evaluate a module is a debugging session.",
+	"- **Verification is never defined by the default entry point.** Call",
+	"  `installModelContext(document)` yourself. A package that installs on import as a side",
+	"  effect cannot be tree-shaken, and a polyfill that runs when a bundler happens to",
+	"  evaluate a module is a debugging session.",
+	"- **`@ax-kit/core/auto` is the deliberate exception.** It is this project's own entry",
+	"  point, not the specification's, and it installs on import for frameworks that have no",
+	"  client entry hook to run an explicit call from. The default entry point never does.",
 	"",
 ];
 

@@ -27,9 +27,13 @@ second source of truth.
   default import.
 - **No parameter types appear here.** They are in the `.d.ts` files, which is what a
   consumer's compiler reads; a table paraphrasing them would be a worse copy.
-- **Verification is never defined.** Call `installModelContext(document)` yourself. A package
-  that installs on import as a side effect cannot be tree-shaken, and a polyfill that runs
-  when a bundler happens to evaluate a module is a debugging session.
+- **Verification is never defined by the default entry point.** Call
+  `installModelContext(document)` yourself. A package that installs on import as a side
+  effect cannot be tree-shaken, and a polyfill that runs when a bundler happens to
+  evaluate a module is a debugging session.
+- **`@ax-kit/core/auto` is the deliberate exception.** It is this project's own entry
+  point, not the specification's, and it installs on import for frameworks that have no
+  client entry hook to run an explicit call from. The default entry point never does.
 ## @ax-kit/cli
 
 24 exported names across 1 entry point.
@@ -40,7 +44,7 @@ Runtime dependencies: `playwright`.
 
 | Entry point | Names | Reached by |
 |---|---|---|
-| `.` | 24 | `import { AuditContextInput } from "@ax-kit/cli"` |
+| `.` | 24 | `import type { AuditContextInput } from "@ax-kit/cli"` |
 
 ### functions (13)
 
@@ -67,7 +71,7 @@ Runtime dependencies: `playwright`.
 | `BUDGETS` | `.` |
 | `LANE_STATEMENT` | `.` |
 
-### types (9)
+### interfaces (7)
 
 | Name | Entry point |
 |---|---|
@@ -75,11 +79,16 @@ Runtime dependencies: `playwright`.
 | `AuditFinding` | `.` |
 | `AuditReport` | `.` |
 | `AuditToolInput` | `.` |
-| `BrowserLike` | `.` |
-| `BrowserPageLike` | `.` |
 | `DrivenBrowser` | `.` |
 | `DrivenPage` | `.` |
 | `LaunchOptions` | `.` |
+
+### types (2)
+
+| Name | Entry point |
+|---|---|
+| `BrowserLike` | `.` |
+| `BrowserPageLike` | `.` |
 
 ## @ax-kit/core
 
@@ -114,20 +123,14 @@ Only `.` carries the specification's surface. The other 2 entry points are this 
 |---|---|
 | `SPEC_VERSION` | `.` |
 
-### classs (2)
+### classes (2)
 
 | Name | Entry point |
 |---|---|
 | `ToolActivatedEvent` | `.` |
 | `ToolCancelEvent` | `.` |
 
-### interface (1)
-
-| Name | Entry point |
-|---|---|
-| `ToolChangeDiff` | `./ax` |
-
-### types (10)
+### interfaces (9)
 
 | Name | Entry point |
 |---|---|
@@ -138,9 +141,15 @@ Only `.` carries the specification's surface. The other 2 entry points are this 
 | `ModelContextTool` | `.` |
 | `RegisteredTool` | `.` |
 | `ToolAnnotations` | `.` |
+| `ToolChangeDiff` | `./ax` |
+| `ToolExecuteCallbackOptions` | `.` |
+
+### types (2)
+
+| Name | Entry point |
+|---|---|
 | `ToolChangeListener` | `./ax` |
 | `ToolExecuteCallback` | `.` |
-| `ToolExecuteCallbackOptions` | `.` |
 
 ## @ax-kit/daemon
 
@@ -193,7 +202,7 @@ No runtime dependencies.
 | `PROTOCOL_VERSION` | `.` |
 | `SUPPORTED_VERSIONS` | `.` |
 
-### classs (3)
+### classes (3)
 
 | Name | Entry point |
 |---|---|
@@ -201,7 +210,7 @@ No runtime dependencies.
 | `BridgeRefusal` | `.` |
 | `PageBridge` | `.` |
 
-### types (11)
+### interfaces (11)
 
 | Name | Entry point |
 |---|---|
@@ -260,33 +269,38 @@ No runtime dependencies.
 | `HANDLER_NAMES` | `.` |
 | `TRANSPORT_KIND` | `.` |
 
-### classs (2)
+### classes (2)
 
 | Name | Entry point |
 |---|---|
 | `ApprovalStore` | `.` |
 | `WorkerAuditTrail` | `.` |
 
-### types (12)
+### interfaces (9)
 
 | Name | Entry point |
 |---|---|
 | `ApprovalActivity` | `.` |
 | `ApprovalDetails` | `.` |
 | `AuditEntry` | `.` |
-| `ConfirmationSurface` | `.` |
 | `ExternallyConnectable` | `.` |
 | `FrameToolView` | `.` |
-| `HandlerName` | `.` |
 | `HitlKey` | `.` |
 | `InjectionRequest` | `.` |
 | `ManifestDocument` | `.` |
 | `ManifestPosture` | `.` |
+
+### types (3)
+
+| Name | Entry point |
+|---|---|
+| `ConfirmationSurface` | `.` |
+| `HandlerName` | `.` |
 | `TransportKind` | `.` |
 
 ## @ax-kit/playwright
 
-12 exported names across 1 entry point.
+19 exported names across 1 entry point.
 
 No runtime dependencies.
 
@@ -294,7 +308,7 @@ No runtime dependencies.
 
 | Entry point | Names | Reached by |
 |---|---|---|
-| `.` | 12 | `import { AxCompanion } from "@ax-kit/playwright"` |
+| `.` | 19 | `import { AxCompanion } from "@ax-kit/playwright"` |
 
 ### functions (7)
 
@@ -314,7 +328,7 @@ No runtime dependencies.
 |---|---|
 | `test` | `.` |
 
-### classs (3)
+### classes (3)
 
 | Name | Entry point |
 |---|---|
@@ -322,11 +336,32 @@ No runtime dependencies.
 | `AxMissingSurfaceError` | `.` |
 | `AxParseError` | `.` |
 
+### interfaces (6)
+
+| Name | Entry point |
+|---|---|
+| `AxExecuteOptions` | `.` |
+| `AxExpectOptions` | `.` |
+| `AxListOptions` | `.` |
+| `AxToolAnnotations` | `.` |
+| `AxToolSummary` | `.` |
+| `AxWaitOptions` | `.` |
+
 ### type (1)
 
 | Name | Entry point |
 |---|---|
+| `AxPage` | `.` |
+
+### re-exported (1)
+
+| Name | Entry point |
+|---|---|
 | `expect` | `.` |
+
+These are re-exported from another module, so this package's own
+declarations do not state whether each is a value or a type. They are
+listed rather than guessed at, and grouped here rather than with the types.
 
 ## @ax-kit/react
 
@@ -338,7 +373,7 @@ No runtime dependencies.
 
 | Entry point | Names | Reached by |
 |---|---|---|
-| `.` | 13 | `import { AxAnnotations } from "@ax-kit/react"` |
+| `.` | 13 | `import type { AxAnnotations } from "@ax-kit/react"` |
 
 ### functions (4)
 
@@ -349,19 +384,24 @@ No runtime dependencies.
 | `isAxSupported` | `.` |
 | `useAxTool` | `.` |
 
-### types (9)
+### interfaces (6)
 
 | Name | Entry point |
 |---|---|
 | `AxAnnotations` | `.` |
-| `AxDispatchOutcome` | `.` |
-| `AxExecuteCallback` | `.` |
 | `AxExecuteOptions` | `.` |
-| `AxMiddleware` | `.` |
 | `AxProviderProps` | `.` |
 | `AxToolDefinition` | `.` |
 | `AxToolHandle` | `.` |
 | `AxToolOptions` | `.` |
+
+### types (3)
+
+| Name | Entry point |
+|---|---|
+| `AxDispatchOutcome` | `.` |
+| `AxExecuteCallback` | `.` |
+| `AxMiddleware` | `.` |
 
 ## @ax-kit/svelte
 
@@ -373,7 +413,7 @@ No runtime dependencies.
 
 | Entry point | Names | Reached by |
 |---|---|---|
-| `.` | 8 | `import { AxAnnotations } from "@ax-kit/svelte"` |
+| `.` | 8 | `import type { AxAnnotations } from "@ax-kit/svelte"` |
 
 ### functions (3)
 
@@ -383,15 +423,20 @@ No runtime dependencies.
 | `axToolEffect` | `.` |
 | `isAxSupported` | `.` |
 
-### types (5)
+### interfaces (4)
 
 | Name | Entry point |
 |---|---|
 | `AxAnnotations` | `.` |
-| `AxExecuteCallback` | `.` |
 | `AxExecuteOptions` | `.` |
 | `AxModelContextLike` | `.` |
 | `AxToolDefinition` | `.` |
+
+### type (1)
+
+| Name | Entry point |
+|---|---|
+| `AxExecuteCallback` | `.` |
 
 ## @ax-kit/vue
 
@@ -403,7 +448,7 @@ No runtime dependencies.
 
 | Entry point | Names | Reached by |
 |---|---|---|
-| `.` | 9 | `import { AxAnnotations } from "@ax-kit/vue"` |
+| `.` | 9 | `import type { AxAnnotations } from "@ax-kit/vue"` |
 
 ### functions (2)
 
@@ -418,16 +463,21 @@ No runtime dependencies.
 |---|---|
 | `vAxTool` | `.` |
 
-### types (6)
+### interfaces (5)
 
 | Name | Entry point |
 |---|---|
 | `AxAnnotations` | `.` |
-| `AxExecuteCallback` | `.` |
 | `AxExecuteOptions` | `.` |
 | `AxModelContextLike` | `.` |
 | `AxToolDefinition` | `.` |
 | `AxToolHandle` | `.` |
+
+### type (1)
+
+| Name | Entry point |
+|---|---|
+| `AxExecuteCallback` | `.` |
 
 ## @ax-kit/zod
 
@@ -457,7 +507,7 @@ Runtime dependencies: `zod`.
 | `MAX_CONVERT_DEPTH` | `.` |
 | `MAX_CONVERT_KEYS` | `.` |
 
-### types (3)
+### interfaces (3)
 
 | Name | Entry point |
 |---|---|

@@ -25,7 +25,7 @@
  * exists.
  */
 
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { readAllPackages, serialise } from "./public-interface.mjs";
@@ -36,9 +36,9 @@ const REPORT_PATH = join(SITE, "src/data/api-report.json");
 /**
  * The report, as it stands on disk.
  *
- * Returns `undefined` when the file is absent, which is the first-run case and
- * not a failure: the gate's job is to catch a *change*, and there is nothing to
- * have changed from yet.
+ * Returns `undefined` when the file is absent. That is a defect rather than a
+ * first run: the report is committed, so a checkout without one has lost a
+ * tracked file, and the caller treats it as a failure.
  */
 function readCommitted() {
 	if (!existsSync(REPORT_PATH)) {
@@ -51,11 +51,22 @@ const current = serialise(readAllPackages());
 const committed = readCommitted();
 
 if (committed === undefined) {
-	writeFileSync(REPORT_PATH, current);
-	process.stdout.write(
-		`[reference] wrote the interface report for the first time: ${REPORT_PATH}\n`,
+	// Writing the report and exiting 0 was the original behaviour, and it made
+	// the gate meaningless in the one place that matters: deleting
+	// `api-report.json` in a pull request removed the committed baseline, so
+	// there was nothing to compare against and the gate reported success for
+	// *any* interface whatsoever. The gate could be disabled by deleting the file
+	// that defines it.
+	//
+	// Generation is a separate, explicit step (`generate:reference`). A missing
+	// report means the change has not been reviewed, which is exactly what this
+	// gate exists to prevent.
+	process.stderr.write(
+		`[reference] ${REPORT_PATH} is missing. It is committed, so its absence is a\n` +
+			`           deleted file rather than a first run. Generate and commit it:\n` +
+			`             pnpm --filter @ax-kit/docs-site generate:reference\n`,
 	);
-	process.exit(0);
+	process.exit(1);
 }
 
 if (committed === current) {
@@ -141,6 +152,34 @@ function describe() {
 					lines.push(
 						`  ~ ${name} ${subpath} ${member.name} ${priorKind} -> ${member.kind}`,
 					);
+				}
+			}
+
+			// A member whose *signature* changed, under an unchanged name and kind.
+			//
+			// This is the case the gate's stated invariant is actually about, and it
+			// was the one it could not see: `searchProducts(input: SearchInput)`
+			// becoming `searchProducts(input: string)` adds no name, removes no name
+			// and changes no kind, so every other comparison in this function
+			// reported nothing and the build went green over a breaking change.
+			//
+			// Both sides are printed because "the signature changed" is not
+			// actionable; a maintainer needs to see the two declarations to know
+			// whether to regenerate or to look for a mistake.
+			const beforeSignatures = new Map(
+				prior.members.map((member) => [member.name, member.signature]),
+			);
+			for (const member of value.members) {
+				const priorSignature = beforeSignatures.get(member.name);
+				if (
+					priorSignature !== undefined &&
+					priorSignature !== member.signature
+				) {
+					lines.push(
+						`  ~ ${name} ${subpath} ${member.name} signature changed:`,
+					);
+					lines.push(`      was: ${priorSignature}`);
+					lines.push(`      now: ${member.signature}`);
 				}
 			}
 		}
