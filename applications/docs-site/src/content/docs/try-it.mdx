@@ -3,7 +3,6 @@ draft: false
 title: "Try it in your browser"
 description: "Register a tool, enumerate the surface, invoke it, and watch it refuse — on this page, without installing anything."
 ---
-draft: false
 
 import Demo from "../../components/Demo.astro";
 
@@ -14,7 +13,7 @@ refuse, below, on this page.
 import { SPEC_VERSION } from "@ax-kit/core";
 
 Everything on this page describes **{SPEC_VERSION.draft}** (upstream
-`{SPEC_VERSION.commit}`).
+<code>{SPEC_VERSION.commit}</code>).
 
 <Demo />
 

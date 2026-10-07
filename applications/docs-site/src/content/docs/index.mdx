@@ -2,35 +2,76 @@
 draft: false
 title: "ax-kit"
 description: "A correct, tiny, dependency-free implementation of WebMCP's ModelContext."
-template: splash
-hero:
-  tagline: The tool surface, in your browser, in about five kilobytes.
-  actions:
-    - text: Try it without installing
-      link: ./try-it/
-      icon: right-arrow
-    - text: Install it
-      link: /quickstart/
-      variant: minimal
 ---
-draft: false
 
 import { SPEC_VERSION } from "@ax-kit/core";
 
-<div class="ax-hero">
-	<p class="ax-hero__claim">
+<div class="ax-front">
+	{/*
+	 * No heading here. The frontmatter `title` is already rendered as the page's
+	 * `<h1>` by the framework, and an earlier version of this page added a second
+	 * one — so the front page read "ax-kit" twice, once large and once slightly
+	 * less large, with a horizontal rule between them.
+	 *
+	 * The tagline carries what the splash hero used to, which is the right way
+	 * round: the hero *is* the subtitle, and a subtitle belongs under the title.
+	 */}
+	<p class="ax-front__sub">
+		The tool surface, in your browser, in about five kilobytes.
+	</p>
+
+	<p>
 		This page defines a typed surface on <code>document</code> and hands you a
 		button to call it. If it works, the library works — in your browser, on this
 		page, with nothing installed.
 	</p>
-	<p class="ax-hero__draft">
-		Everything here describes <strong>{SPEC_VERSION.draft}</strong> (upstream
-		<code>{SPEC_VERSION.commit}</code>). The
+
+	<p>
+		Everything here describes <strong>{SPEC_VERSION.draft}</strong>, upstream
+		<code>{SPEC_VERSION.commit}</code>. The
 		<a href="https://webmachinelearning.github.io/webmcp/">proposal is linked, not
 		copied</a>, because it is re-dated often and a copy would be wrong within days.
 	</p>
-	<p class="ax-hero__meta">
-		Under 5&nbsp;kB gzipped, enforced in CI as a build failure · zero runtime
-		dependencies · zero unexpected failures against the proposal's own test suite
-	</p>
+
+	<div class="ax-front__actions">
+		<a href="/try-it/">Try it without installing</a>
+		<a href="/quickstart/" aria-variant="minimal">Install it</a>
+	</div>
+
+	<h2>What it costs</h2>
+	<ul class="ax-front__list">
+		<li>
+			<strong>Under 5 kB gzipped</strong> — a hard build failure in CI, not a
+			sentence in a README.
+		</li>
+		<li>
+			<strong>Zero runtime dependencies.</strong> <code>StandardSchemaV1</code> is
+			consumed structurally; the interface is declared locally rather than
+			installed.
+		</li>
+		<li>
+			<strong>Zero unexpected failures</strong> against the proposal's own test
+			suite, on Chromium, Firefox and WebKit.
+		</li>
+	</ul>
+
+	<h2>Start here</h2>
+	<ul class="ax-front__list">
+		<li>
+			<a href="/quickstart/"><strong>Quickstart</strong></a> — from nothing to a
+			working tool on a page, in four steps.
+		</li>
+		<li>
+			<a href="/try-it/"><strong>Try it</strong></a> — register, enumerate, invoke
+			and watch it refuse, in your own browser.
+		</li>
+		<li>
+			<a href="/reference/api/"><strong>API reference</strong></a> — every exported
+			name, generated from the published declarations.
+		</li>
+		<li>
+			<a href="/security/threat-model/"><strong>Threat model</strong></a> — what
+			this library can reach, and what it does not defend against.
+		</li>
+	</ul>
 </div>

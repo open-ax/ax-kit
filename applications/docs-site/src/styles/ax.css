@@ -1,68 +1,633 @@
 /*
- * Site styling.
+ * The site's visual language.
  *
- * Almost nothing here. The documentation framework already has a design system,
- * and restating one in custom CSS produces a site that looks like this project
- * rather than like its documentation, at the cost of maintaining a stylesheet.
+ * This is the OpenAX organisation site's design language, applied to
+ * documentation. It is a deliberate point of view rather than a theme:
  *
- * What is here is the handful of variables the footer and the demonstration
- * reference, so those two components do not carry a copy each.
+ * - **Near-monochrome.** One accent-free greyscale ramp and no colour at all
+ *   except in code and links. Documentation's job is to be read; a palette is a
+ *   tax on that.
+ * - **Light mode only.** The reference site is `color-scheme: light` with no dark
+ *   scheme at all. Supporting two schemes is two things to keep right, and this
+ *   site would rather be one thing done properly. The dark media query below
+ *   exists only so the framework's own default does not fight this.
+ * - **One font, self-hosted, variable weight.** No display face, no monospace
+ *   novelty: the code font is a UI monospace, which is what a reader expects and
+ *   what diffs and identifiers actually want.
+ * - **A narrow measure.** 38rem of prose, left-aligned. The reference site's
+ *   figure, and the width at which a line of English stops being comfortable.
+ * - **One emphasis weight.** 600 for emphasis, nothing bolder. Hierarchy comes
+ *   from size and colour, not from weight.
+ *
+ * Everything here is an override of the framework's own tokens rather than a
+ * restyle of its elements. That is deliberate: overriding tokens means a
+ * framework upgrade cannot silently un-style the site, whereas restyling elements
+ * means it can.
+ */
+
+/* ── Palette ────────────────────────────────────────────────────────────────
+ *
+ * The ramp, in the reference site's order: background, rule, muted, body, text.
+ * Only six greys, because a documentation site should not need more and a ramp
+ * with twelve stops is twelve opportunities to pick the wrong one.
  */
 
 :root {
-	--ax-border: var(--sl-color-gray-5);
-	--ax-accent-soft: var(--sl-color-gray-6);
+	--sl-color-white: #111111;
+	--sl-color-gray-1: #fafafa;
+	--sl-color-gray-2: #f2f2f1;
+	--sl-color-gray-3: #e8e8e6;
+	--sl-color-gray-4: #d4d4d4;
+	--sl-color-gray-5: #b8b8b6;
+	--sl-color-gray-6: #737373;
+	--sl-color-black: #ffffff;
+
+	/* The accent is a grey. Every link, focus ring and active marker is drawn
+	 * with it, so nothing on the page is coloured except code. */
+	--sl-color-accent-low: #ededec;
+	--sl-color-accent-high: #111111;
+	--sl-color-accent: #3d3d3b;
+
+	/* Borders and surfaces, named for what they are rather than by number, so a
+	 * rule is `var(--rule)` at the point of use and the palette stays in one
+	 * place. */
+	--ax-bg: #fafafa;
+	--ax-surface: #ffffff;
+	--ax-rule: #e4e4e2;
+	--ax-rule-strong: #d4d4d4;
+	--ax-text: #111111;
+	--ax-body: #3d3d3b;
+	--ax-muted: #737373;
+
+	/* The reference site's focus ring: 2px, offset, in the text colour. Visible,
+	 * never a glow. */
+	--sl-focus-ring-color: #111111;
+	--sl-focus-ring-width: 2px;
+	--sl-focus-ring-offset: 3px;
+
+	color-scheme: light;
+}
+
+/* Only one scheme. The framework defaults to following the reader's preference,
+ * and a site that ships one palette should say so rather than switching to
+ * another at dusk. */
+@media (prefers-color-scheme: dark) {
+	:root {
+		--sl-color-white: #111111;
+		--sl-color-gray-1: #fafafa;
+		--sl-color-black: #ffffff;
+	}
+}
+
+:root[data-theme="dark"] {
+	--sl-color-white: #111111;
+	--sl-color-gray-1: #fafafa;
+	--sl-color-gray-2: #f2f2f1;
+	--sl-color-gray-3: #e8e8e6;
+	--sl-color-gray-4: #d4d4d4;
+	--sl-color-gray-5: #b8b8b6;
+	--sl-color-gray-6: #737373;
+	--sl-color-black: #ffffff;
+	--sl-color-accent-low: #ededec;
+	--sl-color-accent-high: #111111;
+	--sl-color-accent: #3d3d3b;
+	--sl-focus-ring-color: #111111;
+}
+
+/* ── Typography ──────────────────────────────────────────────────────────── */
+
+:root {
+	--sl-font: var(
+		--font-sans,
+		"Hanken Grotesk",
+		system-ui,
+		-apple-system,
+		"Segoe UI",
+		Helvetica,
+		Arial,
+		sans-serif
+	);
+	--sl-font-mono:
+		ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas,
+		"Liberation Mono", monospace;
+
+	--sl-text-base: 0.9375rem;
+	--sl-text-sm: 0.8125rem;
+	--sl-text-xs: 0.75rem;
+
+	/* The reference site's 38rem, widened a little for a page with a sidebar and
+	 * a table of contents. Not much: the width at which a line of English stops
+	 * being comfortable is not a function of taste. */
+	--sl-content-width: 44rem;
+	--sl-line-height: 1.75;
+
+	--sl-text-h1: 1.75rem;
+	--sl-text-h2: 1.3125rem;
+	--sl-text-h3: 1.0625rem;
+	--sl-text-h4: 0.9375rem;
+	--sl-text-h5: 0.875rem;
+
+	--sl-nav-height: 3.5rem;
+	--sl-sidebar-gap: 1.5rem;
+	--sl-aside-gap: 2rem;
+}
+
+:root {
+	--sl-heading-font: var(--sl-font);
+	--sl-heading-font-weight: 600;
+	/* Negative tracking, from the reference site's `.name`. Headings set tight
+	 * read as considered; the framework's default of normal tracking reads as a
+	 * template. */
+	--sl-heading-letter-spacing: -0.015em;
+	--sl-code-font: var(--sl-font-mono);
+	--sl-code-font-size: 0.8125em;
+	--sl-code-line-height: 1.7;
+	--sl-code-radius: 4px;
+	--sl-code-border: 1px solid var(--ax-rule);
+	--sl-code-bg: var(--ax-surface);
+	--sl-code-header-bg: #f4f4f2;
+	--sl-code-line-highlight-color: #f0f0ee;
+}
+
+/* ── The page ────────────────────────────────────────────────────────────── */
+
+body {
+	background: var(--ax-bg);
+	color: var(--ax-text);
+	-webkit-font-smoothing: antialiased;
+	text-size-adjust: 100%;
+}
+
+/* Prose reads differently from interface text, and the reference site says so
+ * with `text-wrap: pretty`: no single-word last line, and no hyphen. `balance`
+ * is for headings, where a ragged two-line heading looks broken. */
+.sl-markdown-content p,
+.sl-markdown-content li {
+	color: var(--ax-body);
+	text-wrap: pretty;
+}
+
+.sl-markdown-content :is(h1, h2, h3, h4, h5, h6) {
+	color: var(--ax-text);
+	text-wrap: balance;
+}
+
+/* ── Links ─────────────────────────────────────────────────────────────────
+ *
+ * The reference site underlines prose links in the text colour with a rule
+ * beneath, thickening to the text colour on hover. That is quieter than a
+ * coloured link and reads as deliberate, so it is what prose links do here.
+ */
+
+.sl-markdown-content a:not(:where(.not-content *)) {
+	color: var(--ax-text);
+	text-decoration: underline;
+	text-decoration-color: var(--ax-rule-strong);
+	text-decoration-thickness: 1px;
+	text-underline-offset: 4px;
+	transition: text-decoration-color 120ms ease-out;
+}
+
+.sl-markdown-content a:not(:where(.not-content *)):hover {
+	text-decoration-color: var(--ax-text);
+}
+
+/* Interface links — the sidebar, the header, the footer, pagination — are not
+ * prose and are not underlined. Colour is enough, and underlining them would
+ * draw lines down the whole page. */
+.site-header :is(a, a:hover),
+.sidebar-content a,
+.pagination-links a,
+.sl-markdown-content :is(h2, h3) a {
+	text-decoration: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.sl-markdown-content a {
+		transition: none;
+	}
+}
+
+/* ── Header ──────────────────────────────────────────────────────────────── */
+
+.site-header {
+	background: var(--ax-bg);
+	border-bottom: 1px solid var(--ax-rule);
+}
+
+.site-header__inner {
+	max-width: 68rem;
+}
+
+/* ── Sidebar and table of contents ──────────────────────────────────────────
+ *
+ * Colours set directly rather than through the framework's grey ramp.
+ *
+ * The ramp's numbering is not a lightness ordering — in the framework's own
+ * light theme `gray-6` is *darker* than `gray-5` — so remapping it to this
+ * palette produced a sidebar of near-invisible links on a near-white page. Named
+ * colours at the point of use cannot be misread that way, and there are three
+ * places here rather than a twelve-stop ramp to get right.
+ */
+
+.sidebar-content {
+	color: var(--ax-body);
+	font-size: var(--sl-text-sm);
+}
+
+.sidebar-content :is(a, a:hover) {
+	color: var(--ax-body);
+	text-decoration: none;
+}
+
+.sidebar-content a:hover {
+	color: var(--ax-text);
 }
 
 /*
- * The landing page's hero.
- *
- * Here rather than in a `<style>` block in the MDX, because MDX parses a
- * `<style>` element's contents as JSX children rather than as CSS — which fails
- * the build on the first declaration.
+ * The current page. The framework marks it with a filled pill in its accent,
+ * which here is a near-black grey and reads as a selection the user made rather
+ * than a location they are at. A light surface plus a dark label says the same
+ * thing without the shouting.
  */
-.ax-hero {
-	max-width: 44rem;
-	margin: 0 auto 3rem;
-	text-align: center;
+.sidebar-content [aria-current="page"],
+.sidebar-content a[aria-current="page"] {
+	color: var(--ax-text);
+	font-weight: 500;
+	background: var(--ax-surface);
+	box-shadow: inset 2px 0 0 var(--ax-text);
+	border-radius: 2px;
 }
 
-.ax-hero__claim {
-	font-size: 1.15rem;
+.sidebar-content strong {
+	color: var(--ax-text);
+	font-weight: 600;
 }
 
-.ax-hero__draft,
-.ax-hero__meta {
-	font-size: 0.9rem;
-	color: var(--sl-color-gray-3);
+/* The group label, which is the lightest thing on the page by default and is
+ * what made the navigation read as disabled rather than quiet. */
+.sidebar-content :is(strong, .top-level > summary > span) {
+	color: var(--ax-text);
+}
+
+.right-sidebar-panel,
+.right-sidebar-panel :is(a, a:hover) {
+	color: var(--ax-muted);
+	background: transparent;
+	text-decoration: none;
 }
 
 /*
- * The live demonstration.
+ * The theme control.
  *
- * Here rather than in the component, because an `.astro` file cannot hold a
- * template literal in a `<style>` element and an `.mdx` file parses a `<style>`
- * element's contents as JSX.
+ * A site that ships one colour scheme has nothing to toggle, so the control is
+ * removed rather than styled — a switch that cannot change anything is worse than
+ * no switch, because it invites the reader to look for a dark mode that is not
+ * there.
+ *
+ * The element is `<starlight-theme-select>`, a custom element wrapping a
+ * `<label>` and a `<select>`. Two earlier attempts used `.theme-toggle` and
+ * `[data-component="ThemeToggle"]`, neither of which this framework version
+ * emits, so the control stayed on the page rendering its own options in near-
+ * white on near-white: visible as unreadable text rather than absent. The name
+ * below was read out of the built HTML rather than guessed.
  */
-.ax-try {
-	border: 1px solid var(--ax-border);
+starlight-theme-select {
+	display: none;
+}
+
+.site-header :is(a, a:hover) {
+	color: var(--ax-body);
+}
+
+.site-header .site-title {
+	color: var(--ax-text);
+	font-weight: 600;
+	letter-spacing: -0.01em;
+}
+
+.site-header :is(.search, .search-input) :is(input, button) {
+	color: var(--ax-body);
+	border-color: var(--ax-rule);
+}
+
+.site-header :is(.search, .search-input) input::placeholder {
+	color: var(--ax-muted);
+}
+
+/*
+ * The header's trailing controls. The repository link is built as
+ * `.social-icons > a > span.sr-only + svg`, and the icon inherits its colour
+ * from `currentColor` on the anchor — so the anchor's colour is what has to
+ * change. Two earlier attempts missed it: one selected `.social-links`, which is
+ * not the class the framework emits, and one set `.site-header a`, which the
+ * anchor's own rule outranks. Read out of the built HTML this time.
+ */
+.site-header .social-icons a,
+.site-header .social-icons a:visited,
+.site-header .social-icons svg {
+	color: var(--ax-body);
+	fill: currentColor;
+}
+
+.site-header .social-icons a:hover {
+	color: var(--ax-text);
+}
+
+/* The header's own rule, because the framework's default is tuned for a
+ * coloured accent and a grey one does not read against it. */
+.site-header {
+	border-bottom: 1px solid var(--ax-rule);
+}
+
+/* The header's own rule, because the framework's default is tuned for a
+ * coloured accent and a grey one does not read against it. */
+.site-header {
+	border-bottom: 1px solid var(--ax-rule);
+}
+
+/* The rule under the page heading. The framework draws it in its accent, which
+ * here is a grey, and a grey rule under a grey heading reads as a mistake. */
+.page-header {
+	border-bottom: 1px solid var(--ax-rule);
+}
+
+/* ── Cards, asides and callouts ────────────────────────────────────────────
+ *
+ * The reference site has one border colour and uses it for everything. A card
+ * with a shadow and a callout with a coloured left border is three visual
+ * languages where one is enough.
+ */
+
+.sl-markdown-content :is(.card, .card + .card > .card-title) {
+	border: 1px solid var(--ax-rule);
 	border-radius: 6px;
-	padding: 1rem 1.25rem;
+	background: var(--ax-surface);
+	box-shadow: none;
+}
+
+.sl-markdown-content .aside {
+	border-left: 2px solid var(--ax-rule-strong);
+	background: transparent;
+	border-radius: 0;
+	padding: 0.25rem 0 0.25rem 1rem;
+}
+
+.sl-markdown-content .starlight-aside__content {
+	color: var(--ax-body);
+}
+
+/* ── Tables ────────────────────────────────────────────────────────────────
+ *
+ * The API reference is mostly tables, so they get treated properly: a rule under
+ * the header, a rule between rows, no vertical lines, and no zebra striping. A
+ * zebra-striped table is noise in a document where the rows are already
+ * separated by whitespace.
+ */
+
+.sl-markdown-content table {
+	border-collapse: collapse;
+	width: 100%;
+	font-size: var(--sl-text-sm);
+}
+
+.sl-markdown-content :is(th, td) {
+	border: 0;
+	border-bottom: 1px solid var(--ax-rule);
+	/* Right padding on every column except the last. Removing it everywhere
+	 * makes two-column tables run their headers together — "Entry point" and
+	 * "Names" read as one word, which is what it looked like before this was
+	 * fixed by giving every cell but the last its own gutter. */
+	padding: 0.5rem 1.25rem 0.5rem 0;
+	text-align: left;
+	vertical-align: top;
+	color: var(--ax-body);
+}
+
+.sl-markdown-content :is(th, td):last-child {
+	padding-right: 0;
+}
+
+.sl-markdown-content th {
+	color: var(--ax-text);
+	font-weight: 600;
+	border-bottom-color: var(--ax-rule-strong);
+	white-space: nowrap;
+}
+
+/* ── Code ────────────────────────────────────────────────────────────────── */
+
+/*
+ * Inline code.
+ *
+ * The framework renders it inside a `<code>` nested in a `<span>`, so a
+ * `:not(pre) > code` selector never matched and the weak default stood —
+ * pale grey text in a pale grey box, which on the API reference means most of the
+ * content. Selected by element with an explicit `:not(pre)` ancestor chain
+ * instead, which reaches the node the framework actually emits.
+ */
+.sl-markdown-content code {
+	background: var(--ax-surface);
+	border: 1px solid var(--ax-rule-strong);
+	padding: 0.0625rem 0.3rem;
+	border-radius: 3px;
+	font-size: 0.8125em;
+	color: var(--ax-text);
+	white-space: nowrap;
+}
+
+.sl-markdown-content pre code {
+	background: transparent;
+	border: 0;
+	padding: 0;
+	border-radius: 0;
+	color: inherit;
+	white-space: pre;
+}
+
+.sl-markdown-content pre {
+	background: var(--ax-surface);
+	border: 1px solid var(--ax-rule);
+	box-shadow: none;
+}
+
+/*
+ * Terminal chrome.
+ *
+ * Shells are labelled with a bar carrying three dots, which is worth keeping:
+ * it is the only thing on the page that tells a reader whether to paste the line
+ * into a shell or read it as library code. What is worth changing is the colour.
+ * The bar takes its background from the framework's grey ramp, and this palette's
+ * ramp lands it on a mid-dark grey — a dark strip across a near-white page, with
+ * dots a shade darker still, which reads as a rendering fault rather than as
+ * chrome.
+ *
+ * A light bar with mid-grey dots says the same thing in the same register as
+ * everything else here.
+ */
+.sl-markdown-content .expressive-code .frame.is-terminal .header {
+	background: #f4f4f2;
+}
+
+.sl-markdown-content .expressive-code .frame.is-terminal .header::before {
+	box-shadow: inset 99rem 99rem var(--ax-muted);
+}
+
+/* ── Landing page ────────────────────────────────────────────────────────────
+ *
+ * No hero, no splash template. The reference site leads with a name and a
+ * paragraph, and a documentation site that does the same reads as though a
+ * person wrote it.
+ */
+
+.ax-front {
+	max-width: 44rem;
+	padding: 0.5rem 0 2rem;
+}
+
+/*
+ * The page heading comes from the frontmatter `title` and the framework
+ * renders it. This block deliberately has **no** `h1` — an earlier version had
+ * one and the page showed "ax-kit" twice, once from the framework and once from
+ * here. The first thing on the page is already the heading.
+ */
+
+.ax-front__sub {
+	color: var(--ax-muted);
+	font-size: 0.9375rem;
+	margin: 0 0 2.5rem;
+}
+
+.ax-front h2 {
+	font-size: 0.8125rem;
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	color: var(--ax-muted);
+	margin: 2.5rem 0 0.75rem;
+}
+
+.ax-front p {
+	color: var(--ax-body);
+	line-height: 1.75;
+	text-wrap: pretty;
+	margin: 0 0 1rem;
+	max-width: 42rem;
+}
+
+.ax-front__actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.625rem;
+	margin: 2rem 0 0;
+}
+
+.ax-front .ax-front__actions a,
+.ax-front .ax-front__actions a:hover {
+	display: inline-block;
+	padding: 0.4375rem 0.875rem;
+	border: 1px solid var(--ax-text);
+	border-radius: 6px;
+	font-size: var(--sl-text-sm);
+	font-weight: 500;
+	color: var(--ax-text);
+	text-decoration: none;
+	transition:
+		background-color 120ms ease-out,
+		color 120ms ease-out;
+}
+
+.ax-front .ax-front__actions a:hover {
+	background: var(--ax-text);
+	color: var(--ax-bg);
+}
+
+.ax-front .ax-front__actions a[aria-variant="minimal"] {
+	border-color: var(--ax-rule-strong);
+	color: var(--ax-muted);
+}
+
+.ax-front .ax-front__actions a[aria-variant="minimal"]:hover {
+	background: var(--ax-surface);
+	color: var(--ax-text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.ax-front .ax-front__actions a {
+		transition: none;
+	}
+}
+
+.ax-front__list {
+	list-style: none;
+	padding: 0;
+	margin: 0;
+}
+
+.ax-front__list li {
+	padding: 0.5rem 0;
+	border-bottom: 1px solid var(--ax-rule);
+	color: var(--ax-body);
+	font-size: var(--sl-text-sm);
+}
+
+.ax-front__list li:last-child {
+	border-bottom: 0;
+}
+
+.ax-front__list strong {
+	color: var(--ax-text);
+	font-weight: 600;
+}
+
+/* ── The live demonstration ────────────────────────────────────────────────────
+ *
+ * One border, one radius, one type size — the same vocabulary as the reference
+ * site's rules. An island that looked designed differently from the page around
+ * it would read as a widget bolted on.
+ */
+
+.ax-try {
+	border: 1px solid var(--ax-rule-strong);
+	border-radius: 8px;
+	padding: 1.25rem;
 	margin: 1.5rem 0;
+	background: var(--ax-surface);
+}
+
+.ax-try > :first-child {
+	margin-top: 0;
+}
+
+.ax-try h4 {
+	font-size: 0.75rem;
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	color: var(--ax-muted);
+	margin: 1.5rem 0 0.625rem;
 }
 
 .ax-try__table {
 	border-collapse: collapse;
 	width: 100%;
-	margin: 0.5rem 0 1rem;
+	font-size: var(--sl-text-sm);
+	margin: 0;
 }
 
 .ax-try__table th,
 .ax-try__table td {
-	border-bottom: 1px solid var(--ax-border);
-	padding: 0.35rem 0.5rem;
+	border-bottom: 1px solid var(--ax-rule);
+	padding: 0.4375rem 0.625rem 0.4375rem 0;
 	text-align: left;
-	font-size: 0.9em;
+	color: var(--ax-body);
+}
+
+.ax-try__table th {
+	color: var(--ax-text);
+	font-weight: 600;
+	white-space: nowrap;
+	border-bottom-color: var(--ax-rule-strong);
 }
 
 .ax-try__actions {
@@ -73,47 +638,53 @@
 
 .ax-try__actions button {
 	font: inherit;
-	font-size: 0.85em;
-	padding: 0.3rem 0.6rem;
+	font-size: var(--sl-text-sm);
+	padding: 0.375rem 0.6875rem;
 	cursor: pointer;
-	border: 1px solid var(--ax-border);
-	border-radius: 4px;
-	background: transparent;
-	color: inherit;
+	border: 1px solid var(--ax-rule-strong);
+	border-radius: 6px;
+	background: var(--ax-surface);
+	color: var(--ax-text);
+	transition:
+		border-color 120ms ease-out,
+		background-color 120ms ease-out;
 }
 
 .ax-try__actions button:hover {
-	background: var(--ax-accent-soft);
+	border-color: var(--ax-text);
 }
 
 .ax-try__log {
-	padding-left: 1.2rem;
-	font-size: 0.9em;
+	padding-left: 1.125rem;
+	margin: 0;
+	font-size: var(--sl-text-sm);
+	color: var(--ax-body);
 }
 
 .ax-try__label {
+	color: var(--ax-text);
 	font-weight: 600;
 }
 
 .ax-try__muted {
-	opacity: 0.7;
+	color: var(--ax-muted);
 }
 
 .ax-try__note {
-	font-size: 0.9em;
-	border-top: 1px solid var(--ax-border);
-	padding-top: 0.75rem;
-	margin-bottom: 0;
+	font-size: var(--sl-text-sm);
+	color: var(--ax-body);
+	border-top: 1px solid var(--ax-rule);
+	padding-top: 0.875rem;
+	margin: 1.5rem 0 0;
 }
 
-/*
- * Dark mode.
- *
- * Starlight exposes its own tokens per colour scheme, so this maps ours onto
- * those rather than picking colours. A hand-picked dark palette would be wrong
- * the first time the framework's scheme changed.
- */
-:root[data-theme="dark"] {
-	--ax-border: var(--sl-color-gray-6);
-	--ax-accent-soft: var(--sl-color-gray-7);
+.ax-try--unavailable {
+	color: var(--ax-body);
+	font-size: var(--sl-text-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.ax-try__actions button {
+		transition: none;
+	}
 }

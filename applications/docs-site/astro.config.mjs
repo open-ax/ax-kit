@@ -120,7 +120,16 @@ export default defineConfig({
 					],
 				},
 			],
-			customCss: ["./src/styles/ax.css"],
+			// The self-hosted variable font, then the whole stylesheet. Both come
+			// from the framework's own extension point rather than from a `<link>`
+			// in a layout, so the stylesheet loads in the order the cascade needs —
+			// after the framework's tokens, so its overrides win without a single
+			// `!important`.
+			//
+			// Self-hosted rather than fetched from a font CDN: a documentation page
+			// that makes a third-party request on load tells a third party who read
+			// it, and this site makes no third-party requests at all.
+			customCss: ["@fontsource-variable/hanken-grotesk", "./src/styles/ax.css"],
 			components: {
 				// An island is opt-in per page through `<TryIt />`, and this slot is
 				// what keeps an ordinary page free of the framework runtime. No global
