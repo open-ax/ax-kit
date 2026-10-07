@@ -10,12 +10,12 @@
 				{
 					"kind": "interface",
 					"name": "AuditContextInput",
-					"signature": "interface AuditContextInput"
+					"signature": "interface AuditContextInput { readonly tools: ReadonlyArray<AuditToolInput>; readonly policyAllowsTools: boolean; }"
 				},
 				{
 					"kind": "interface",
 					"name": "AuditFinding",
-					"signature": "interface AuditFinding"
+					"signature": "interface AuditFinding { readonly check: string; readonly tool: string | null; readonly pass: boolean; readonly detail: string; }"
 				},
 				{
 					"kind": "function",
@@ -25,12 +25,12 @@
 				{
 					"kind": "function",
 					"name": "auditLiveUrlFindings",
-					"signature": "export declare function auditLiveUrlFindings(options: LaunchOptions, url: string): Promise<"
+					"signature": "export declare function auditLiveUrlFindings(options: LaunchOptions, url: string): Promise<{ report: string; context: AuditContextInput; }"
 				},
 				{
 					"kind": "interface",
 					"name": "AuditReport",
-					"signature": "interface AuditReport"
+					"signature": "interface AuditReport { readonly url: string; readonly lane: typeof LANE_STATEMENT; readonly failures: number; readonly total: number; readonly findings: ReadonlyArray<AuditFinding>; }"
 				},
 				{
 					"kind": "function",
@@ -40,7 +40,7 @@
 				{
 					"kind": "interface",
 					"name": "AuditToolInput",
-					"signature": "interface AuditToolInput"
+					"signature": "interface AuditToolInput { readonly name: string; readonly description: string; readonly title?: string | undefined; readonly hasInputSchema: boolean; readonly schemaValid: boolean; readonly consequentialHint: boolean; readonly readOnlyHint: boolean; readonly exposedOrigins: ReadonlyArray<string>; readonly outputLength: number; readonly paramCount: number; readonly maxParamDescription: number; }"
 				},
 				{
 					"kind": "function",
@@ -50,17 +50,17 @@
 				{
 					"kind": "type",
 					"name": "BrowserLike",
-					"signature": "type BrowserLike ="
+					"signature": "type BrowserLike = { newPage(): Promise<BrowserPageLike>; close(): Promise<void>; }"
 				},
 				{
 					"kind": "type",
 					"name": "BrowserPageLike",
-					"signature": "type BrowserPageLike ="
+					"signature": "type BrowserPageLike = { goto(url: string): Promise<void>; evaluate<T>(fn: () => T): Promise<Awaited<T>>; }"
 				},
 				{
 					"kind": "const",
 					"name": "BUDGETS",
-					"signature": "export declare const BUDGETS:"
+					"signature": "export declare const BUDGETS: { readonly toolDescription: 500; readonly paramDescription: 150; readonly toolName: 30; readonly toolOutput: 1536; }"
 				},
 				{
 					"kind": "function",
@@ -85,12 +85,12 @@
 				{
 					"kind": "interface",
 					"name": "DrivenBrowser",
-					"signature": "interface DrivenBrowser"
+					"signature": "interface DrivenBrowser { newPage(): Promise<DrivenPage>; close(): Promise<void>; }"
 				},
 				{
 					"kind": "interface",
 					"name": "DrivenPage",
-					"signature": "interface DrivenPage extends BrowserPageLike"
+					"signature": "interface DrivenPage extends BrowserPageLike { waitFor<T>(fn: (arg: unknown) => T, arg: unknown, description: string): Promise<Awaited<T>>; }"
 				},
 				{
 					"kind": "function",
@@ -120,7 +120,7 @@
 				{
 					"kind": "interface",
 					"name": "LaunchOptions",
-					"signature": "interface LaunchOptions"
+					"signature": "interface LaunchOptions { readonly headless: boolean; }"
 				},
 				{
 					"kind": "function",
@@ -147,52 +147,52 @@
 				{
 					"kind": "interface",
 					"name": "ModelContext",
-					"signature": "interface ModelContext extends EventTarget"
+					"signature": "interface ModelContext extends EventTarget { registerTool(tool: ModelContextTool, options?: ModelContextRegisterToolOptions | undefined): Promise<undefined>; getTools(options?: ModelContextGetToolOptions | undefined): Promise<RegisteredTool[]>; executeTool(tool: RegisteredTool, inputObject?: unknown, options?: ModelContextExecuteToolOptions | undefined): Promise<string>; ontoolchange: ModelEventHandler; ontoolactivated: ModelEventHandler; ontoolcancel: ModelEventHandler; }"
 				},
 				{
 					"kind": "interface",
 					"name": "ModelContextExecuteToolOptions",
-					"signature": "interface ModelContextExecuteToolOptions"
+					"signature": "interface ModelContextExecuteToolOptions { readonly signal?: AbortSignal | undefined; }"
 				},
 				{
 					"kind": "interface",
 					"name": "ModelContextGetToolOptions",
-					"signature": "interface ModelContextGetToolOptions"
+					"signature": "interface ModelContextGetToolOptions { readonly fromOrigins?: ReadonlyArray<string> | undefined; }"
 				},
 				{
 					"kind": "interface",
 					"name": "ModelContextRegisterToolOptions",
-					"signature": "interface ModelContextRegisterToolOptions"
+					"signature": "interface ModelContextRegisterToolOptions { readonly exposedTo?: ReadonlyArray<string> | undefined; readonly signal?: AbortSignal | undefined; }"
 				},
 				{
 					"kind": "interface",
 					"name": "ModelContextTool",
-					"signature": "interface ModelContextTool"
+					"signature": "interface ModelContextTool { readonly name: string; readonly title?: string | undefined; readonly description: string; readonly inputSchema?: unknown; readonly execute: ToolExecuteCallback; readonly annotations?: ToolAnnotations | undefined; }"
 				},
 				{
 					"kind": "interface",
 					"name": "RegisteredTool",
-					"signature": "interface RegisteredTool"
+					"signature": "interface RegisteredTool { readonly name: string; readonly title: string; readonly description: string; readonly inputSchema?: unknown; readonly window: Window; readonly origin: string; readonly annotations?: ToolAnnotations | undefined; }"
 				},
 				{
 					"kind": "const",
 					"name": "SPEC_VERSION",
-					"signature": "export declare const SPEC_VERSION:"
+					"signature": "export declare const SPEC_VERSION: { readonly draft: \"Draft Community Group Report, 2 October 2026\"; readonly commit: \"d61d0e6\"; }"
 				},
 				{
 					"kind": "class",
 					"name": "ToolActivatedEvent",
-					"signature": "export declare class ToolActivatedEvent extends Event"
+					"signature": "export declare class ToolActivatedEvent extends Event { readonly toolName: string; constructor(type: string, init?: ToolLifecycleInit | undefined); }"
 				},
 				{
 					"kind": "interface",
 					"name": "ToolAnnotations",
-					"signature": "interface ToolAnnotations"
+					"signature": "interface ToolAnnotations { readonly readOnlyHint?: boolean | undefined; readonly untrustedContentHint?: boolean | undefined; readonly consequentialHint?: boolean | undefined; readonly debugging?: boolean | undefined; }"
 				},
 				{
 					"kind": "class",
 					"name": "ToolCancelEvent",
-					"signature": "export declare class ToolCancelEvent extends Event"
+					"signature": "export declare class ToolCancelEvent extends Event { readonly toolName: string; constructor(type: string, init?: ToolLifecycleInit | undefined); }"
 				},
 				{
 					"kind": "type",
@@ -202,7 +202,7 @@
 				{
 					"kind": "interface",
 					"name": "ToolExecuteCallbackOptions",
-					"signature": "interface ToolExecuteCallbackOptions"
+					"signature": "interface ToolExecuteCallbackOptions { readonly signal: AbortSignal; }"
 				}
 				],
 				"runtime": "./dist/index.mjs"
@@ -232,7 +232,7 @@
 				{
 					"kind": "interface",
 					"name": "ToolChangeDiff",
-					"signature": "export interface ToolChangeDiff"
+					"signature": "export interface ToolChangeDiff { readonly added: ReadonlyArray<string>; readonly removed: ReadonlyArray<string>; }"
 				},
 				{
 					"kind": "type",
@@ -269,27 +269,27 @@
 				{
 					"kind": "const",
 					"name": "BRIDGE_ERRORS",
-					"signature": "export declare const BRIDGE_ERRORS:"
+					"signature": "export declare const BRIDGE_ERRORS: { readonly badRequest: -32602; readonly notExposed: -32010; readonly tooManyPending: -32011; readonly outcomeUnknown: -32012; }"
 				},
 				{
 					"kind": "class",
 					"name": "BridgeClient",
-					"signature": "export declare class BridgeClient"
+					"signature": "export declare class BridgeClient { private readonly post; private readonly pull; constructor(post: (body: unknown) => Promise<unknown>, pull: () => Promise<unknown>); serve(handler: (request: BridgeRequest) => Promise<unknown>): Promise<void>; }"
 				},
 				{
 					"kind": "class",
 					"name": "BridgeRefusal",
-					"signature": "export declare class BridgeRefusal extends Error"
+					"signature": "export declare class BridgeRefusal extends Error { readonly code: number; constructor(code: number, message: string); }"
 				},
 				{
 					"kind": "interface",
 					"name": "BridgeRequest",
-					"signature": "interface BridgeRequest"
+					"signature": "interface BridgeRequest { readonly handler: string; readonly args: Record<string, unknown>; }"
 				},
 				{
 					"kind": "interface",
 					"name": "BridgeRoutes",
-					"signature": "interface BridgeRoutes"
+					"signature": "interface BridgeRoutes { take(): Envelope | null; deliver(body: unknown): void; }"
 				},
 				{
 					"kind": "function",
@@ -329,7 +329,7 @@
 				{
 					"kind": "interface",
 					"name": "DaemonInfo",
-					"signature": "interface DaemonInfo"
+					"signature": "interface DaemonInfo { readonly name: string; readonly version: string; }"
 				},
 				{
 					"kind": "const",
@@ -339,7 +339,7 @@
 				{
 					"kind": "interface",
 					"name": "DiscoveryFile",
-					"signature": "interface DiscoveryFile"
+					"signature": "interface DiscoveryFile { readonly port: number; readonly pid: number; readonly token: string; readonly version: string; }"
 				},
 				{
 					"kind": "function",
@@ -354,7 +354,7 @@
 				{
 					"kind": "interface",
 					"name": "Envelope",
-					"signature": "interface Envelope"
+					"signature": "interface Envelope { readonly id: number; readonly request: BridgeRequest; }"
 				},
 				{
 					"kind": "function",
@@ -369,12 +369,12 @@
 				{
 					"kind": "interface",
 					"name": "JsonRpcRequest",
-					"signature": "interface JsonRpcRequest"
+					"signature": "interface JsonRpcRequest { readonly jsonrpc: \"2.0\"; readonly id: string | number; readonly method: string; readonly params?: unknown; }"
 				},
 				{
 					"kind": "interface",
 					"name": "JsonRpcResponse",
-					"signature": "interface JsonRpcResponse"
+					"signature": "interface JsonRpcResponse { readonly jsonrpc: \"2.0\"; readonly id: string | number | null; readonly result?: unknown; readonly error?: { readonly code: number; readonly message: string; }; }"
 				},
 				{
 					"kind": "function",
@@ -389,12 +389,12 @@
 				{
 					"kind": "interface",
 					"name": "NativeHostManifest",
-					"signature": "interface NativeHostManifest"
+					"signature": "interface NativeHostManifest { readonly name: string; readonly description: string; readonly path: string; readonly type: \"stdio\"; readonly allowed_origins: ReadonlyArray<string>; }"
 				},
 				{
 					"kind": "class",
 					"name": "PageBridge",
-					"signature": "export declare class PageBridge"
+					"signature": "export declare class PageBridge { private readonly deadlineMs; private nextId; private readonly queue; private readonly settled; constructor(deadlineMs?: number); take(): Envelope | null; deliver(body: unknown): void; private enqueue; listTools(tabId: number): Promise<ReadonlyArray<Record<string, unknown>>>; callTool(name: string, args: Record<string, unknown>, tabId: number, callerOrigin: string): Promise<unknown>; }"
 				},
 				{
 					"kind": "function",
@@ -429,7 +429,7 @@
 				{
 					"kind": "interface",
 					"name": "RequestMeta",
-					"signature": "interface RequestMeta"
+					"signature": "interface RequestMeta { readonly protocolVersion: string; readonly clientCapabilities: unknown; readonly clientInfo?: unknown; }"
 				},
 				{
 					"kind": "function",
@@ -449,7 +449,7 @@
 				{
 					"kind": "function",
 					"name": "splitFrames",
-					"signature": "export declare function splitFrames(buffer: string):"
+					"signature": "export declare function splitFrames(buffer: string): { lines: string[]; rest: string; }"
 				},
 				{
 					"kind": "function",
@@ -464,12 +464,12 @@
 				{
 					"kind": "interface",
 					"name": "Transport",
-					"signature": "interface Transport"
+					"signature": "interface Transport { readonly port: number; readonly bearer: string; readonly discoveryPath: string; close(): Promise<void>; }"
 				},
 				{
 					"kind": "interface",
 					"name": "TransportOptions",
-					"signature": "interface TransportOptions"
+					"signature": "interface TransportOptions { readonly discoveryDir: string; readonly host?: string; readonly port?: number; readonly bridge?: BridgeRoutes; }"
 				},
 				{
 					"kind": "function",
@@ -496,17 +496,17 @@
 				{
 					"kind": "interface",
 					"name": "ApprovalActivity",
-					"signature": "interface ApprovalActivity"
+					"signature": "interface ApprovalActivity { readonly kind: \"requested\" | \"approved\" | \"rejected\" | \"consumed\" | \"invalidated\"; readonly key: string; readonly at: number; }"
 				},
 				{
 					"kind": "interface",
 					"name": "ApprovalDetails",
-					"signature": "interface ApprovalDetails"
+					"signature": "interface ApprovalDetails { readonly key: HitlKey; readonly toolName: string; readonly description: string; readonly origin: string; readonly frameOrigin: string; readonly argsJson: string; readonly consequentialHint: boolean; readonly readOnlyHint: boolean; readonly definitionVersion: string; }"
 				},
 				{
 					"kind": "class",
 					"name": "ApprovalStore",
-					"signature": "export declare class ApprovalStore"
+					"signature": "export declare class ApprovalStore { private readonly pending; private readonly approved; private readonly activity; pendingKeys(): string[]; pendingBindingsFor(target: unknown): string[]; pendingDefinitionVersion(key: unknown): string | undefined; activityLog(): ApprovalActivity[]; private record; requestApproval(details: unknown): string; isApproved(key: unknown): boolean; approveApproval(key: unknown): void; rejectApproval(key: unknown): void; verifyAndConsume(key: unknown, liveKey: unknown, liveDefinitionVersion: unknown): void; invalidateDocument(documentId: unknown): void; invalidateTab(tabId: unknown): void; private dropPending; }"
 				},
 				{
 					"kind": "function",
@@ -531,7 +531,7 @@
 				{
 					"kind": "interface",
 					"name": "AuditEntry",
-					"signature": "interface AuditEntry"
+					"signature": "interface AuditEntry { readonly key: string; readonly toolName: string; readonly origin: string; readonly decision: \"requested\" | \"approved\" | \"rejected\" | \"executed\"; readonly at: number; }"
 				},
 				{
 					"kind": "function",
@@ -576,7 +576,7 @@
 				{
 					"kind": "interface",
 					"name": "ExternallyConnectable",
-					"signature": "interface ExternallyConnectable"
+					"signature": "interface ExternallyConnectable { readonly ids: ReadonlyArray<string>; readonly matches: ReadonlyArray<string>; }"
 				},
 				{
 					"kind": "function",
@@ -586,7 +586,7 @@
 				{
 					"kind": "interface",
 					"name": "FrameToolView",
-					"signature": "interface FrameToolView"
+					"signature": "interface FrameToolView { readonly name: string; readonly origin: string; readonly frameOrigin: string; readonly description: string; readonly consequentialHint: boolean; readonly readOnlyHint: boolean; readonly definitionVersion: string; readonly declaredKeys: ReadonlyArray<string>; }"
 				},
 				{
 					"kind": "const",
@@ -606,7 +606,7 @@
 				{
 					"kind": "interface",
 					"name": "HitlKey",
-					"signature": "interface HitlKey"
+					"signature": "interface HitlKey { readonly tabId: number; readonly documentId: string; readonly frameId: number; readonly toolName: string; readonly argsHash: string; }"
 				},
 				{
 					"kind": "function",
@@ -621,7 +621,7 @@
 				{
 					"kind": "interface",
 					"name": "InjectionRequest",
-					"signature": "interface InjectionRequest"
+					"signature": "interface InjectionRequest { readonly handler: HandlerName; readonly args: unknown; }"
 				},
 				{
 					"kind": "function",
@@ -636,12 +636,12 @@
 				{
 					"kind": "interface",
 					"name": "ManifestDocument",
-					"signature": "interface ManifestDocument"
+					"signature": "interface ManifestDocument { readonly manifest_version: 3; readonly name: string; readonly version: string; readonly description: string; readonly incognito: \"not_allowed\"; readonly background: { readonly service_worker: string; readonly type: \"module\"; }; readonly host_permissions: ReadonlyArray<string>; readonly permissions: ReadonlyArray<string>; readonly content_security_policy: { readonly extension_pages: string; }; readonly externally_connectable: { readonly ids: ReadonlyArray<string>; readonly matches: ReadonlyArray<string>; }; readonly action: { readonly default_title: string; }; readonly side_panel: { readonly default_path: string; }; readonly minimum_chrome_version: string; }"
 				},
 				{
 					"kind": "interface",
 					"name": "ManifestPosture",
-					"signature": "interface ManifestPosture"
+					"signature": "interface ManifestPosture { readonly incognito: \"not_allowed\"; readonly externallyConnectable: ExternallyConnectable; readonly hostMatches: ReadonlyArray<string>; readonly allFrames: boolean; readonly hostScopeJustification: string; readonly backgroundKind: \"service-worker\" | \"event-page\"; }"
 				},
 				{
 					"kind": "const",
@@ -661,7 +661,7 @@
 				{
 					"kind": "class",
 					"name": "WorkerAuditTrail",
-					"signature": "export declare class WorkerAuditTrail"
+					"signature": "export declare class WorkerAuditTrail { private readonly entries; append(entry: unknown): void; list(): AuditEntry[]; }"
 				}
 				],
 				"runtime": "./dist/index.mjs"
@@ -678,52 +678,52 @@
 				{
 					"kind": "class",
 					"name": "AxCompanion",
-					"signature": "export declare class AxCompanion"
+					"signature": "export declare class AxCompanion { readonly page: Page; constructor(page: Page); isInstalled(): Promise<boolean>; waitForTool(name: string, options?: AxWaitOptions): Promise<AxToolSummary>; expectTool(name: string, options?: AxExpectOptions): Promise<AxToolSummary>; getAvailableTools(options?: AxListOptions): Promise<AxToolSummary[]>; executeTool<T = unknown>(name: string, args?: unknown, options?: AxExecuteOptions): Promise<T>; }"
 				},
 				{
 					"kind": "interface",
 					"name": "AxExecuteOptions",
-					"signature": "interface AxExecuteOptions"
+					"signature": "interface AxExecuteOptions { readonly signal?: AbortSignal | undefined; }"
 				},
 				{
 					"kind": "interface",
 					"name": "AxExpectOptions",
-					"signature": "interface AxExpectOptions"
+					"signature": "interface AxExpectOptions { readonly timeout?: number | undefined; }"
 				},
 				{
 					"kind": "interface",
 					"name": "AxListOptions",
-					"signature": "interface AxListOptions"
+					"signature": "interface AxListOptions { readonly fromOrigins?: ReadonlyArray<string> | undefined; }"
 				},
 				{
 					"kind": "class",
 					"name": "AxMissingSurfaceError",
-					"signature": "export declare class AxMissingSurfaceError extends Error"
+					"signature": "export declare class AxMissingSurfaceError extends Error { constructor(); }"
 				},
 				{
 					"kind": "type",
 					"name": "AxPage",
-					"signature": "type AxPage = Page &"
+					"signature": "type AxPage = Page & { ax: AxCompanion; }"
 				},
 				{
 					"kind": "class",
 					"name": "AxParseError",
-					"signature": "export declare class AxParseError extends Error"
+					"signature": "export declare class AxParseError extends Error { readonly toolName: string; readonly raw: string; constructor(toolName: string, raw: string, cause: unknown); }"
 				},
 				{
 					"kind": "interface",
 					"name": "AxToolAnnotations",
-					"signature": "interface AxToolAnnotations"
+					"signature": "interface AxToolAnnotations { readonly readOnlyHint?: boolean | undefined; readonly untrustedContentHint?: boolean | undefined; readonly consequentialHint?: boolean | undefined; readonly debugging?: boolean | undefined; }"
 				},
 				{
 					"kind": "interface",
 					"name": "AxToolSummary",
-					"signature": "interface AxToolSummary"
+					"signature": "interface AxToolSummary { readonly name: string; readonly description: string; readonly title: string; readonly origin: string; readonly annotations?: AxToolAnnotations | undefined; }"
 				},
 				{
 					"kind": "interface",
 					"name": "AxWaitOptions",
-					"signature": "interface AxWaitOptions"
+					"signature": "interface AxWaitOptions { readonly timeout?: number | undefined; }"
 				},
 				{
 					"kind": "function",
@@ -785,7 +785,7 @@
 				{
 					"kind": "interface",
 					"name": "AxAnnotations",
-					"signature": "interface AxAnnotations"
+					"signature": "interface AxAnnotations { readonly readOnlyHint?: boolean | undefined; readonly untrustedContentHint?: boolean | undefined; readonly consequentialHint?: boolean | undefined; readonly debugging?: boolean | undefined; }"
 				},
 				{
 					"kind": "type",
@@ -800,7 +800,7 @@
 				{
 					"kind": "interface",
 					"name": "AxExecuteOptions",
-					"signature": "interface AxExecuteOptions"
+					"signature": "interface AxExecuteOptions { readonly signal: AbortSignal; }"
 				},
 				{
 					"kind": "type",
@@ -815,22 +815,22 @@
 				{
 					"kind": "interface",
 					"name": "AxProviderProps",
-					"signature": "interface AxProviderProps"
+					"signature": "interface AxProviderProps { readonly namespace?: string | undefined; readonly middleware?: AxMiddleware | undefined; readonly children: ReactNode; }"
 				},
 				{
 					"kind": "interface",
 					"name": "AxToolDefinition",
-					"signature": "interface AxToolDefinition"
+					"signature": "interface AxToolDefinition { readonly name: string; readonly title?: string | undefined; readonly description: string; readonly inputSchema?: unknown; readonly execute: AxExecuteCallback; readonly annotations?: AxAnnotations | undefined; readonly exposedTo?: ReadonlyArray<string> | undefined; }"
 				},
 				{
 					"kind": "interface",
 					"name": "AxToolHandle",
-					"signature": "interface AxToolHandle"
+					"signature": "interface AxToolHandle { readonly supported: boolean; readonly registered: boolean; readonly error: Error | DOMException | null; }"
 				},
 				{
 					"kind": "interface",
 					"name": "AxToolOptions",
-					"signature": "interface AxToolOptions"
+					"signature": "interface AxToolOptions { readonly description?: string | undefined; readonly title?: string | undefined; readonly inputSchema?: unknown; readonly annotations?: AxAnnotations | undefined; readonly exposedTo?: ReadonlyArray<string> | undefined; }"
 				},
 				{
 					"kind": "function",
@@ -862,7 +862,7 @@
 				{
 					"kind": "interface",
 					"name": "AxAnnotations",
-					"signature": "interface AxAnnotations"
+					"signature": "interface AxAnnotations { readonly readOnlyHint?: boolean | undefined; readonly untrustedContentHint?: boolean | undefined; readonly consequentialHint?: boolean | undefined; readonly debugging?: boolean | undefined; }"
 				},
 				{
 					"kind": "type",
@@ -872,12 +872,12 @@
 				{
 					"kind": "interface",
 					"name": "AxExecuteOptions",
-					"signature": "interface AxExecuteOptions"
+					"signature": "interface AxExecuteOptions { readonly signal: AbortSignal; }"
 				},
 				{
 					"kind": "interface",
 					"name": "AxModelContextLike",
-					"signature": "interface AxModelContextLike"
+					"signature": "interface AxModelContextLike { registerTool(tool: { readonly name: string; readonly title?: string | undefined; readonly description: string; readonly inputSchema?: unknown; readonly execute: AxExecuteCallback; readonly annotations?: AxAnnotations | undefined; }, options?: { readonly exposedTo?: ReadonlyArray<string> | undefined; readonly signal?: AbortSignal | undefined; } | undefined): Promise<undefined>; }"
 				},
 				{
 					"kind": "function",
@@ -887,7 +887,7 @@
 				{
 					"kind": "interface",
 					"name": "AxToolDefinition",
-					"signature": "interface AxToolDefinition"
+					"signature": "interface AxToolDefinition { readonly name: string; readonly title?: string | undefined; readonly description: string; readonly inputSchema?: unknown; readonly execute: AxExecuteCallback; readonly annotations?: AxAnnotations | undefined; readonly exposedTo?: ReadonlyArray<string> | undefined; }"
 				},
 				{
 					"kind": "function",
@@ -914,7 +914,7 @@
 				{
 					"kind": "interface",
 					"name": "AxAnnotations",
-					"signature": "interface AxAnnotations"
+					"signature": "interface AxAnnotations { readonly readOnlyHint?: boolean | undefined; readonly untrustedContentHint?: boolean | undefined; readonly consequentialHint?: boolean | undefined; readonly debugging?: boolean | undefined; }"
 				},
 				{
 					"kind": "type",
@@ -924,22 +924,22 @@
 				{
 					"kind": "interface",
 					"name": "AxExecuteOptions",
-					"signature": "interface AxExecuteOptions"
+					"signature": "interface AxExecuteOptions { readonly signal: AbortSignal; }"
 				},
 				{
 					"kind": "interface",
 					"name": "AxModelContextLike",
-					"signature": "interface AxModelContextLike"
+					"signature": "interface AxModelContextLike { registerTool(tool: { readonly name: string; readonly title?: string | undefined; readonly description: string; readonly inputSchema?: unknown; readonly execute: AxExecuteCallback; readonly annotations?: AxAnnotations | undefined; }, options?: { readonly exposedTo?: ReadonlyArray<string> | undefined; readonly signal?: AbortSignal | undefined; } | undefined): Promise<undefined>; }"
 				},
 				{
 					"kind": "interface",
 					"name": "AxToolDefinition",
-					"signature": "interface AxToolDefinition"
+					"signature": "interface AxToolDefinition { readonly name: string; readonly title?: string | undefined; readonly description: string; readonly inputSchema?: unknown; readonly execute: AxExecuteCallback; readonly annotations?: AxAnnotations | undefined; readonly exposedTo?: ReadonlyArray<string> | undefined; }"
 				},
 				{
 					"kind": "interface",
 					"name": "AxToolHandle",
-					"signature": "interface AxToolHandle"
+					"signature": "interface AxToolHandle { readonly supported: Ref<boolean>; readonly registered: Ref<boolean>; readonly error: Ref<Error | DOMException | null>; }"
 				},
 				{
 					"kind": "function",
@@ -978,7 +978,7 @@
 				{
 					"kind": "interface",
 					"name": "ConvertOptions",
-					"signature": "interface ConvertOptions"
+					"signature": "interface ConvertOptions { readonly allowAdditionalProperties?: boolean | undefined; }"
 				},
 				{
 					"kind": "function",
@@ -993,7 +993,7 @@
 				{
 					"kind": "interface",
 					"name": "LibrarySchemaLike",
-					"signature": "interface LibrarySchemaLike"
+					"signature": "interface LibrarySchemaLike { readonly toJSONSchema?: unknown; readonly jsonSchema?: unknown; readonly schema?: unknown; }"
 				},
 				{
 					"kind": "const",
@@ -1013,7 +1013,7 @@
 				{
 					"kind": "interface",
 					"name": "StandardJsonSchemaConverter",
-					"signature": "interface StandardJsonSchemaConverter"
+					"signature": "interface StandardJsonSchemaConverter { readonly \"~standard\": { readonly version: 1; readonly vendor: string; readonly jsonSchema: { readonly input: (options?: unknown) => Record<string, unknown>; readonly output: (options?: unknown) => Record<string, unknown>; }; }; readonly jsonSchema: { readonly input: (options?: unknown) => Record<string, unknown>; readonly output: (options?: unknown) => Record<string, unknown>; }; }"
 				}
 				],
 				"runtime": "./dist/index.mjs"
