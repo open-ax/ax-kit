@@ -29,7 +29,7 @@ already reach, because it runs inside the page's own realm.
 The registry is a `WeakMap` held inside the installed script, keyed by document.
 It is not shared with any other document, so a parent frame and a child frame
 each hold their own. That is a real gap against the specification — see
-[known gaps](./reference/conformance/) — and it happens to be a narrowing one:
+[known gaps](/reference/conformance/) — and it happens to be a narrowing one:
 a frame cannot see a parent's tools.
 
 ## What an agent can do through it
@@ -38,9 +38,14 @@ An agent that can call `document.modelContext.executeTool` can do whatever the
 **page's own handlers** do. The library does not widen that and does not narrow
 it.
 
-- The arguments an agent sends are `unknown` until the page validates them. The
-  library passes them through unvalidated, because the specification's
-  `inputSchema` is a declared contract and the page owns the checking.
+- Arguments an agent sends are `unknown` to the library, and are checked before
+  any handler sees them: `executeTool` validates them against the declared
+  `inputSchema` and rejects with `UnknownError` on a violation. The specification
+  declares `inputSchema` but implements no checking against it, so that step is
+  this library's. It is a *structural* check - types, required members, enums -
+  and the handler still owns every semantic rule the schema cannot express.
+- A handler that throws rejects the caller with `UnknownError`, so a readable
+  message from a handler reaches the log and not the agent.
 - The result is whatever the page's handler returns, JSON-serialized.
 - Cancellation is cooperative: aborting the execution signal tells the page's
   handler to stop, through the `signal` the callback receives. A handler that
@@ -80,7 +85,7 @@ default exposure is same-origin and not "anything present".
 | An agent that ignores `consequentialHint` | The annotation is a declaration. Nothing in the draft makes it enforceable, and inventing enforcement would be a name the proposal does not define. |
 | Cross-document tool discovery | Not implemented, and not attempted. Tools do not cross document boundaries in this implementation. |
 | Prompt injection through tool results | A property of the agent, not of the transport. The library hands results over; what an agent does with them is outside its reach. |
-| A browser that misenforces Permissions Policy | The library reads the policy where observable and assumes allowed where not. [Errors → preconditions](./reference/errors/) describes that limit precisely. |
+| A browser that misenforces Permissions Policy | The library reads the policy where observable and assumes allowed where not. [Errors → preconditions](/reference/errors/) describes that limit precisely. |
 
 ## Isolation, stated precisely
 

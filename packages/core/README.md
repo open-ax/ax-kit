@@ -91,20 +91,65 @@ them, so a conformance run cannot observe them.
 
 `@ax-kit/core/auto` installs the surface against the ambient document when you
 import it. It exists for one situation: a server-rendered application, where the
-one place a polyfill belongs is the framework's client entry hook, which runs
-before hydration for exactly this purpose.
-
-```js
-// client-entry.js — runs before hydration
-import "@ax-kit/core/auto";
-```
+page itself renders on the server and an explicit install call has no client-side
+place to be written from.
 
 ```ts
-// A server component. No "use client", no client directive on the tree.
+"use client";
+
+import { useEffect } from "react";
+import { autoInstallModelContext } from "@ax-kit/core/auto";
+
+// Mounted as the first child of the document body.
+export function Polyfill() {
+  useEffect(() => {
+    autoInstallModelContext();
+  }, []);
+  return null;
+}
+```
+
+**When the install runs depends on the framework, and it is worth knowing which
+you have.** Some frameworks have a client entry module that is evaluated before
+hydration; importing `/auto` there does what the name suggests. The Next.js App
+Router has no such hook — its closest equivalents, `instrumentation.ts` and the
+App Router's own entry points, run on the server and never touch the reader's
+document. In that framework the import above runs *after hydration begins*, which
+means there is a window in which an agent arriving early finds no surface. There
+is no arrangement that removes that window; marking the whole tree as a client
+component to get an earlier install throws away the server rendering that was the
+reason for using `/auto` at all.
+
+Registering the tools has the same constraint, for a different reason. A Server
+Component cannot hand an ordinary function to a Client Component — the props are
+serialized, and a function is not serializable — so the registration call belongs
+in an effect inside a client component, not in a prop passed down from the server:
+
+```ts
+"use client";
+
+import { useEffect } from "react";
 import { registerStorefrontTools } from "./tools";
 
-export default function Page() {
-  return <Catalog onReady={registerStorefrontTools} />;
+export function ToolRegistration() {
+  useEffect(() => {
+    const installed = autoInstallModelContext();
+    if (installed === undefined) return;
+    let dispose: (() => void) | undefined;
+    let cancelled = false;
+    void Promise.resolve(registerStorefrontTools(installed)).then((remove) => {
+      // Cleanup can run while registration is still in flight, so the disposer is
+      // kept and called on both paths. Dropping it leaves the tools registered
+      // after unmount, and a remount collides on the names.
+      dispose = remove;
+      if (cancelled) remove();
+    });
+    return () => {
+      cancelled = true;
+      dispose?.();
+    };
+  }, []);
+  return null;
 }
 ```
 

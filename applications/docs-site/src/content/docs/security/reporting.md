@@ -73,4 +73,4 @@ consumer does with a result is outside its reach — that is the
 **Tools not being visible across documents.** This implementation's registry is
 per document, so a frame does not see a parent's tools. It is a known gap
 against the specification and a narrowing one. See
-[conformance](./reference/conformance/).
+[conformance](/reference/conformance/).

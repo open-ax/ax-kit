@@ -28,7 +28,7 @@
 
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { createServer } from "node:http";
-import { extname, join, resolve } from "node:path";
+import { extname, join, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import {
 	afterAll,
@@ -43,6 +43,9 @@ const SITE = fileURLToPath(new URL("..", pathToFileURL(__filename)));
 const DIST = resolve(join(SITE, "dist"));
 const PORT = 4398;
 const ORIGIN = `http://localhost:${PORT}`;
+
+/** The static server, kept so `afterAll` can close it. */
+let server: ReturnType<typeof createServer> | undefined;
 
 /**
  * A static file server over `dist/`.
@@ -66,7 +69,15 @@ function serve(root: string) {
 		const requested = new URL(request.url ?? "/", ORIGIN).pathname;
 		// Normalise before joining, so `..` cannot climb out of the served root.
 		const resolved = resolve(root, `.${requested}`);
-		if (resolved === undefined || !resolved.startsWith(root)) {
+		// `resolved === root` is allowed: that is a request for `/`, which is the
+		// site itself and must be served. For anything deeper, the comparison is
+		// against the root *plus a separator*, because a bare `startsWith(root)`
+		// also accepts a sibling directory whose name merely begins with the root's
+		// — serving `dist-other` while claiming to serve `dist`.
+		if (
+			resolved === undefined ||
+			(resolved !== root && !resolved.startsWith(root + sep))
+		) {
 			response.writeHead(403).end("forbidden");
 			return;
 		}
@@ -105,16 +116,26 @@ beforeAll(async () => {
 			"the site has not been built. Run `pnpm --filter @ax-kit/docs-site build` first; these tests deliberately do not fall back to `astro dev`.",
 		);
 	}
+	server = serve(DIST);
 	await new Promise<void>((resolve) => {
-		serve(DIST).listen(PORT, resolve);
+		server.listen(PORT, resolve);
 	});
 });
 
 afterAll(async () => {
-	// Nothing to clean up: the server runs in this process and the test runner
-	// owns its lifetime. Closing it explicitly would be tidier in a suite that
-	// started more than one.
-	await new Promise<void>((resolve) => resolve());
+	// Closed explicitly, because it was not before. The listener lives in this
+	// process, so the suite held the port open after the last test: the runner
+	// exited anyway, but a second run in the same process failed with `EADDRINUSE`,
+	// which is the sort of failure that looks like a flake and gets ignored.
+	if (server === undefined) {
+		return;
+	}
+	await new Promise<void>((resolve) => {
+		server.close(() => {
+			resolve();
+		});
+	});
+	server = undefined;
 });
 
 describe("the built site", () => {
@@ -209,9 +230,16 @@ describe("the live demonstration", () => {
 					hasText: "proceed_to_checkout",
 				}),
 			).toContainText("yes");
+			// The *cell*, not the row. `toContainText("no")` on the row matched the
+			// substring inside "no — takes none" in a neighbouring column, so the
+			// assertion passed whatever the Consequential column said — and would
+			// have passed had the column not existed at all.
 			await expect(
-				page.locator(".ax-try__table tbody tr", { hasText: "add_to_cart" }),
-			).toContainText("no");
+				page
+					.locator(".ax-try__table tbody tr", { hasText: "add_to_cart" })
+					.locator("td")
+					.nth(2),
+			).toHaveText("no");
 
 			// Invocation. The result is displayed as the string the draft specifies.
 			await page.getByRole("button", { name: /well formed/ }).click();
@@ -219,10 +247,21 @@ describe("the live demonstration", () => {
 				"search_products",
 			);
 
-			// Two refusals the specification defines.
+			// Two refusals, each asserted separately. Asserting once after clicking
+			// twice proved only that *a* refusal happened: the second click could have
+			// done nothing and the test would still have passed. Each entry carries the
+			// label it was invoked under, so the label is what identifies it.
 			await page.getByRole("button", { name: /query is a number/ }).click();
+			await expect(
+				page.locator(".ax-try__log li", {
+					hasText: "query is a number",
+				}),
+			).toContainText("UnknownError");
+
 			await page.getByRole("button", { name: /no query/ }).click();
-			await expect(page.locator(".ax-try__log")).toContainText("UnknownError");
+			await expect(
+				page.locator(".ax-try__log li", { hasText: "no query" }),
+			).toContainText("UnknownError");
 		} finally {
 			await browser.close();
 		}

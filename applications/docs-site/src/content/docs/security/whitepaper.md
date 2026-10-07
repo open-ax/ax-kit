@@ -58,7 +58,7 @@ descendants". Each document that evaluates the bundle holds its own registry, so
 Source: [MDN Same-origin policy](https://developer.mozilla.org/en-US/docs/Web/Security/Same-origin_policy)
 
 This is recorded as the largest known gap in
-[conformance](./reference/conformance/). It is a *narrowing* divergence: a frame
+[conformance](/reference/conformance/). It is a *narrowing* divergence: a frame
 sees fewer tools than the specification grants, never more.
 
 ### JSON serialization of tool results
@@ -86,7 +86,7 @@ a way it can defend, is more useful to an adopter than one that hides it.
 | `ModelContext`, `ToolActivatedEvent`, `ToolCancelEvent` are not global constructors | Narrowing | The behaviour the event tests assert is implemented; the named interface objects are not exposed. |
 | `modelContext` is an own property, not a `Document.prototype` accessor | Narrowing | An own property is not reachable from a document the bundle never ran against. |
 | `SecurityError` on non-origin-keyed agent cluster | **Removed** | Upstream PR #330 removed the requirement on 2026-09-30; this implementation follows the 2 October 2026 draft. |
-| Argument validation is the page author's, not the platform's | Neutral | The draft's `inputSchema` is a declared contract. Nothing in the draft implements checking against it. |
+| Arguments are checked against `inputSchema` before the handler runs | Narrowing | The draft declares `inputSchema` and implements no checking against it. This library validates first and rejects with `UnknownError`, so an agent cannot reach a handler with arguments the schema forbids. |
 
 ## What the library does not do
 
@@ -113,7 +113,7 @@ pass is not an accepted fix.
 ## Verifying these claims
 
 The conformance suite runs on every change as a required status check on all
-three engines. [Conformance](./reference/conformance/) states what is measured,
+three engines. [Conformance](/reference/conformance/) states what is measured,
 what is excluded and why, and what is expected to fail with the reason for each.
 
 To verify the behavioural claims yourself, the [live demonstration](/try-it/)

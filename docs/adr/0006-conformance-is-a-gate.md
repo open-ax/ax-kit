@@ -53,6 +53,14 @@ because it needs all three engines rather than one and takes minutes rather
 than seconds. It is a required status check on `main`, so a conformance
 failure cannot be merged around.
 
+The check names are the jobs' configured `name` values — `Repository guard`,
+`Toolchain`, `Conformance suite` — because that is what GitHub uses as a status
+check's context. An earlier version of this paragraph named them
+`guard / Repository guard` and so on, which is the *display* form the settings UI
+shows and not the value a required-check configuration matches on. Every pull
+request reported the three required checks as expected-and-missing, and no run
+could satisfy them.
+
 ### What the detector does and does not do
 
 The scheduled job is unchanged. It watches upstream and opens an issue, because

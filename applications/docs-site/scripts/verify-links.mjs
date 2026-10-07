@@ -49,14 +49,29 @@ function htmlFiles(dir) {
 }
 
 /**
- * The file a URL resolves to, or `undefined` when it does not.
+ * The file a URL resolves to.
  *
- * `build.format: "file"` means `/reference/api` is `reference/api.html`, and the
- * mapping is not something to reimplement loosely — a check that guesses the
- * output layout is a check that agrees with itself.
+ * `build.format: "directory"` means `/reference/api/` is
+ * `reference/api/index.html`, and the mapping is not something to reimplement
+ * loosely — a check that guesses the output layout is a check that agrees with
+ * itself.
+ *
+ * `page` is the URL of the page the link was found on, and it is required
+ * rather than optional.
+ *
+ * A relative href is resolved against its own page, in a browser, because that
+ * is what a reader's browser does. Resolving it against the site root instead
+ * made this gate report five broken links as sound: `./reference/conformance/`
+ * written on `/security/threat-model/` reaches
+ * `/security/reference/conformance/`, which does not exist, while
+ * `reference/conformance/index.html` does and so the link passed. The security
+ * pages carried three of them. A gate that resolves a URL differently from the
+ * browser is not checking the links a reader will follow.
  */
-function resolve(url) {
-	const clean = url.split("#")[0].split("?")[0];
+function resolve(url, page) {
+	const base = `https://example.invalid${page}`;
+	const { pathname } = new URL(url, base);
+	const clean = pathname.split("#")[0].split("?")[0];
 	if (clean === "" || clean === "/") {
 		return join(DIST, "index.html");
 	}
@@ -81,7 +96,10 @@ let checked = 0;
 
 for (const page of pages) {
 	const html = readFileSync(page, "utf8");
+	// The built path with its `index.html` removed, so it is the URL a browser is
+	// on rather than a filename. `./x` from this base is what the reader gets.
 	const where = `/${relative(DIST, page).replace(/\\/g, "/")}`;
+	const pageUrl = where.replace(/(?:^|\/)index\.html$/, "/");
 	for (const match of html.matchAll(/(?:href|src)="([^"]+)"/g)) {
 		const url = match[1];
 		if (
@@ -99,7 +117,7 @@ for (const page of pages) {
 			continue;
 		}
 		checked += 1;
-		const target = resolve(url);
+		const target = resolve(url, pageUrl);
 		if (!existsSync(target)) {
 			problems.push(`${where} -> ${url}`);
 		}
@@ -124,6 +142,24 @@ if (!existsSync(securityTxt)) {
 		problems.push(`security.txt Expires is not a date: ${expires}`);
 	} else if (expires !== undefined && Date.parse(expires) < Date.now()) {
 		problems.push(`security.txt Expires is in the past: ${expires}`);
+	}
+
+	// RFC 9116 §4.4: `Canonical` names the URI this file is served from, and a
+	// consumer should not trust a copy retrieved from anywhere else. It pointed at
+	// the reporting *page* rather than at this file, so every consumer comparing
+	// the two would have decided the file was an untrusted copy and ignored it —
+	// which is the opposite of what publishing it is for.
+	//
+	// Checked here because it is a one-line field that silently stops meaning
+	// anything, and nothing else in the build would notice.
+	const canonical = /Canonical:\s*(\S+)/.exec(body)?.[1];
+	const expectedCanonical = "https://ax-kit.dev/.well-known/security.txt";
+	if (canonical === undefined) {
+		problems.push("security.txt has no Canonical field");
+	} else if (canonical !== expectedCanonical) {
+		problems.push(
+			`security.txt Canonical must name this file, ${expectedCanonical}, not ${canonical}`,
+		);
 	}
 }
 

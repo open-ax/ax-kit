@@ -66,8 +66,9 @@ thing.
 
 ## Honest about what it is not
 
-- **Not deployed.** `pnpm build && pnpm preview` is what the tests run against.
-  No deployment, no claim of one.
+- **Not deployed.** `pnpm build` is what the tests run against — specifically
+  `dist/`, served by the suite's own Node server rather than by `astro preview`,
+  for the reason above. No deployment, no claim of one.
 - **The live demonstration uses React** because a hydrated component needs a
   renderer. Exactly one component carries `client:load`; every other page ships no
   island, and that is asserted rather than assumed.

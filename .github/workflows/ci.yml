@@ -102,8 +102,14 @@ jobs:
     # unauthenticated when it is not, so this is the difference between a run
     # that works and a run that reports an enumeration failure as a suite
     # problem.
-    env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    #
+    # The token is declared on the step that reads it rather than on the job.
+    # At job level it was also in the environment of `pnpm install`,
+    # `playwright install` and `pnpm build` — three commands that execute
+    # dependency code and install binaries, none of which need write access to
+    # anything. The token's `contents: read` scope limits what it can do, but
+    # "read-only" is a property of the credential, not of the process holding it:
+    # a compromised postinstall script does not need to write.
     steps:
       # Pinned to SHA (version in trailing comment).
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -137,6 +143,8 @@ jobs:
         run: pnpm build
 
       - name: Run the pinned suite on every claimed engine
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: pnpm test:conformance
 
   # Toolchain checks. They live here, with the root manifest, so every change

@@ -25,20 +25,34 @@ import { defineConfig } from "astro/config";
  * gives either documentation that drifts or a build that fails on irrelevant
  * changes.
  *
- * The report is **committed** under `src/content/docs/reference/api-report.json`.
- * That is what makes the change reviewable — a pull request that alters a public
- * signature shows the reference diff next to the code diff.
+ * The report is **committed** at `src/data/api-report.json`. It sits beside the
+ * generated page rather than beside the hand-written pages, because it is an input
+ * to the generator rather than a page anyone edits. That is what makes the change
+ * reviewable — a pull request that alters a public signature shows the reference
+ * diff next to the code diff.
  *
  * ## No dates rendered from build time
  *
- * `build: { format: "file" }` and the `LastUpdated` component read from git. The
- * site rebuilds on every release, so a build-time date would make every page look
- * freshly edited after every release and destroy the only signal the dates carry,
- * which is which pages actually changed.
+ * The `LastUpdated` component reads from git. The site rebuilds on every release,
+ * so a build-time date would make every page look freshly edited after every
+ * release and destroy the only signal the dates carry, which is which pages
+ * actually changed. The component is therefore not used at all — see
+ * `components.Footer` below, which replaces the framework's footer rather than
+ * extending it.
+ *
+ * (This header previously claimed `build: { format: "file" }` while the
+ * configuration set `"directory"`. A header that explains decisions is worth
+ * nothing if it describes a file that is not the one being built.)
  */
 export default defineConfig({
 	site: "https://ax-kit.dev",
-	trailingSlash: "never",
+	// "always", not "never", because every link on this site ends in a slash —
+	// the ones written in MDX and the ones the documentation framework
+	// generates. With "never" the development server answers those URLs with a
+	// warning page rather than the page, so the site behaves differently under
+	// `astro dev` than it does after a build. The two must agree, or the
+	// development server stops being a way to check the site.
+	trailingSlash: "always",
 	build: {
 		// "directory", not "file".
 		//

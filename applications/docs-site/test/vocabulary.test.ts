@@ -43,7 +43,18 @@ describe("the canonical tool vocabulary", () => {
 	const demonstration = declaredNames(readFileSync(DEMONSTRATION, "utf8"));
 
 	it("is the same set in both places", () => {
-		expect(demonstration.sort()).toEqual(storefront.sort());
+		// Copied before sorting. `sort()` mutates, and both arrays are shared with
+		// the cases below — so sorting in place silently reordered them, and the
+		// docblock's "in the order it declares them" stopped being true from the
+		// first assertion onward.
+		expect([...demonstration].sort()).toEqual([...storefront].sort());
+	});
+
+	it("declares them in the same order in both places", () => {
+		// The previous case sorted before comparing, so a reordering in one file
+		// could not be detected at all. The storefront's order is the reading order
+		// of a shopping flow, and the demo's is meant to mirror it.
+		expect(demonstration).toEqual(storefront);
 	});
 
 	it("is five tools, and no sixth appears in either", () => {
@@ -52,15 +63,30 @@ describe("the canonical tool vocabulary", () => {
 	});
 
 	it("marks exactly one consequential, and both agree which", () => {
-		const consequentialIn = (path: string) => {
+		// The *name* is compared, not only the count. Two files each flagging one
+		// tool is not agreement if they flag different ones, and a count-only
+		// assertion reported that state as a pass.
+		const consequentialNameIn = (path: string): string | undefined => {
 			const source = readFileSync(path, "utf8");
-			// The storefront records the decision as `consequential: true` in a
-			// table; the demo records it on the same property. Both are read the
-			// same way so a change to one shape cannot silently pass.
-			return [...source.matchAll(/consequential:\s*true/g)].length;
+			// Both files record the decision on a `consequential:` property within a
+			// few lines of the tool's `name`. Read as a window so the property is
+			// attributed to the nearest preceding name rather than the whole file.
+			// The tempered-dot token is what keeps the match inside one tool: an
+			// unbounded `[\s\S]{0,400}?` reaches *backwards* into the previous
+			// tool's object and reports its name instead, which is how a first
+			// attempt at this assertion compared `apply_coupon_code` with
+			// `proceed_to_checkout` and failed on files that agree.
+			const match =
+				/name:\s*"([a-z_]+)"((?:(?!name:)[\s\S]){0,400}?)consequential:\s*true/.exec(
+					source,
+				);
+			return match?.[1];
 		};
-		expect(consequentialIn(STOREFRONT)).toBe(1);
-		expect(consequentialIn(DEMONSTRATION)).toBe(1);
+		const fromStorefront = consequentialNameIn(STOREFRONT);
+		const fromDemonstration = consequentialNameIn(DEMONSTRATION);
+		expect(fromStorefront).toBeDefined();
+		expect(fromDemonstration).toBeDefined();
+		expect(fromDemonstration).toBe(fromStorefront);
 	});
 
 	it("uses snake_case, which the draft's name rule permits", () => {

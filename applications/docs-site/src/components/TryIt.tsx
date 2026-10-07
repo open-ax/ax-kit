@@ -90,12 +90,102 @@ type Row = {
 	readonly title: string;
 	readonly consequential: boolean;
 	readonly hasSchema: boolean;
+	/**
+	 * The declared argument shapes, read from the tool's own `inputSchema`.
+	 *
+	 * Present so the table can show the contract rather than only whether one was
+	 * declared. The page claimed to display the same argument shapes as the
+	 * storefront while showing a single yes/no, which made the claim false for
+	 * every tool that takes arguments.
+	 */
+	readonly arguments: ReadonlyArray<{
+		readonly name: string;
+		readonly type: string;
+		readonly required: boolean;
+	}>;
 };
 
+/**
+ * The declared argument shapes, read from a tool's `inputSchema`.
+ *
+ * `inputSchema` is typed `unknown`, and stays that way here. It is an
+ * externally-supplied JSON Schema, so its shape is checked at runtime rather than
+ * asserted: a cast would both hide a signature change and let a malformed schema
+ * throw during render, which would take the whole demonstration down.
+ *
+ * Returns an empty list for anything that is not an object schema with a
+ * `properties` dictionary. A tool that declares a schema this reader cannot
+ * summarise is shown as taking unspecified arguments, which is true, rather than
+ * as taking none, which would be a lie.
+ */
+function readArguments(schema: unknown): ReadonlyArray<{
+	name: string;
+	type: string;
+	required: boolean;
+}> {
+	if (typeof schema !== "object" || schema === null || Array.isArray(schema)) {
+		return [];
+	}
+	const { properties, required } = schema as {
+		readonly properties?: unknown;
+		readonly required?: unknown;
+	};
+	if (typeof properties !== "object" || properties === null) {
+		return [];
+	}
+	const requiredNames = new Set(
+		Array.isArray(required)
+			? required.filter((n): n is string => typeof n === "string")
+			: [],
+	);
+	const out: Array<{ name: string; type: string; required: boolean }> = [];
+	for (const [name, node] of Object.entries(properties)) {
+		let type = "unknown";
+		if (typeof node === "object" && node !== null && !Array.isArray(node)) {
+			const declared = (node as { readonly type?: unknown }).type;
+			if (typeof declared === "string") {
+				type = declared;
+			}
+		}
+		out.push({ name, type, required: requiredNames.has(name) });
+	}
+	return out;
+}
+
 type Outcome =
-	| { readonly kind: "result"; readonly label: string; readonly value: string }
-	| { readonly kind: "refusal"; readonly label: string; readonly name: string }
-	| { readonly kind: "error"; readonly label: string; readonly detail: string };
+	| {
+			readonly id: number;
+			readonly kind: "result";
+			readonly label: string;
+			readonly value: string;
+	  }
+	| {
+			readonly id: number;
+			readonly kind: "refusal";
+			readonly label: string;
+			readonly name: string;
+	  }
+	| {
+			readonly id: number;
+			readonly kind: "error";
+			readonly label: string;
+			readonly detail: string;
+	  };
+
+/**
+ * The next log entry's id.
+ *
+ * Every entry needs a key React can distinguish, and two obvious choices are
+ * wrong here. Keying on `${label}-${kind}` repeats as soon as a reader clicks the
+ * same button twice, which is the first thing anyone does with a demonstration.
+ * Keying on the array index is stable for an append-only list, but it is the
+ * documented way to introduce state bugs the moment an entry is ever inserted or
+ * removed, and it is refused by this repository's own lint rule.
+ *
+ * A counter is correct for both cases: unique by construction, and unaffected by
+ * reordering.
+ */
+let nextOutcomeId = 0;
 
 /** Read `document.modelContext` without pretending the DOM lib declares it. */
 function surface(): ModelContext | undefined {
@@ -108,14 +198,23 @@ export default function TryIt(): React.JSX.Element {
 	const [rows, setRows] = useState<ReadonlyArray<Row>>([]);
 	const [log, setLog] = useState<ReadonlyArray<Outcome>>([]);
 	const [unavailable, setUnavailable] = useState(false);
+	// Tracked separately from `rows`, because "no rows" is ambiguous: it is both the
+	// state while registration is in flight and the state after it failed. Leaving
+	// the page on "Registering…" after a failure is a page contradicting itself,
+	// and the error explaining why sits in the log further down.
+	const [registrationFailed, setRegistrationFailed] = useState(false);
 	// The registration controller. One for the whole set, so every tool is removed
 	// together — the two lifetimes stay distinct, and the execution signal below
 	// cancels one call without touching any of this.
 	const controller = useRef<AbortController | null>(null);
 	const mounted = useRef(true);
 
-	const note = useCallback((outcome: Outcome) => {
-		setLog((previous) => [...previous, outcome]);
+	// The id is stamped here rather than at each call site, so an entry cannot be
+	// logged without one.
+	const note = useCallback((outcome: Omit<Outcome, "id">) => {
+		nextOutcomeId += 1;
+		const entry = { ...outcome, id: nextOutcomeId } as Outcome;
+		setLog((previous) => [...previous, entry]);
 	}, []);
 
 	useEffect(() => {
@@ -144,6 +243,7 @@ export default function TryIt(): React.JSX.Element {
 						title: tool.title,
 						consequential: tool.annotations?.consequentialHint === true,
 						hasSchema: tool.inputSchema !== undefined,
+						arguments: readArguments(tool.inputSchema),
 					})),
 				);
 			}
@@ -199,6 +299,7 @@ export default function TryIt(): React.JSX.Element {
 			.then(read)
 			.catch((error: unknown) => {
 				if (!cancelled && mounted.current) {
+					setRegistrationFailed(true);
 					note({
 						kind: "error",
 						label: "registration",
@@ -263,13 +364,27 @@ export default function TryIt(): React.JSX.Element {
 		<div className="ax-try">
 			<p>
 				Everything below is running in your browser against the published entry
-				points. Register, enumerate, invoke, and watch the specification's
-				refusals.
+				points. Register, enumerate, invoke, and watch two calls be refused.
+			</p>
+			<p className="ax-try__muted">
+				Those refusals are <em>this library's</em>, not the proposal's. The
+				draft passes object arguments to a tool's <code>execute</code> without
+				validating them; the polyfill checks them against{" "}
+				<code>inputSchema</code> first and reports the failure as the draft's
+				generic <code>UnknownError</code>, so an agent cannot tell a bad{" "}
+				<code>query</code> from a missing one. That is a limitation worth seeing
+				rather than a conformance claim.
 			</p>
 
 			<h4>What an agent sees on this page</h4>
 			{rows.length === 0 ? (
-				<p>Registering…</p>
+				registrationFailed ? (
+					<p className="ax-try__muted">
+						Registration failed. The reason is in the log below.
+					</p>
+				) : (
+					<p>Registering…</p>
+				)
 			) : (
 				<table className="ax-try__table">
 					<thead>
@@ -277,7 +392,7 @@ export default function TryIt(): React.JSX.Element {
 							<th scope="col">Name</th>
 							<th scope="col">Title</th>
 							<th scope="col">Consequential</th>
-							<th scope="col">Declares arguments</th>
+							<th scope="col">Arguments</th>
 						</tr>
 					</thead>
 					<tbody>
@@ -294,7 +409,22 @@ export default function TryIt(): React.JSX.Element {
 										<span className="ax-try__muted">no</span>
 									)}
 								</td>
-								<td>{row.hasSchema ? "yes" : "no — takes none"}</td>
+								<td>
+									{row.hasSchema ? (
+										<code>
+											{row.arguments.length === 0
+												? "none"
+												: row.arguments
+														.map(
+															(argument) =>
+																`${argument.name}${argument.required ? "" : "?"}: ${argument.type}`,
+														)
+														.join(", ")}
+										</code>
+									) : (
+										<span className="ax-try__muted">no — takes none</span>
+									)}
+								</td>
 							</tr>
 						))}
 					</tbody>
@@ -351,7 +481,7 @@ export default function TryIt(): React.JSX.Element {
 			) : (
 				<ol className="ax-try__log">
 					{log.map((entry) => (
-						<li key={`${entry.label}-${entry.kind}`}>
+						<li key={entry.id}>
 							<span className="ax-try__label">{entry.label}</span>
 							{entry.kind === "result" && (
 								<>

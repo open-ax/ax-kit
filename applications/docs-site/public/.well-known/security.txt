@@ -1,5 +1,5 @@
 Contact: mailto:contactopenax@gmail.com
 Expires: 2027-10-07T00:00:00.000Z
 Preferred-Languages: en
-Canonical: https://ax-kit.dev/security/reporting
-Policy: https://github.com/open-ax/ax-kit/security/policy
+Canonical: https://ax-kit.dev/.well-known/security.txt
+Policy: https://ax-kit.dev/security/reporting

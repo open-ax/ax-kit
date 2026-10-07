@@ -97,8 +97,20 @@
 /* ── Typography ──────────────────────────────────────────────────────────── */
 
 :root {
+	/*
+	 * The family name is `Hanken Grotesk Variable`, not `Hanken Grotesk` — read out
+	 * of the installed package's own `index.css`, which declares
+	 * `font-family: 'Hanken Grotesk Variable'`.
+	 *
+	 * Asking for the un-suffixed name matches no `@font-face` rule, so the browser
+	 * fell straight through to `system-ui` and the self-hosted font was downloaded
+	 * on every page and never used. The whole point of self-hosting here is to stop
+	 * making third-party requests; paying for the download and rendering someone
+	 * else's font is worse than not self-hosting at all.
+	 */
 	--sl-font: var(
 		--font-sans,
+		"Hanken Grotesk Variable",
 		"Hanken Grotesk",
 		system-ui,
 		-apple-system,
@@ -313,6 +325,28 @@ starlight-theme-select {
 
 .site-header :is(.search, .search-input) input::placeholder {
 	color: var(--ax-muted);
+}
+
+/*
+ * Search results.
+ *
+ * The search dialog is Pagefind's own widget, and it takes its text colour from
+ * `--pagefind-ui-text`, which the framework sets to `--sl-color-gray-2`. This
+ * palette redefines that token as `#f2f2f1` — near-white — so result excerpts and
+ * the highlighted `<mark>` terms were rendered at roughly the same value as the
+ * white surface behind them. Titles stayed legible only because the framework
+ * styles those separately.
+ *
+ * Overriding the two tokens is enough: the dialog's surface is left alone, and
+ * Pagefind's own layout is untouched.
+ */
+#starlight__search .pagefind-ui {
+	--pagefind-ui-text: var(--ax-body);
+}
+
+#starlight__search .pagefind-ui mark {
+	color: var(--ax-text);
+	background: var(--ax-surface);
 }
 
 /*

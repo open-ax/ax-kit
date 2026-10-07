@@ -35,17 +35,23 @@ JSON serialization, so a handler returning `{ tool: "…" }` comes back as
 `{"tool":"…"}` with quotes, and the caller parses it. This is the specification's
 behaviour, not a limitation of the polyfill.
 
-**A refusal is `UnknownError`.** When a handler throws — including when your own
-argument validation rejects — the caller sees `UnknownError`. The specification
-says a callback failure rejects that way, so a readable message from your handler
-is for your logs, not for the agent. If an agent needs to distinguish "bad
-arguments" from "the tool failed", validate before invoking.
+**Both refusals above come from schema validation, not from a throwing
+handler.** The library checks the arguments against the declared `inputSchema`
+before `execute` runs, and reports the failure as the specification's generic
+`UnknownError`. So an agent sending `query: 42` and an agent sending no `query` at
+all both see `UnknownError` and cannot tell them apart. That is a limitation worth
+seeing rather than a conformance claim: the draft specifies one failure name, and
+this library maps both causes onto it.
+
+A handler that throws produces the same `UnknownError`, so a readable message from
+your handler reaches your log and not the agent. If an agent must distinguish
+"bad arguments" from "the tool failed", validate before invoking.
 
 **One tool is consequential and four are not.** `proceed_to_checkout` spends money
 and cannot be undone. The two cart mutations are reversible, cost nothing, and a
 user who clicked *add to cart* has already confirmed it. Over-annotating trains
 everyone to dismiss confirmations, which is the failure mode the annotation exists
-to prevent. [Why, in more detail →](./reference/annotations/)
+to prevent. [Why, in more detail →](/reference/annotations/)
 
 ## If nothing happened above
 
