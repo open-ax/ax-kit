@@ -160,9 +160,23 @@ function describe(value: unknown): string {
  */
 function refusesArguments(tool: string): (input: unknown) => void {
 	return (input: unknown) => {
+		// Accepts only an empty, non-array object, and refuses everything else.
+		//
+		// The earlier version refused an object with keys and let everything
+		// through otherwise — so `[]`, `true` and `42` all reached the handler. For
+		// `proceed_to_checkout` that meant an order was placed on a populated cart
+		// by a caller that sent something other than no arguments at all, which is
+		// the opposite of what the refusal is for.
+		//
+		// `buildTool` normalises `undefined` and `null` to `{}` before calling the
+		// handler, so "no arguments" arrives here as the empty object and every
+		// other shape is a caller that sent something. An array is refused rather
+		// than treated as empty: `Object.keys([])` is `[]`, so the earlier check
+		// could not tell an empty array from no arguments.
 		if (
-			typeof input === "object" &&
-			input !== null &&
+			typeof input !== "object" ||
+			input === null ||
+			Array.isArray(input) ||
 			Object.keys(input as Record<string, unknown>).length > 0
 		) {
 			throw new BadArguments(tool, "takes no arguments");

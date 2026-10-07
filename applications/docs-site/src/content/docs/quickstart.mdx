@@ -99,12 +99,20 @@ not a loopback exemption. Loopback trust affects whether a document counts as a
 [secure context](https://developer.mozilla.org/docs/Web/Security/Secure_Contexts),
 which is a separate check from the `tools` policy.
 
-What actually happens without the header depends on the browser. Where the
-Permissions Policy API is present it decides, and a document with no `tools`
-allowance cannot install the surface. Where the API is absent the browser
-predates the draft and enforces nothing, so the polyfill assumes allowed. That is
-the failure mode worth knowing: a browser too old to deny you will not tell you,
-and the page degrades to being an ordinary shop rather than erroring.
+What actually happens without the header depends on what the browser can
+observe, and the honest summary is narrower than "it stops working". This library
+refuses installation on an **observable denial** and assumes permission when it
+cannot observe one:
+
+- If the browser's feature list names `tools`, the Permissions Policy API decides,
+  and a document with no allowance cannot install the surface.
+- If the feature list does **not** name `tools`, the browser predates the draft and
+  enforces nothing, so the library assumes allowed and installs.
+- If the Permissions Policy API is absent entirely, the same assumption applies.
+
+So the header is worth shipping because it turns a silent allowance into an
+enforced one on browsers that know the feature — not because the page is
+guaranteed to degrade without it.
 
 ## Does it work?
 

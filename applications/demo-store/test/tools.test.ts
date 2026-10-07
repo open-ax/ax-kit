@@ -352,16 +352,31 @@ describe("schema rejection is ours, not the platform's", () => {
 		// The cart is filled first because checkout refuses an empty one, and
 		// that refusal would otherwise be indistinguishable from the one under
 		// test: both come back as `ok: false`.
-		expect(
+		// The invalid call comes first, while the cart is still populated. A
+		// successful checkout empties the cart, and a call on an empty cart is
+		// refused for a different reason entirely — so asserting after a successful
+		// call proves nothing about argument refusal.
+		await expect(
 			(await invoke("add_to_cart", { sku: "AX-MUG-001", quantity: 1 })).ok,
 		).toBe(true);
-		expect((await invoke("proceed_to_checkout", {})).ok).toBe(true);
 		expect((await invoke("proceed_to_checkout", { anything: 1 })).ok).toBe(
 			false,
 		);
-		await expect(
-			handler("proceed_to_checkout")({ anything: 1 }),
-		).rejects.toThrow(/takes no arguments/);
+
+		// And the same tool with no arguments still succeeds, so the refusal above is
+		// about the argument rather than about the cart.
+		expect((await invoke("proceed_to_checkout", {})).ok).toBe(true);
+
+		// Direct callback invocation as well. The registry rejects a primitive
+		// before a handler runs, so this path is only reachable by calling the
+		// exported `buildTool(...).execute` yourself — and it is reachable, which is
+		// why the guard checks the shape rather than only the key count.
+		for (const bad of [{ anything: 1 }, [], true, 42, "pay"]) {
+			await expect(
+				handler("proceed_to_checkout")(bad),
+				`${JSON.stringify(bad)} should be refused`,
+			).rejects.toThrow(/takes no arguments/);
+		}
 	});
 
 	it("rejects a quantity that would make the total inexact", async () => {

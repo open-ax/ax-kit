@@ -97,12 +97,17 @@ type Row = {
 	 * declared. The page claimed to display the same argument shapes as the
 	 * storefront while showing a single yes/no, which made the claim false for
 	 * every tool that takes arguments.
+	 *
+	 * `undefined` when a schema is declared but cannot be summarised, which is a
+	 * different fact from "no arguments".
 	 */
-	readonly arguments: ReadonlyArray<{
-		readonly name: string;
-		readonly type: string;
-		readonly required: boolean;
-	}>;
+	readonly arguments:
+		| ReadonlyArray<{
+				readonly name: string;
+				readonly type: string;
+				readonly required: boolean;
+		  }>
+		| undefined;
 };
 
 /**
@@ -118,20 +123,29 @@ type Row = {
  * summarise is shown as taking unspecified arguments, which is true, rather than
  * as taking none, which would be a lie.
  */
-function readArguments(schema: unknown): ReadonlyArray<{
-	name: string;
-	type: string;
-	required: boolean;
-}> {
+function readArguments(schema: unknown):
+	| ReadonlyArray<{
+			name: string;
+			type: string;
+			required: boolean;
+	  } | null>
+	| undefined {
 	if (typeof schema !== "object" || schema === null || Array.isArray(schema)) {
-		return [];
+		return undefined;
 	}
 	const { properties, required } = schema as {
 		readonly properties?: unknown;
 		readonly required?: unknown;
 	};
+	// `undefined` means "a schema is declared but this reader cannot summarise it".
+	// It is deliberately not the same answer as an empty list: an object schema
+	// can constrain its arguments with `patternProperties` or
+	// `additionalProperties` and no `properties` at all, and reporting that as
+	// "takes no arguments" would be a claim about the tool that the tool does not
+	// make. An empty `properties` really does mean no named arguments, so that case
+	// still returns an empty list.
 	if (typeof properties !== "object" || properties === null) {
-		return [];
+		return undefined;
 	}
 	const requiredNames = new Set(
 		Array.isArray(required)
@@ -364,16 +378,27 @@ export default function TryIt(): React.JSX.Element {
 		<div className="ax-try">
 			<p>
 				Everything below is running in your browser against the published entry
-				points. Register, enumerate, invoke, and watch two calls be refused.
+				points. Register, enumerate, invoke, and watch what two malformed calls
+				do.
 			</p>
 			<p className="ax-try__muted">
-				Those refusals are <em>this library's</em>, not the proposal's. The
-				draft passes object arguments to a tool's <code>execute</code> without
-				validating them; the polyfill checks them against{" "}
-				<code>inputSchema</code> first and reports the failure as the draft's
-				generic <code>UnknownError</code>, so an agent cannot tell a bad{" "}
+				With <em>this library</em> answering, both are refused. It checks the
+				arguments against the declared <code>inputSchema</code> before a tool's{" "}
+				<code>execute</code> runs, and reports the failure as the draft's
+				generic <code>UnknownError</code> — so an agent cannot tell a bad{" "}
 				<code>query</code> from a missing one. That is a limitation worth seeing
 				rather than a conformance claim.
+			</p>
+			<p className="ax-try__muted">
+				<b>
+					If your browser ships its own <code>document.modelContext</code>
+				</b>
+				, it is that surface which answers here, not this library —{" "}
+				<code>installModelContext</code> preserves an existing implementation
+				rather than replacing it. The draft does not require a native surface to
+				check <code>inputSchema</code>, and this demonstration's handlers do not
+				throw, so on such a browser both calls may succeed. That would be the
+				native surface behaving as specified, not a fault here.
 			</p>
 
 			<h4>What an agent sees on this page</h4>
@@ -411,16 +436,22 @@ export default function TryIt(): React.JSX.Element {
 								</td>
 								<td>
 									{row.hasSchema ? (
-										<code>
-											{row.arguments.length === 0
-												? "none"
-												: row.arguments
-														.map(
-															(argument) =>
-																`${argument.name}${argument.required ? "" : "?"}: ${argument.type}`,
-														)
-														.join(", ")}
-										</code>
+										row.arguments === undefined ? (
+											<span className="ax-try__muted">
+												declared, but not summarisable here
+											</span>
+										) : (
+											<code>
+												{row.arguments.length === 0
+													? "none"
+													: row.arguments
+															.map(
+																(argument) =>
+																	`${argument.name}${argument.required ? "" : "?"}: ${argument.type}`,
+															)
+															.join(", ")}
+											</code>
+										)
 									) : (
 										<span className="ax-try__muted">no — takes none</span>
 									)}
