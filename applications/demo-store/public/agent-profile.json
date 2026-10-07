@@ -1,0 +1,26 @@
+{
+	"$comment": "The machine-readable profile the least-effort protocol family expects. Published as data: this storefront implements none of these protocols, and the capability entries below say so in the protocol's own terms rather than by omission.",
+	"version": "0.1.0",
+	"id": "https://ax-kit.dev/demo-store",
+	"merchant": {
+		"name": "ax-kit reference storefront",
+		"description": "A small shop that publishes its capabilities as typed tools."
+	},
+	"capabilities": {
+		"supports_ap2": false,
+		"supports_acp": false,
+		"supports_mcp": false
+	},
+	"payment": {
+		"$comment": "Present because the profile shape requires the key, empty because there is no integration to describe. An empty object is a truthful answer; omitting the key would be ambiguous between 'no' and 'not written yet'.",
+		"methods": [],
+		"currencies": ["GBP"]
+	},
+	"agent_tool_surface": {
+		"$comment": "What this storefront actually offers an agent, which is the one capability here that is real. The tools are enumerated by the page at runtime rather than hard-coded in this file, because a copy of a list is a second source of truth for something the page already knows.",
+		"mechanism": "webmcp",
+		"draft": "Draft Community Group Report, 2 October 2026",
+		"enumeration": "document.modelContext.getTools()",
+		"note": "A tool surface describes this page to an agent that is already present. It is not an agent acting on the shop's behalf over a payment rail, and it is not a substitute for any of the protocols above."
+	}
+}
