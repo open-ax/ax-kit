@@ -129,15 +129,27 @@ in an effect inside a client component, not in a prop passed down from the serve
 "use client";
 
 import { useEffect } from "react";
+import { autoInstallModelContext } from "@ax-kit/core/auto";
 import { registerStorefrontTools } from "./tools";
 
 export function ToolRegistration() {
   useEffect(() => {
-    const installed = autoInstallModelContext();
-    if (installed === undefined) return;
+    // `autoInstallModelContext` returns `undefined` when the surface already
+    // exists — including when `/auto` installed it on import earlier, which is
+    // the normal case here. Reading `document.modelContext` as the fallback is
+    // what makes the two components composable: `Polyfill` may mount, or not, and
+    // this one works either way.
+    //
+    // A genuine refusal also leaves it `undefined`, and that is still the right
+    // answer: nothing to register against.
+    const context =
+      autoInstallModelContext() ??
+      (document as unknown as Record<string, unknown>).modelContext;
+    if (context === undefined || context === null) return;
+
     let dispose: (() => void) | undefined;
     let cancelled = false;
-    void Promise.resolve(registerStorefrontTools(installed)).then((remove) => {
+    void Promise.resolve(registerStorefrontTools(context)).then((remove) => {
       // Cleanup can run while registration is still in flight, so the disposer is
       // kept and called on both paths. Dropping it leaves the tools registered
       // after unmount, and a remount collides on the names.
