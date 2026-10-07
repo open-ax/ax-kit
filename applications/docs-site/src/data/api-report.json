@@ -1,0 +1,818 @@
+{
+	"packages": [
+	{
+		"dependencies": [
+		"playwright"
+		],
+		"entries": {
+			".": {
+				"members": [
+				{
+					"kind": "type",
+					"name": "AuditContextInput"
+				},
+				{
+					"kind": "type",
+					"name": "AuditFinding"
+				},
+				{
+					"kind": "function",
+					"name": "auditLiveUrl"
+				},
+				{
+					"kind": "function",
+					"name": "auditLiveUrlFindings"
+				},
+				{
+					"kind": "type",
+					"name": "AuditReport"
+				},
+				{
+					"kind": "function",
+					"name": "auditSnapshot"
+				},
+				{
+					"kind": "type",
+					"name": "AuditToolInput"
+				},
+				{
+					"kind": "function",
+					"name": "auditUrl"
+				},
+				{
+					"kind": "type",
+					"name": "BrowserLike"
+				},
+				{
+					"kind": "type",
+					"name": "BrowserPageLike"
+				},
+				{
+					"kind": "const",
+					"name": "BUDGETS"
+				},
+				{
+					"kind": "function",
+					"name": "collectContext"
+				},
+				{
+					"kind": "function",
+					"name": "collectSettled"
+				},
+				{
+					"kind": "function",
+					"name": "countFailures"
+				},
+				{
+					"kind": "function",
+					"name": "createReport"
+				},
+				{
+					"kind": "type",
+					"name": "DrivenBrowser"
+				},
+				{
+					"kind": "type",
+					"name": "DrivenPage"
+				},
+				{
+					"kind": "function",
+					"name": "exitCodeFor"
+				},
+				{
+					"kind": "function",
+					"name": "formatReport"
+				},
+				{
+					"kind": "const",
+					"name": "LANE_STATEMENT"
+				},
+				{
+					"kind": "function",
+					"name": "launchBrowser"
+				},
+				{
+					"kind": "function",
+					"name": "launchDrivenBrowser"
+				},
+				{
+					"kind": "type",
+					"name": "LaunchOptions"
+				},
+				{
+					"kind": "function",
+					"name": "scoreAudit"
+				}
+				],
+				"runtime": "./dist/index.mjs"
+			}
+		},
+		"name": "@ax-kit/cli",
+		"version": "0.0.0"
+	},
+	{
+		"dependencies": [],
+		"entries": {
+			".": {
+				"members": [
+				{
+					"kind": "function",
+					"name": "installModelContext"
+				},
+				{
+					"kind": "type",
+					"name": "ModelContext"
+				},
+				{
+					"kind": "type",
+					"name": "ModelContextExecuteToolOptions"
+				},
+				{
+					"kind": "type",
+					"name": "ModelContextGetToolOptions"
+				},
+				{
+					"kind": "type",
+					"name": "ModelContextRegisterToolOptions"
+				},
+				{
+					"kind": "type",
+					"name": "ModelContextTool"
+				},
+				{
+					"kind": "type",
+					"name": "RegisteredTool"
+				},
+				{
+					"kind": "const",
+					"name": "SPEC_VERSION"
+				},
+				{
+					"kind": "class",
+					"name": "ToolActivatedEvent"
+				},
+				{
+					"kind": "type",
+					"name": "ToolAnnotations"
+				},
+				{
+					"kind": "class",
+					"name": "ToolCancelEvent"
+				},
+				{
+					"kind": "type",
+					"name": "ToolExecuteCallback"
+				},
+				{
+					"kind": "type",
+					"name": "ToolExecuteCallbackOptions"
+				}
+				],
+				"runtime": "./dist/index.mjs"
+			},
+			"./auto": {
+				"members": [
+				{
+					"kind": "function",
+					"name": "autoInstallModelContext"
+				}
+				],
+				"runtime": "./dist/auto/index.mjs"
+			},
+			"./ax": {
+				"members": [
+				{
+					"kind": "function",
+					"name": "executeToolResult"
+				},
+				{
+					"kind": "function",
+					"name": "getTool"
+				},
+				{
+					"kind": "interface",
+					"name": "ToolChangeDiff"
+				},
+				{
+					"kind": "type",
+					"name": "ToolChangeListener"
+				},
+				{
+					"kind": "function",
+					"name": "trackToolChanges"
+				},
+				{
+					"kind": "function",
+					"name": "unregisterTool"
+				}
+				],
+				"runtime": "./dist/ax/index.mjs"
+			}
+		},
+		"name": "@ax-kit/core",
+		"version": "0.0.0"
+	},
+	{
+		"dependencies": [],
+		"entries": {
+			".": {
+				"members": [
+				{
+					"kind": "function",
+					"name": "assertLoopbackBind"
+				},
+				{
+					"kind": "const",
+					"name": "BRIDGE_ERRORS"
+				},
+				{
+					"kind": "class",
+					"name": "BridgeClient"
+				},
+				{
+					"kind": "class",
+					"name": "BridgeRefusal"
+				},
+				{
+					"kind": "type",
+					"name": "BridgeRequest"
+				},
+				{
+					"kind": "type",
+					"name": "BridgeRoutes"
+				},
+				{
+					"kind": "function",
+					"name": "checkBearer"
+				},
+				{
+					"kind": "function",
+					"name": "checkUpgradeOrigin"
+				},
+				{
+					"kind": "function",
+					"name": "completeResult"
+				},
+				{
+					"kind": "function",
+					"name": "createBearer"
+				},
+				{
+					"kind": "function",
+					"name": "createDaemonInfo"
+				},
+				{
+					"kind": "function",
+					"name": "createDiscoveryFile"
+				},
+				{
+					"kind": "function",
+					"name": "createNativeHostManifest"
+				},
+				{
+					"kind": "type",
+					"name": "DaemonInfo"
+				},
+				{
+					"kind": "const",
+					"name": "DISCOVERY_FILE_NAME"
+				},
+				{
+					"kind": "type",
+					"name": "DiscoveryFile"
+				},
+				{
+					"kind": "function",
+					"name": "discoveryResult"
+				},
+				{
+					"kind": "function",
+					"name": "dispatchRequest"
+				},
+				{
+					"kind": "type",
+					"name": "Envelope"
+				},
+				{
+					"kind": "function",
+					"name": "isDeprecatedMethod"
+				},
+				{
+					"kind": "function",
+					"name": "isLoopbackHost"
+				},
+				{
+					"kind": "type",
+					"name": "JsonRpcRequest"
+				},
+				{
+					"kind": "type",
+					"name": "JsonRpcResponse"
+				},
+				{
+					"kind": "function",
+					"name": "logToStderr"
+				},
+				{
+					"kind": "const",
+					"name": "MAX_FRAME_BYTES"
+				},
+				{
+					"kind": "type",
+					"name": "NativeHostManifest"
+				},
+				{
+					"kind": "class",
+					"name": "PageBridge"
+				},
+				{
+					"kind": "function",
+					"name": "parseDiscoveryFile"
+				},
+				{
+					"kind": "function",
+					"name": "parseFrame"
+				},
+				{
+					"kind": "const",
+					"name": "PROTOCOL_VERSION"
+				},
+				{
+					"kind": "function",
+					"name": "readDiscoveryFile"
+				},
+				{
+					"kind": "function",
+					"name": "readEnvelope"
+				},
+				{
+					"kind": "function",
+					"name": "readResponse"
+				},
+				{
+					"kind": "type",
+					"name": "RequestMeta"
+				},
+				{
+					"kind": "function",
+					"name": "resolveDiscoveryDir"
+				},
+				{
+					"kind": "function",
+					"name": "serializeDiscoveryFile"
+				},
+				{
+					"kind": "function",
+					"name": "serializeFrame"
+				},
+				{
+					"kind": "function",
+					"name": "splitFrames"
+				},
+				{
+					"kind": "function",
+					"name": "startTransport"
+				},
+				{
+					"kind": "const",
+					"name": "SUPPORTED_VERSIONS"
+				},
+				{
+					"kind": "type",
+					"name": "Transport"
+				},
+				{
+					"kind": "type",
+					"name": "TransportOptions"
+				},
+				{
+					"kind": "function",
+					"name": "writeNativeHostManifest"
+				}
+				],
+				"runtime": "./dist/index.mjs"
+			}
+		},
+		"name": "@ax-kit/daemon",
+		"version": "0.0.0"
+	},
+	{
+		"dependencies": [],
+		"entries": {
+			".": {
+				"members": [
+				{
+					"kind": "function",
+					"name": "applyArgAllowList"
+				},
+				{
+					"kind": "type",
+					"name": "ApprovalActivity"
+				},
+				{
+					"kind": "type",
+					"name": "ApprovalDetails"
+				},
+				{
+					"kind": "class",
+					"name": "ApprovalStore"
+				},
+				{
+					"kind": "function",
+					"name": "assertHandlerName"
+				},
+				{
+					"kind": "function",
+					"name": "assertManifestPosture"
+				},
+				{
+					"kind": "function",
+					"name": "assertToolName"
+				},
+				{
+					"kind": "const",
+					"name": "AUDIT_TRAIL_DISCLAIMER"
+				},
+				{
+					"kind": "type",
+					"name": "AuditEntry"
+				},
+				{
+					"kind": "function",
+					"name": "canonicalizeArgs"
+				},
+				{
+					"kind": "const",
+					"name": "CONFIRMATION_SURFACE"
+				},
+				{
+					"kind": "type",
+					"name": "ConfirmationSurface"
+				},
+				{
+					"kind": "function",
+					"name": "createHitlKey"
+				},
+				{
+					"kind": "function",
+					"name": "createInjectionRequest"
+				},
+				{
+					"kind": "function",
+					"name": "createManifestDocument"
+				},
+				{
+					"kind": "function",
+					"name": "defaultManifestDocument"
+				},
+				{
+					"kind": "function",
+					"name": "defaultManifestPosture"
+				},
+				{
+					"kind": "type",
+					"name": "ExternallyConnectable"
+				},
+				{
+					"kind": "function",
+					"name": "firefoxManifestPosture"
+				},
+				{
+					"kind": "type",
+					"name": "FrameToolView"
+				},
+				{
+					"kind": "const",
+					"name": "HANDLER_NAMES"
+				},
+				{
+					"kind": "type",
+					"name": "HandlerName"
+				},
+				{
+					"kind": "function",
+					"name": "hashArgs"
+				},
+				{
+					"kind": "type",
+					"name": "HitlKey"
+				},
+				{
+					"kind": "function",
+					"name": "hitlKeysEqual"
+				},
+				{
+					"kind": "function",
+					"name": "hitlKeyToString"
+				},
+				{
+					"kind": "type",
+					"name": "InjectionRequest"
+				},
+				{
+					"kind": "function",
+					"name": "isExposedToCaller"
+				},
+				{
+					"kind": "function",
+					"name": "isHandlerName"
+				},
+				{
+					"kind": "type",
+					"name": "ManifestDocument"
+				},
+				{
+					"kind": "type",
+					"name": "ManifestPosture"
+				},
+				{
+					"kind": "const",
+					"name": "TRANSPORT_KIND"
+				},
+				{
+					"kind": "type",
+					"name": "TransportKind"
+				},
+				{
+					"kind": "function",
+					"name": "validateFrameTool"
+				},
+				{
+					"kind": "class",
+					"name": "WorkerAuditTrail"
+				}
+				],
+				"runtime": "./dist/index.mjs"
+			}
+		},
+		"name": "@ax-kit/extension",
+		"version": "0.0.0"
+	},
+	{
+		"dependencies": [],
+		"entries": {
+			".": {
+				"members": [
+				{
+					"kind": "class",
+					"name": "AxCompanion"
+				},
+				{
+					"kind": "class",
+					"name": "AxMissingSurfaceError"
+				},
+				{
+					"kind": "class",
+					"name": "AxParseError"
+				},
+				{
+					"kind": "function",
+					"name": "compareToolNames"
+				},
+				{
+					"kind": "function",
+					"name": "executeTool"
+				},
+				{
+					"kind": "type",
+					"name": "expect"
+				},
+				{
+					"kind": "function",
+					"name": "expectTool"
+				},
+				{
+					"kind": "function",
+					"name": "findToolByName"
+				},
+				{
+					"kind": "function",
+					"name": "getAvailableTools"
+				},
+				{
+					"kind": "function",
+					"name": "resolveInitScriptPath"
+				},
+				{
+					"kind": "const",
+					"name": "test"
+				},
+				{
+					"kind": "function",
+					"name": "waitForTool"
+				}
+				],
+				"runtime": "./dist/index.mjs"
+			}
+		},
+		"name": "@ax-kit/playwright",
+		"version": "0.0.0"
+	},
+	{
+		"dependencies": [],
+		"entries": {
+			".": {
+				"members": [
+				{
+					"kind": "type",
+					"name": "AxAnnotations"
+				},
+				{
+					"kind": "type",
+					"name": "AxDispatchOutcome"
+				},
+				{
+					"kind": "type",
+					"name": "AxExecuteCallback"
+				},
+				{
+					"kind": "type",
+					"name": "AxExecuteOptions"
+				},
+				{
+					"kind": "type",
+					"name": "AxMiddleware"
+				},
+				{
+					"kind": "function",
+					"name": "AxProvider"
+				},
+				{
+					"kind": "type",
+					"name": "AxProviderProps"
+				},
+				{
+					"kind": "type",
+					"name": "AxToolDefinition"
+				},
+				{
+					"kind": "type",
+					"name": "AxToolHandle"
+				},
+				{
+					"kind": "type",
+					"name": "AxToolOptions"
+				},
+				{
+					"kind": "function",
+					"name": "dispatchAxClick"
+				},
+				{
+					"kind": "function",
+					"name": "isAxSupported"
+				},
+				{
+					"kind": "function",
+					"name": "useAxTool"
+				}
+				],
+				"runtime": "./dist/index.mjs"
+			}
+		},
+		"name": "@ax-kit/react",
+		"version": "0.0.0"
+	},
+	{
+		"dependencies": [],
+		"entries": {
+			".": {
+				"members": [
+				{
+					"kind": "type",
+					"name": "AxAnnotations"
+				},
+				{
+					"kind": "type",
+					"name": "AxExecuteCallback"
+				},
+				{
+					"kind": "type",
+					"name": "AxExecuteOptions"
+				},
+				{
+					"kind": "type",
+					"name": "AxModelContextLike"
+				},
+				{
+					"kind": "function",
+					"name": "axTool"
+				},
+				{
+					"kind": "type",
+					"name": "AxToolDefinition"
+				},
+				{
+					"kind": "function",
+					"name": "axToolEffect"
+				},
+				{
+					"kind": "function",
+					"name": "isAxSupported"
+				}
+				],
+				"runtime": "./dist/index.mjs"
+			}
+		},
+		"name": "@ax-kit/svelte",
+		"version": "0.0.0"
+	},
+	{
+		"dependencies": [],
+		"entries": {
+			".": {
+				"members": [
+				{
+					"kind": "type",
+					"name": "AxAnnotations"
+				},
+				{
+					"kind": "type",
+					"name": "AxExecuteCallback"
+				},
+				{
+					"kind": "type",
+					"name": "AxExecuteOptions"
+				},
+				{
+					"kind": "type",
+					"name": "AxModelContextLike"
+				},
+				{
+					"kind": "type",
+					"name": "AxToolDefinition"
+				},
+				{
+					"kind": "type",
+					"name": "AxToolHandle"
+				},
+				{
+					"kind": "function",
+					"name": "isAxSupported"
+				},
+				{
+					"kind": "function",
+					"name": "useAxTool"
+				},
+				{
+					"kind": "const",
+					"name": "vAxTool"
+				}
+				],
+				"runtime": "./dist/index.mjs"
+			}
+		},
+		"name": "@ax-kit/vue",
+		"version": "0.0.0"
+	},
+	{
+		"dependencies": [
+		"zod"
+		],
+		"entries": {
+			".": {
+				"members": [
+				{
+					"kind": "function",
+					"name": "asStandardConverter"
+				},
+				{
+					"kind": "type",
+					"name": "ConvertOptions"
+				},
+				{
+					"kind": "function",
+					"name": "convertToInputSchema"
+				},
+				{
+					"kind": "function",
+					"name": "extractJsonSchema"
+				},
+				{
+					"kind": "type",
+					"name": "LibrarySchemaLike"
+				},
+				{
+					"kind": "const",
+					"name": "MAX_CONVERT_BYTES"
+				},
+				{
+					"kind": "const",
+					"name": "MAX_CONVERT_DEPTH"
+				},
+				{
+					"kind": "const",
+					"name": "MAX_CONVERT_KEYS"
+				},
+				{
+					"kind": "type",
+					"name": "StandardJsonSchemaConverter"
+				}
+				],
+				"runtime": "./dist/index.mjs"
+			}
+		},
+		"name": "@ax-kit/zod",
+		"version": "0.0.0"
+	}
+	]
+}

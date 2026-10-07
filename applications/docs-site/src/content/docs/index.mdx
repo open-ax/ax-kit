@@ -1,0 +1,36 @@
+---
+draft: false
+title: "ax-kit"
+description: "A correct, tiny, dependency-free implementation of WebMCP's ModelContext."
+template: splash
+hero:
+  tagline: The tool surface, in your browser, in about five kilobytes.
+  actions:
+    - text: Try it without installing
+      link: ./try-it/
+      icon: right-arrow
+    - text: Install it
+      link: /quickstart/
+      variant: minimal
+---
+draft: false
+
+import { SPEC_VERSION } from "@ax-kit/core";
+
+<div class="ax-hero">
+	<p class="ax-hero__claim">
+		This page defines a typed surface on <code>document</code> and hands you a
+		button to call it. If it works, the library works — in your browser, on this
+		page, with nothing installed.
+	</p>
+	<p class="ax-hero__draft">
+		Everything here describes <strong>{SPEC_VERSION.draft}</strong> (upstream
+		<code>{SPEC_VERSION.commit}</code>). The
+		<a href="https://webmachinelearning.github.io/webmcp/">proposal is linked, not
+		copied</a>, because it is re-dated often and a copy would be wrong within days.
+	</p>
+	<p class="ax-hero__meta">
+		Under 5&nbsp;kB gzipped, enforced in CI as a build failure · zero runtime
+		dependencies · zero unexpected failures against the proposal's own test suite
+	</p>
+</div>

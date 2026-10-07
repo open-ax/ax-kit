@@ -1,0 +1,136 @@
+---
+draft: false
+title: "Quickstart"
+description: "From nothing to a working tool on a page, in one path."
+---
+draft: false
+
+import { SPEC_VERSION } from "@ax-kit/core";
+
+Everything on this page describes **{SPEC_VERSION.draft}** (upstream
+`{SPEC_VERSION.commit}`).
+
+You want a page to offer typed tools to an agent. Four steps.
+
+## 1. Install
+
+```sh
+npm install @ax-kit/core
+```
+
+Zero runtime dependencies. The ESM entry stays under 5&nbsp;kB gzipped, and that
+is a hard build failure rather than a sentence in a README.
+
+## 2. Install the surface
+
+One call, once your document exists:
+
+```ts
+import { installModelContext } from "@ax-kit/core";
+
+const context = installModelContext(document);
+```
+
+`installModelContext` is explicit rather than run on import, so a bundler can
+tree-shake it and nothing happens until you ask. It returns `undefined` where the
+platform marks the context non-secure or the `tools` permission policy is denied —
+check for that if your page must work in both states.
+
+In a server-rendered framework, import [`@ax-kit/core/auto`](/reference/api/) from the
+client entry hook instead, and it installs on import. That entry point exists
+because marking your whole component tree client-side just to get an import to run
+in a browser throws away server rendering.
+
+## 3. Register a tool
+
+```ts
+await context.registerTool({
+	name: "search_products",
+	title: "Search products",
+	description: "Find products by name or description.",
+	inputSchema: {
+		type: "object",
+		properties: {
+			query: { type: "string" },
+			maxPrice: { type: "integer" },
+		},
+		required: ["query"],
+	},
+	execute: async (input) => {
+		const { query, maxPrice } = input as { query: string; maxPrice?: number };
+		return findProducts(query, maxPrice);
+	},
+	annotations: {
+		readOnlyHint: true,
+	},
+});
+```
+
+Three things the shape is telling you:
+
+- **Name, description and `execute` are required.** The draft requires all three,
+  and registration refuses a tool without a callback.
+- **`inputSchema` is a declared contract, not validation.** The draft describes
+  what a well-formed call looks like; *checking* calls against it is the
+  polyfill's job. Validate `input` at the top of your handler, or a
+  badly-typed call reaches your code.
+- **`annotations` declare intent, they do not enforce it.** What an agent does
+  with `consequentialHint` is the agent's decision.
+
+## 4. Declare the permission policy
+
+```ts
+// next.config.ts
+async headers() {
+	return [
+		{
+			source: "/:path*",
+			headers: [{ key: "Permissions-Policy", value: "tools=(self)" }],
+		},
+	];
+}
+```
+
+The tool surface is gated behind a Permissions Policy feature. Without this header
+the example works on localhost and **silently does nothing in a deployment**,
+because the platform treats loopback as potentially trustworthy. That is the most
+common way an example like this misleads, so it is worth doing before you believe
+anything you saw locally.
+
+## Does it work?
+
+[Try it on this page](/try-it/) — register, enumerate, invoke, and watch it
+refuse. No installation, in your own browser.
+
+## Two lifetimes
+
+```ts
+const controller = new AbortController();
+
+await context.registerTool(tool, { signal: controller.signal });
+// …later
+controller.abort(); // removes the tool
+```
+
+That signal controls **availability** — whether the tool can be discovered and
+called at all. Execution has its own signal, passed per call, that cancels **one
+invocation** and nothing else:
+
+```ts
+const call = new AbortController();
+const pending = context.executeTool(tool, input, { signal: call.signal });
+call.abort(); // cancels this call. The tool stays registered.
+```
+
+Conflating them is the most common bug built on this surface, and it produces two
+symptoms that look unrelated: a tool that vanishes when a call times out, and an
+invocation that keeps running after its tool is removed.
+
+## Next
+
+| | |
+|---|---|
+| [API reference](/reference/api/) | Every exported name, generated from the declarations |
+| [Annotations](./reference/annotations/) | What each one means, and what over-annotating costs |
+| [Errors](./reference/errors/) | Every failure mode and the condition that produces it |
+| [Threat model](./security/threat-model/) | What this library can reach, and what it does not defend against |

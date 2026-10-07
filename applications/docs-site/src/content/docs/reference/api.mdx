@@ -1,0 +1,466 @@
+---
+draft: false
+title: API reference
+description: Every exported name, grouped by entry point, generated from the published type declarations.
+---
+
+This page is **generated** from the published type declarations of every package in this
+repository. It is not hand-maintained, and a change to a public signature that does not
+reach this page fails the build. See
+[`scripts/verify-reference.mjs`](https://github.com/open-ax/ax-kit/blob/main/applications/docs-site/scripts/verify-reference.mjs).
+
+It describes **Draft Community Group Report, 2 October 2026** (upstream `d61d0e6`). Every page on this site that
+describes behaviour names the draft it describes, because the proposal is re-dated often
+and a reader comparing this page with the specification needs to know whether they are
+reading the same thing.
+
+The specification itself is [linked, not copied](https://webmachinelearning.github.io/webmcp/).
+A Community Group draft that has been re-dated four times in eight days will make any text
+copied here wrong within days, and a second source of truth that is wrong is worse than no
+second source of truth.
+
+## Reading this page
+
+- **The default entry point is the specification's surface.** Every name on `.` traces to a
+  dated draft of the proposal.
+- **Other subpaths are this project's own**, documented as such, and unreachable from the
+  default import.
+- **No parameter types appear here.** They are in the `.d.ts` files, which is what a
+  consumer's compiler reads; a table paraphrasing them would be a worse copy.
+- **Verification is never defined.** Call `installModelContext(document)` yourself. A package
+  that installs on import as a side effect cannot be tree-shaken, and a polyfill that runs
+  when a bundler happens to evaluate a module is a debugging session.
+## @ax-kit/cli
+
+24 exported names across 1 entry point.
+
+Runtime dependencies: `playwright`.
+
+### Entry points
+
+| Entry point | Names | Reached by |
+|---|---|---|
+| `.` | 24 | `import { AuditContextInput } from "@ax-kit/cli"` |
+
+### functions (13)
+
+| Name | Entry point |
+|---|---|
+| `auditLiveUrl` | `.` |
+| `auditLiveUrlFindings` | `.` |
+| `auditSnapshot` | `.` |
+| `auditUrl` | `.` |
+| `collectContext` | `.` |
+| `collectSettled` | `.` |
+| `countFailures` | `.` |
+| `createReport` | `.` |
+| `exitCodeFor` | `.` |
+| `formatReport` | `.` |
+| `launchBrowser` | `.` |
+| `launchDrivenBrowser` | `.` |
+| `scoreAudit` | `.` |
+
+### values (2)
+
+| Name | Entry point |
+|---|---|
+| `BUDGETS` | `.` |
+| `LANE_STATEMENT` | `.` |
+
+### types (9)
+
+| Name | Entry point |
+|---|---|
+| `AuditContextInput` | `.` |
+| `AuditFinding` | `.` |
+| `AuditReport` | `.` |
+| `AuditToolInput` | `.` |
+| `BrowserLike` | `.` |
+| `BrowserPageLike` | `.` |
+| `DrivenBrowser` | `.` |
+| `DrivenPage` | `.` |
+| `LaunchOptions` | `.` |
+
+## @ax-kit/core
+
+20 exported names across 3 entry points.
+
+No runtime dependencies.
+
+### Entry points
+
+| Entry point | Names | Reached by |
+|---|---|---|
+| `.` | 13 | `import { installModelContext } from "@ax-kit/core"` |
+| `./ax` | 6 | `import { executeToolResult } from "@ax-kit/core/ax"` |
+| `./auto` | 1 | `import { autoInstallModelContext } from "@ax-kit/core/auto"` |
+
+Only `.` carries the specification's surface. The other 2 entry points are this project's own additions, reachable only through those subpaths. The default import never exposes them, so a conformance run cannot observe them.
+
+### functions (6)
+
+| Name | Entry point |
+|---|---|
+| `autoInstallModelContext` | `./auto` |
+| `executeToolResult` | `./ax` |
+| `getTool` | `./ax` |
+| `installModelContext` | `.` |
+| `trackToolChanges` | `./ax` |
+| `unregisterTool` | `./ax` |
+
+### value (1)
+
+| Name | Entry point |
+|---|---|
+| `SPEC_VERSION` | `.` |
+
+### classs (2)
+
+| Name | Entry point |
+|---|---|
+| `ToolActivatedEvent` | `.` |
+| `ToolCancelEvent` | `.` |
+
+### interface (1)
+
+| Name | Entry point |
+|---|---|
+| `ToolChangeDiff` | `./ax` |
+
+### types (10)
+
+| Name | Entry point |
+|---|---|
+| `ModelContext` | `.` |
+| `ModelContextExecuteToolOptions` | `.` |
+| `ModelContextGetToolOptions` | `.` |
+| `ModelContextRegisterToolOptions` | `.` |
+| `ModelContextTool` | `.` |
+| `RegisteredTool` | `.` |
+| `ToolAnnotations` | `.` |
+| `ToolChangeListener` | `./ax` |
+| `ToolExecuteCallback` | `.` |
+| `ToolExecuteCallbackOptions` | `.` |
+
+## @ax-kit/daemon
+
+43 exported names across 1 entry point.
+
+No runtime dependencies.
+
+### Entry points
+
+| Entry point | Names | Reached by |
+|---|---|---|
+| `.` | 43 | `import { assertLoopbackBind } from "@ax-kit/daemon"` |
+
+### functions (24)
+
+| Name | Entry point |
+|---|---|
+| `assertLoopbackBind` | `.` |
+| `checkBearer` | `.` |
+| `checkUpgradeOrigin` | `.` |
+| `completeResult` | `.` |
+| `createBearer` | `.` |
+| `createDaemonInfo` | `.` |
+| `createDiscoveryFile` | `.` |
+| `createNativeHostManifest` | `.` |
+| `discoveryResult` | `.` |
+| `dispatchRequest` | `.` |
+| `isDeprecatedMethod` | `.` |
+| `isLoopbackHost` | `.` |
+| `logToStderr` | `.` |
+| `parseDiscoveryFile` | `.` |
+| `parseFrame` | `.` |
+| `readDiscoveryFile` | `.` |
+| `readEnvelope` | `.` |
+| `readResponse` | `.` |
+| `resolveDiscoveryDir` | `.` |
+| `serializeDiscoveryFile` | `.` |
+| `serializeFrame` | `.` |
+| `splitFrames` | `.` |
+| `startTransport` | `.` |
+| `writeNativeHostManifest` | `.` |
+
+### values (5)
+
+| Name | Entry point |
+|---|---|
+| `BRIDGE_ERRORS` | `.` |
+| `DISCOVERY_FILE_NAME` | `.` |
+| `MAX_FRAME_BYTES` | `.` |
+| `PROTOCOL_VERSION` | `.` |
+| `SUPPORTED_VERSIONS` | `.` |
+
+### classs (3)
+
+| Name | Entry point |
+|---|---|
+| `BridgeClient` | `.` |
+| `BridgeRefusal` | `.` |
+| `PageBridge` | `.` |
+
+### types (11)
+
+| Name | Entry point |
+|---|---|
+| `BridgeRequest` | `.` |
+| `BridgeRoutes` | `.` |
+| `DaemonInfo` | `.` |
+| `DiscoveryFile` | `.` |
+| `Envelope` | `.` |
+| `JsonRpcRequest` | `.` |
+| `JsonRpcResponse` | `.` |
+| `NativeHostManifest` | `.` |
+| `RequestMeta` | `.` |
+| `Transport` | `.` |
+| `TransportOptions` | `.` |
+
+## @ax-kit/extension
+
+35 exported names across 1 entry point.
+
+No runtime dependencies.
+
+### Entry points
+
+| Entry point | Names | Reached by |
+|---|---|---|
+| `.` | 35 | `import { applyArgAllowList } from "@ax-kit/extension"` |
+
+### functions (17)
+
+| Name | Entry point |
+|---|---|
+| `applyArgAllowList` | `.` |
+| `assertHandlerName` | `.` |
+| `assertManifestPosture` | `.` |
+| `assertToolName` | `.` |
+| `canonicalizeArgs` | `.` |
+| `createHitlKey` | `.` |
+| `createInjectionRequest` | `.` |
+| `createManifestDocument` | `.` |
+| `defaultManifestDocument` | `.` |
+| `defaultManifestPosture` | `.` |
+| `firefoxManifestPosture` | `.` |
+| `hashArgs` | `.` |
+| `hitlKeysEqual` | `.` |
+| `hitlKeyToString` | `.` |
+| `isExposedToCaller` | `.` |
+| `isHandlerName` | `.` |
+| `validateFrameTool` | `.` |
+
+### values (4)
+
+| Name | Entry point |
+|---|---|
+| `AUDIT_TRAIL_DISCLAIMER` | `.` |
+| `CONFIRMATION_SURFACE` | `.` |
+| `HANDLER_NAMES` | `.` |
+| `TRANSPORT_KIND` | `.` |
+
+### classs (2)
+
+| Name | Entry point |
+|---|---|
+| `ApprovalStore` | `.` |
+| `WorkerAuditTrail` | `.` |
+
+### types (12)
+
+| Name | Entry point |
+|---|---|
+| `ApprovalActivity` | `.` |
+| `ApprovalDetails` | `.` |
+| `AuditEntry` | `.` |
+| `ConfirmationSurface` | `.` |
+| `ExternallyConnectable` | `.` |
+| `FrameToolView` | `.` |
+| `HandlerName` | `.` |
+| `HitlKey` | `.` |
+| `InjectionRequest` | `.` |
+| `ManifestDocument` | `.` |
+| `ManifestPosture` | `.` |
+| `TransportKind` | `.` |
+
+## @ax-kit/playwright
+
+12 exported names across 1 entry point.
+
+No runtime dependencies.
+
+### Entry points
+
+| Entry point | Names | Reached by |
+|---|---|---|
+| `.` | 12 | `import { AxCompanion } from "@ax-kit/playwright"` |
+
+### functions (7)
+
+| Name | Entry point |
+|---|---|
+| `compareToolNames` | `.` |
+| `executeTool` | `.` |
+| `expectTool` | `.` |
+| `findToolByName` | `.` |
+| `getAvailableTools` | `.` |
+| `resolveInitScriptPath` | `.` |
+| `waitForTool` | `.` |
+
+### value (1)
+
+| Name | Entry point |
+|---|---|
+| `test` | `.` |
+
+### classs (3)
+
+| Name | Entry point |
+|---|---|
+| `AxCompanion` | `.` |
+| `AxMissingSurfaceError` | `.` |
+| `AxParseError` | `.` |
+
+### type (1)
+
+| Name | Entry point |
+|---|---|
+| `expect` | `.` |
+
+## @ax-kit/react
+
+13 exported names across 1 entry point.
+
+No runtime dependencies.
+
+### Entry points
+
+| Entry point | Names | Reached by |
+|---|---|---|
+| `.` | 13 | `import { AxAnnotations } from "@ax-kit/react"` |
+
+### functions (4)
+
+| Name | Entry point |
+|---|---|
+| `AxProvider` | `.` |
+| `dispatchAxClick` | `.` |
+| `isAxSupported` | `.` |
+| `useAxTool` | `.` |
+
+### types (9)
+
+| Name | Entry point |
+|---|---|
+| `AxAnnotations` | `.` |
+| `AxDispatchOutcome` | `.` |
+| `AxExecuteCallback` | `.` |
+| `AxExecuteOptions` | `.` |
+| `AxMiddleware` | `.` |
+| `AxProviderProps` | `.` |
+| `AxToolDefinition` | `.` |
+| `AxToolHandle` | `.` |
+| `AxToolOptions` | `.` |
+
+## @ax-kit/svelte
+
+8 exported names across 1 entry point.
+
+No runtime dependencies.
+
+### Entry points
+
+| Entry point | Names | Reached by |
+|---|---|---|
+| `.` | 8 | `import { AxAnnotations } from "@ax-kit/svelte"` |
+
+### functions (3)
+
+| Name | Entry point |
+|---|---|
+| `axTool` | `.` |
+| `axToolEffect` | `.` |
+| `isAxSupported` | `.` |
+
+### types (5)
+
+| Name | Entry point |
+|---|---|
+| `AxAnnotations` | `.` |
+| `AxExecuteCallback` | `.` |
+| `AxExecuteOptions` | `.` |
+| `AxModelContextLike` | `.` |
+| `AxToolDefinition` | `.` |
+
+## @ax-kit/vue
+
+9 exported names across 1 entry point.
+
+No runtime dependencies.
+
+### Entry points
+
+| Entry point | Names | Reached by |
+|---|---|---|
+| `.` | 9 | `import { AxAnnotations } from "@ax-kit/vue"` |
+
+### functions (2)
+
+| Name | Entry point |
+|---|---|
+| `isAxSupported` | `.` |
+| `useAxTool` | `.` |
+
+### value (1)
+
+| Name | Entry point |
+|---|---|
+| `vAxTool` | `.` |
+
+### types (6)
+
+| Name | Entry point |
+|---|---|
+| `AxAnnotations` | `.` |
+| `AxExecuteCallback` | `.` |
+| `AxExecuteOptions` | `.` |
+| `AxModelContextLike` | `.` |
+| `AxToolDefinition` | `.` |
+| `AxToolHandle` | `.` |
+
+## @ax-kit/zod
+
+9 exported names across 1 entry point.
+
+Runtime dependencies: `zod`.
+
+### Entry points
+
+| Entry point | Names | Reached by |
+|---|---|---|
+| `.` | 9 | `import { asStandardConverter } from "@ax-kit/zod"` |
+
+### functions (3)
+
+| Name | Entry point |
+|---|---|
+| `asStandardConverter` | `.` |
+| `convertToInputSchema` | `.` |
+| `extractJsonSchema` | `.` |
+
+### values (3)
+
+| Name | Entry point |
+|---|---|
+| `MAX_CONVERT_BYTES` | `.` |
+| `MAX_CONVERT_DEPTH` | `.` |
+| `MAX_CONVERT_KEYS` | `.` |
+
+### types (3)
+
+| Name | Entry point |
+|---|---|
+| `ConvertOptions` | `.` |
+| `LibrarySchemaLike` | `.` |
+| `StandardJsonSchemaConverter` | `.` |

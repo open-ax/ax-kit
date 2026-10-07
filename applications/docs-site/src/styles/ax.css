@@ -1,0 +1,119 @@
+/*
+ * Site styling.
+ *
+ * Almost nothing here. The documentation framework already has a design system,
+ * and restating one in custom CSS produces a site that looks like this project
+ * rather than like its documentation, at the cost of maintaining a stylesheet.
+ *
+ * What is here is the handful of variables the footer and the demonstration
+ * reference, so those two components do not carry a copy each.
+ */
+
+:root {
+	--ax-border: var(--sl-color-gray-5);
+	--ax-accent-soft: var(--sl-color-gray-6);
+}
+
+/*
+ * The landing page's hero.
+ *
+ * Here rather than in a `<style>` block in the MDX, because MDX parses a
+ * `<style>` element's contents as JSX children rather than as CSS — which fails
+ * the build on the first declaration.
+ */
+.ax-hero {
+	max-width: 44rem;
+	margin: 0 auto 3rem;
+	text-align: center;
+}
+
+.ax-hero__claim {
+	font-size: 1.15rem;
+}
+
+.ax-hero__draft,
+.ax-hero__meta {
+	font-size: 0.9rem;
+	color: var(--sl-color-gray-3);
+}
+
+/*
+ * The live demonstration.
+ *
+ * Here rather than in the component, because an `.astro` file cannot hold a
+ * template literal in a `<style>` element and an `.mdx` file parses a `<style>`
+ * element's contents as JSX.
+ */
+.ax-try {
+	border: 1px solid var(--ax-border);
+	border-radius: 6px;
+	padding: 1rem 1.25rem;
+	margin: 1.5rem 0;
+}
+
+.ax-try__table {
+	border-collapse: collapse;
+	width: 100%;
+	margin: 0.5rem 0 1rem;
+}
+
+.ax-try__table th,
+.ax-try__table td {
+	border-bottom: 1px solid var(--ax-border);
+	padding: 0.35rem 0.5rem;
+	text-align: left;
+	font-size: 0.9em;
+}
+
+.ax-try__actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+}
+
+.ax-try__actions button {
+	font: inherit;
+	font-size: 0.85em;
+	padding: 0.3rem 0.6rem;
+	cursor: pointer;
+	border: 1px solid var(--ax-border);
+	border-radius: 4px;
+	background: transparent;
+	color: inherit;
+}
+
+.ax-try__actions button:hover {
+	background: var(--ax-accent-soft);
+}
+
+.ax-try__log {
+	padding-left: 1.2rem;
+	font-size: 0.9em;
+}
+
+.ax-try__label {
+	font-weight: 600;
+}
+
+.ax-try__muted {
+	opacity: 0.7;
+}
+
+.ax-try__note {
+	font-size: 0.9em;
+	border-top: 1px solid var(--ax-border);
+	padding-top: 0.75rem;
+	margin-bottom: 0;
+}
+
+/*
+ * Dark mode.
+ *
+ * Starlight exposes its own tokens per colour scheme, so this maps ours onto
+ * those rather than picking colours. A hand-picked dark palette would be wrong
+ * the first time the framework's scheme changed.
+ */
+:root[data-theme="dark"] {
+	--ax-border: var(--sl-color-gray-6);
+	--ax-accent-soft: var(--sl-color-gray-7);
+}

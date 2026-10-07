@@ -1,0 +1,36 @@
+{
+	"name": "@ax-kit/docs-site",
+	"version": "0.0.0",
+	"private": true,
+	"description": "Documentation site that runs the polyfill in the reader's browser",
+	"license": "Apache-2.0",
+	"scripts": {
+		"dev": "astro dev --port 4322",
+		"build": "node scripts/generate-llms.mjs && astro build && node scripts/verify-reference.mjs && node scripts/verify-links.mjs",
+		"preview": "astro preview --port 4322",
+		"generate:reference": "node scripts/generate-reference.mjs",
+		"typecheck": "astro check",
+		"test": "vitest run",
+		"test:browser": "playwright test",
+		"size": "echo \"no size gate for a documentation site\"",
+		"publint": "echo \"not published\"",
+		"attw": "echo \"not published\""
+	},
+	"dependencies": {
+		"@astrojs/react": "7.0.1",
+		"@astrojs/starlight": "0.42.5",
+		"@ax-kit/core": "workspace:*",
+		"astro": "7.3.6",
+		"react": "19.3.0",
+		"react-dom": "19.3.0",
+		"sharp": "0.34.4"
+	},
+	"devDependencies": {
+		"@playwright/test": "1.63.0",
+		"@types/node": "24.19.0",
+		"@types/react": "19.3.0",
+		"@types/react-dom": "19.3.0",
+		"typescript": "6.0.3",
+		"vitest": "5.0.2"
+	}
+}

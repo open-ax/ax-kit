@@ -1,0 +1,111 @@
+---
+draft: false
+title: "Conformance"
+description: "What this project claims, what it measures, and the gaps it has not closed."
+---
+draft: false
+
+import { SPEC_VERSION } from "@ax-kit/core";
+
+This project makes exactly one claim, and it is narrower than "it works".
+
+> **Zero unexpected failures against the pinned draft, on each named engine.**
+
+It is not "the suite is green" and it is not "fully conforming". The reference
+browser does not pass the whole suite either, and neither does this — the
+[known gaps](#known-gaps) below are real and listed rather than smoothed over.
+
+## What is measured
+
+The [proposal's own test suite](https://github.com/web-platform-tests/wpt/tree/fe52996d4465f23617bce91927bdd58e6ce8f541/webmcp),
+fetched at a pinned revision and run against the **built bundle** — not against
+source. That distinction is the whole point: a polyfill that passes when
+conveniently transpiled is not a polyfill anyone installs.
+
+```
+Pinned draft    : {SPEC_VERSION.draft}
+Upstream commit : {SPEC_VERSION.commit}
+Suite revision  : fe52996d4465f23617bce91927bdd58e6ce8f541
+Engines         : Chromium 153.0.8010.12 · Firefox 155.0 · WebKit 26.6
+```
+
+The suite revision moves with the draft. A run at a revision that does not
+correspond to the pinned draft tests a different specification than the one
+claimed.
+
+## The measured result
+
+| Engine | Units run | Files passing | Subtests passing | Expected failures | Unexpected |
+|---|---|---|---|---|---|
+| Chromium 153.0.8010.12 | 48 | 22 | 64 | 78 | **0** |
+| Firefox 155.0 | 48 | 22 | 64 | 78 | **0** |
+| WebKit 26.6 | 48 | 22 | 64 | 78 | **0** |
+
+72 files are runnable at that revision. 24 are excluded with a written reason;
+48 are run. The lists are per engine and per version, and a run asserts the exact
+browser build it was written for — so a Playwright upgrade produces a red run
+asking for the list to be re-derived, not a run quietly accepted.
+
+**An expected failure is a claim that a failure is understood.** Each entry
+carries a reason and one of four kinds:
+
+| Kind | Meaning |
+|---|---|
+| `upstream-gap` | The draft has no text, or the upstream assertion contradicts the text that exists. The fix belongs in the proposal. |
+| `known-gap` | The draft describes it and this implementation does not do it. A real divergence, listed so it is visible. |
+| `accepted-deviation` | The implementation deliberately differs, or cannot differ, and the difference is recorded as a decision. |
+| `runner-limitation` | The harness cannot express the test here. Unused at present. |
+
+Excluded is not the same as passing, and neither is the same as expected to fail.
+An exclusion is a claim that there is nothing to measure — the 23 declarative
+files are excluded because the draft's declarative section reads, in full,
+*"This section is entirely a TODO."*
+
+## Known gaps
+
+Three account for most of the list. They are stated here because a library whose
+product is a correctness claim should not have a reader discover its limits from a
+test report.
+
+**The registry is per realm, so tools are not shared across documents.** The draft
+requires `getTools()` to resolve to tools "from this document and its
+descendants". This implementation's registry is a `WeakMap` held inside the
+installed script, so each document that evaluates the bundle has its own. A frame
+registers a tool the parent never learns of. This is the largest single cause of
+failure in the list, and it is also why three files do not complete at all: they
+wait for a `toolchange` another document's registry cannot raise.
+
+**The interface objects the draft's IDL declares are absent.** The draft declares
+`ModelContext`, `ToolActivatedEvent` and `ToolCancelEvent` as global
+constructors. This implementation exposes the surface on `document.modelContext`
+and dispatches plain `Event` objects. The *behaviour* the event files assert is
+implemented; the named *types* are not.
+
+**`modelContext` is an own property, not a prototype accessor.** The draft's IDL
+reads `partial interface Document { … readonly attribute ModelContext
+modelContext; }`, which is an accessor on `Document.prototype`. This installs an
+own, non-writable, non-configurable data property on the document instance. The
+two are observably different — a prototype accessor is reachable from a document
+that never had the bundle run against it.
+
+## The suite is a gate, not a report
+
+The conformance suite runs on **every change** as a required status check on
+`main`. There is no `continue-on-error`, no allow-failure condition, and no skip
+flag reachable from a pull request. Making it green means editing the
+expected-failure list in a reviewed change, next to the diff that caused it.
+
+This was not always true. The upstream change of 2026-09-30 was detected the same
+day it happened, and the resulting issue sat open for seven days while the
+conformance claim was wrong. Opening an issue is a notification; it is not a
+control. See [`adr/0006`](https://github.com/open-ax/ax-kit/blob/main/docs/adr/0006-conformance-is-a-gate.md)
+and [`adr/0007`](https://github.com/open-ax/ax-kit/blob/main/docs/adr/0007-spec-drift-2026-10-07.md).
+
+## Upstream drift
+
+The draft is re-dated often, so the pin moves with it in the same commit as any
+behaviour change, and a scheduled job watches the published document. That job
+opens an issue when it changes; a human answers whether the change affects the
+normative text being implemented. Nothing decides that automatically, because
+reading a diff against the sections you implement needs someone who knows which
+sections those are.

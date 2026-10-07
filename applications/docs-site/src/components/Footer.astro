@@ -1,0 +1,48 @@
+---
+/**
+ * The footer, which is where the site's own honesty lives.
+ *
+ * Two facts that are easy to omit and expensive to leave out: which draft the
+ * documentation describes, and where a vulnerability report goes. A reader
+ * assessing this library needs both, and a reader who cannot find either has to
+ * ask — which is the outcome a security route and a conformance claim both
+ * exist to prevent.
+ *
+ * Rendered on every page, so neither is ever "documented on a page somewhere".
+ */
+import { SPEC_VERSION } from "@ax-kit/core";
+
+const year = new Date().getFullYear();
+---
+
+<footer class="ax-footer">
+	<p>
+		Documentation for <strong>{SPEC_VERSION.draft}</strong> (upstream
+		<code>{SPEC_VERSION.commit}</code>). The specification is
+		<a href="https://webmachinelearning.github.io/webmcp/">linked, not copied</a>.
+	</p>
+	<p>
+		Conformance is
+		<a href="/reference/conformance/">zero unexpected failures against a pinned
+		draft</a>, measured on three engines.
+		<a href="/security/reporting/">Report a vulnerability privately</a> — do not
+		open a public issue.
+	</p>
+	<p class="ax-footer__meta">
+		© {year} · Apache-2.0 ·
+		<a href="https://github.com/open-ax/ax-kit">Source</a>
+	</p>
+</footer>
+
+<style>
+	.ax-footer {
+		border-top: 1px solid var(--ax-border, #d0d7de);
+		margin-top: 3rem;
+		padding-top: 1rem;
+		font-size: var(--sl-text-sm);
+		color: var(--sl-color-gray-3);
+	}
+	.ax-footer__meta {
+		opacity: 0.8;
+	}
+</style>

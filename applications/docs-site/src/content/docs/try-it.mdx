@@ -1,0 +1,64 @@
+---
+draft: false
+title: "Try it in your browser"
+description: "Register a tool, enumerate the surface, invoke it, and watch it refuse — on this page, without installing anything."
+---
+draft: false
+
+import Demo from "../../components/Demo.astro";
+
+A page that tells you a tool surface rejects a badly-typed call teaches less than
+a page where you type one and watch it fail. So: register, enumerate, invoke, and
+refuse, below, on this page.
+
+import { SPEC_VERSION } from "@ax-kit/core";
+
+Everything on this page describes **{SPEC_VERSION.draft}** (upstream
+`{SPEC_VERSION.commit}`).
+
+<Demo />
+
+## What you are looking at
+
+Five tools, registered through `@ax-kit/core`'s published entry points and
+enumerated through the draft's own `getTools()`. The table is what an agent sees —
+the same names and the same argument shapes as the
+[reference storefront](https://github.com/open-ax/ax-kit/tree/main/applications/demo-store),
+so the vocabulary is identical across this project.
+
+The buttons invoke tools through `executeTool`. Two of them send deliberately
+malformed arguments.
+
+## Three things worth noticing
+
+**The result is a string.** `executeTool` resolves to `Promise<DOMString>` over a
+JSON serialization, so a handler returning `{ tool: "…" }` comes back as
+`{"tool":"…"}` with quotes, and the caller parses it. This is the specification's
+behaviour, not a limitation of the polyfill.
+
+**A refusal is `UnknownError`.** When a handler throws — including when your own
+argument validation rejects — the caller sees `UnknownError`. The specification
+says a callback failure rejects that way, so a readable message from your handler
+is for your logs, not for the agent. If an agent needs to distinguish "bad
+arguments" from "the tool failed", validate before invoking.
+
+**One tool is consequential and four are not.** `proceed_to_checkout` spends money
+and cannot be undone. The two cart mutations are reversible, cost nothing, and a
+user who clicked *add to cart* has already confirmed it. Over-annotating trains
+everyone to dismiss confirmations, which is the failure mode the annotation exists
+to prevent. [Why, in more detail →](./reference/annotations/)
+
+## If nothing happened above
+
+The tool surface is gated behind a Permissions Policy feature, so a document has to
+declare that it allows it:
+
+```
+Permissions-Policy: tools=(self)
+```
+
+Without that header the example appears to work on a development machine and
+silently does nothing in a deployment. Most browsers outside the proposal's origin
+trial have no native support, so the demonstration installs the polyfill itself —
+and it stands down rather than replacing a native implementation where one
+exists.
