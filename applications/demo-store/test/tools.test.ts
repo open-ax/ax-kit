@@ -83,9 +83,17 @@ async function surface(): Promise<ModelContext> {
  * is on the notification and then on the listing — never a sleep, which would be
  * both flaky in CI and blind to the ordering the draft specifies.
  */
-async function settled(): Promise<void> {
+async function settled(afterListening?: () => void): Promise<void> {
 	await new Promise<void>((resolve) => {
 		context().addEventListener("toolchange", () => resolve(), { once: true });
+		// The action runs *after* the listener is attached, not before. It used to
+		// be called by the caller first and awaited afterwards, which left the
+		// window between disposal and attachment — a registry that dispatched
+		// `toolchange` synchronously would resolve nothing and the test would sit
+		// until the runner timed it out. That the draft queues the notification as a
+		// task is why it never happened, and depending on that is not the same as
+		// being correct.
+		afterListening?.();
 	});
 }
 
@@ -119,9 +127,9 @@ afterEach(async () => {
 	if (dispose === undefined) {
 		return;
 	}
-	dispose();
+	const remove = dispose;
 	dispose = undefined;
-	await settled();
+	await settled(remove);
 });
 
 describe("the published vocabulary", () => {
@@ -334,6 +342,48 @@ describe("schema rejection is ours, not the platform's", () => {
 		);
 	});
 
+	it("rejects arguments to the consequential tool too", async () => {
+		await surface();
+		// `proceed_to_checkout` declares no schema, exactly as `view_cart` does,
+		// and it is the call that spends money. Refusing a caller's unexpected
+		// arguments is *more* important here, not less, so it must not be the one
+		// tool that silently ignores them.
+		//
+		// The cart is filled first because checkout refuses an empty one, and
+		// that refusal would otherwise be indistinguishable from the one under
+		// test: both come back as `ok: false`.
+		expect(
+			(await invoke("add_to_cart", { sku: "AX-MUG-001", quantity: 1 })).ok,
+		).toBe(true);
+		expect((await invoke("proceed_to_checkout", {})).ok).toBe(true);
+		expect((await invoke("proceed_to_checkout", { anything: 1 })).ok).toBe(
+			false,
+		);
+		await expect(
+			handler("proceed_to_checkout")({ anything: 1 }),
+		).rejects.toThrow(/takes no arguments/);
+	});
+
+	it("rejects a quantity that would make the total inexact", async () => {
+		await surface();
+		// `1e300` is an integer and is well above 1, so the declared schema accepts
+		// it — the schema checks the type and nothing else. Accepted, it multiplied
+		// by a price in minor units produces a total no integer can represent, and
+		// the agent is shown a cart total that is wrong. The bound therefore has to
+		// be the handler's, and this asserts that it is.
+		for (const bad of [1e300, Number.MAX_SAFE_INTEGER, 1001]) {
+			await expect(
+				handler("add_to_cart")({ sku: "AX-MUG-001", quantity: bad }),
+				`${bad} should be refused`,
+			).rejects.toThrow(/between 1 and 1000/);
+		}
+		// And the largest permitted quantity still produces an exact total, so the
+		// bound is not simply refusing everything.
+		await expect(
+			handler("add_to_cart")({ sku: "AX-BAG-006", quantity: 1000 }),
+		).resolves.toBeDefined();
+	});
+
 	it("rejects a primitive in place of an object", async () => {
 		await surface();
 		for (const bad of [42, "nope", null, []]) {
@@ -367,6 +417,33 @@ describe("invocation", () => {
 		expect(result.ok).toBe(true);
 		const value = result.value as { products: ReadonlyArray<{ name: string }> };
 		expect(value.products.map((entry) => entry.name)).toContain("Enamel Mug");
+	});
+
+	it("ranks a prefix match above every kind of substring match", async () => {
+		await surface();
+		// "m" reaches all three ranks at once, which is the point of choosing it:
+		//
+		//   "Merino Socks, Three Pack"  prefix of the name            -> ranked 1st
+		//   "Enamel Mug"                "m" inside the name           -> ranked 2nd
+		//   "Cotton T-Shirt"            "m" only in the summary       -> ranked 2nd
+		//
+		// Summaries are deliberately not scored, so the last two tie and fall
+		// through to alphabetical order — which puts "Cotton T-Shirt" before
+		// "Enamel Mug". And with all three scores equal, alphabetical order puts
+		// "Cotton T-Shirt" *first*, ahead of the only prefix match.
+		//
+		// So the first entry discriminates: it is the prefix match only if the
+		// three ranks are distinct. Asserting membership alone would pass either
+		// way, which is why this asserts the position.
+		const result = await invoke("search_products", { query: "m" });
+		expect(result.ok).toBe(true);
+		const value = result.value as { products: ReadonlyArray<{ name: string }> };
+		const names = value.products.map((entry) => entry.name);
+		expect(names).toEqual([
+			"Merino Socks, Three Pack",
+			"Cotton T-Shirt",
+			"Enamel Mug",
+		]);
 	});
 
 	it("runs a search with its optional argument present, and the bound applies", async () => {
@@ -434,8 +511,7 @@ describe("lifecycle", () => {
 		// to this test and `afterEach` has nothing left to tear down.
 		const disposeHere = await registerStorefrontTools(context());
 		expect(await context().getTools()).toHaveLength(5);
-		disposeHere();
-		await settled();
+		await settled(disposeHere);
 		expect(await context().getTools()).toHaveLength(0);
 	});
 

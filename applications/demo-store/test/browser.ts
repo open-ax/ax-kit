@@ -6,10 +6,10 @@
  *
  * This is the test the other one cannot be. `tools.test.ts` proves the tool
  * surface behaves; this proves the *built output* publishes it — that the
- * permission policy is on a real response, that `instrumentation.ts` installed
- * the polyfill before hydration, that an agent reading the page sees five tools
- * with the right annotations, and that the page still works as a shop for a
- * reader who has no tool surface at all.
+ * permission policy is on a real response, that the `Polyfill` client component
+ * installed the polyfill in the reader's document, that an agent reading the page
+ * sees five tools with the right annotations, and that the page still works as a
+ * shop for a reader who has no tool surface at all.
  *
  * Driven with Playwright directly rather than through the polyfill's own
  * conformance runner. That runner exists to score the proposal's suite against
@@ -283,10 +283,13 @@ describe("what an agent observes on the built page", () => {
 		}
 	});
 
-	test("no component carries a client directive for the purpose of installation", async () => {
-		// The polyfill is installed from `instrumentation.ts`, so the page keeps
-		// server rendering. What proves that is not a comment in a source file but
-		// the absence of the client chunk that a client-marked tree would pull in.
+	test("the page keeps server rendering despite the install being client-side", async () => {
+		// The polyfill is installed by the `Polyfill` client component mounted in
+		// the layout — not by an `instrumentation.ts` hook, which runs on the server
+		// and never reaches the reader's document. So the claim being checked is not
+		// "no client component exists" but "the rest of the tree is still rendered on
+		// the server". What proves that is not a comment in a source file but the
+		// served HTML containing the page's own copy.
 		const html = await (await fetch(ORIGIN)).text();
 		expect(html).toContain(
 			"Preparing the tool surface",
@@ -304,9 +307,13 @@ describe("degradation", () => {
 	/**
 	 * A reader without a usable tool surface must get a shop, not an error page.
 	 *
-	 * **What is simulated, and what is not.** This blocks the polyfill's chunk so
-	 * the install fails. It is not a Permissions Policy denial, and the difference
-	 * is worth being explicit about rather than glossing: outside an origin trial,
+	 * **What is simulated, and what is not.** This blocks nothing. It defines a
+	 * `document.modelContext` the polyfill cannot replace, so installation fails
+	 * where a reader has no usable surface. An earlier version of this comment
+	 * claimed the test blocked the polyfill's chunk, which it has never done.
+	 *
+	 * It is also not a Permissions Policy denial, and the difference is worth being
+	 * explicit about rather than glossing: outside an origin trial,
 	 * Chromium treats `tools` as a trial-controlled feature, logs
 	 * "Origin trial controlled feature not enabled", and then reports the feature
 	 * as *absent* rather than *denied* — the Permissions Policy API cannot
@@ -324,10 +331,8 @@ describe("degradation", () => {
 		const browser = await chromium.launch();
 		try {
 			const context = await browser.newContext();
-			// The two chunks carrying the polyfill are identified by content rather
-			// than by hashed filename, because a hashed name changes on every build
-			// and a test that hard-codes one breaks for the wrong reason. The check
-			// is made against the served script bodies.
+			// Runs before any page script, so the property is already in place when the
+			// polyfill's import evaluates.
 			await context.addInitScript(() => {
 				// A `modelContext` the page cannot replace, and which carries nothing.
 				// Installation reads it, finds `undefined`, and tries to define the

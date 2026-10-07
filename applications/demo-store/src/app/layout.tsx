@@ -33,7 +33,7 @@ export default function RootLayout({
 				 * below it hydrates and before the browser paints. `Polyfill` renders
 				 * nothing; it exists for the side effect, and why it is a client
 				 * component rather than an `instrumentation.ts` hook is explained in
-				 * `polyfill.tsx`.
+				 * `install-polyfill.tsx`.
 				 */}
 				<Polyfill />
 				{children}

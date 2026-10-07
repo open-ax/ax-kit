@@ -36,6 +36,24 @@ export function ToolRegistration(): React.JSX.Element {
 		// warning React no longer prints.
 		let cancelled = false;
 
+		// The disposer returned by `registerStorefrontTools`, or `undefined` until
+		// registration resolves.
+		//
+		// Discarding this was a real leak with a visible symptom, not a tidy-up
+		// point. `next.config.ts` sets `reactStrictMode: true`, so in development
+		// React mounts, unmounts and mounts again. The second registration then
+		// collided with the first on the same names, the registry refused it as a
+		// duplicate, and the `.catch` below reported "unsupported" — a page whose
+		// tool surface worked perfectly telling the reader it did not exist.
+		//
+		// Cleanup can run at any of three moments, and each needs different
+		// handling. Before the install resolves, nothing is registered and the
+		// `cancelled` checks below return before `registerStorefrontTools` is
+		// ever called. During registration, `dispose` arrives after the cleanup
+		// has run, so the check after the assignment removes them. After
+		// registration, `disposeWhenAvailable` has something to call.
+		let dispose: (() => void) | undefined;
+
 		void ensurePolyfill()
 			.then(async (context: ModelContext | undefined) => {
 				if (cancelled) {
@@ -51,7 +69,14 @@ export function ToolRegistration(): React.JSX.Element {
 					setSurface("unsupported");
 					return;
 				}
-				await registerStorefrontTools(context);
+				dispose = await registerStorefrontTools(context);
+				if (cancelled) {
+					// Cleanup ran while the five registrations were in flight. Remove
+					// them now rather than leaving them attached to a document nobody
+					// is reading.
+					dispose();
+					return;
+				}
 				const tools = await context.getTools();
 				if (cancelled) {
 					return;
@@ -67,6 +92,7 @@ export function ToolRegistration(): React.JSX.Element {
 
 		return () => {
 			cancelled = true;
+			dispose?.();
 		};
 	}, []);
 

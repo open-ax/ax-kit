@@ -78,7 +78,32 @@ function quantityOf(sku: string): number {
 	return state.lines.get(sku) ?? 0;
 }
 
-/** Prices are integer minor units, so summing them is exact. */
+/**
+ * The largest quantity one `add_to_cart` call may add.
+ *
+ * Prices are integer minor units and `subtotalOf` multiplies rather than
+ * rounding, so a total is exact only while it stays inside
+ * `Number.MAX_SAFE_INTEGER`. `quantity` is declared as an `integer`, and
+ * `1e300` is an integer and is above 1, so the schema accepts it — the total then
+ * becomes either a value no integer can represent or `Infinity`, and the agent is
+ * shown a cart total that is wrong.
+ *
+ * The bound is in the handler rather than in the schema because this library's
+ * schema validation checks `type`, `properties`, `required`, `items`, `enum` and
+ * `additionalProperties` and treats every other keyword as inert vocabulary. A
+ * `maximum` in the schema would read as a constraint and enforce nothing.
+ *
+ * 1000 is arbitrary within wide limits: the dearest product is £64.00, so the
+ * largest single line this permits is far inside the exact range.
+ */
+const MAX_QUANTITY = 1000;
+
+/**
+ * Prices are integer minor units, so summing them is exact.
+ *
+ * Exact *while* the bound on quantity holds — see `MAX_QUANTITY`. The claim is
+ * about the representation, not about the inputs.
+ */
 function subtotalOf(): number {
 	let total = 0;
 	for (const [sku, quantity] of state.lines) {
@@ -152,7 +177,12 @@ export function searchProducts(input: SearchInput): Product[] {
 		)
 		.map((entry) => {
 			const name = entry.name.toLowerCase();
-			let score = 1;
+			// Three distinct ranks, and they have to be distinct: the default is
+			// the substring case, so giving the prefix branch the same number made
+			// a prefix match tie with a substring match and the sort fell through
+			// to alphabetical order. Searching "mug" could then return the hoodie
+			// first, which is exactly what the docblock above promises it does not.
+			let score = 2;
 			if (name === needle || entry.sku.toLowerCase() === needle) {
 				score = 0;
 			} else if (name.startsWith(needle)) {
@@ -173,8 +203,14 @@ export function addToCart(input: { sku: string; quantity: number }): Cart {
 	// time this runs, so these checks are the handler's own contract rather than
 	// a second validation layer. A handler that trusts its schema entirely is a
 	// handler that breaks when the schema and the call site disagree.
-	if (!Number.isInteger(input.quantity) || input.quantity < 1) {
-		throw new Error("quantity must be a whole number of at least 1");
+	if (
+		!Number.isInteger(input.quantity) ||
+		input.quantity < 1 ||
+		input.quantity > MAX_QUANTITY
+	) {
+		throw new Error(
+			`quantity must be a whole number between 1 and ${MAX_QUANTITY}`,
+		);
 	}
 	const target = product(input.sku);
 	state.lines.set(target.sku, quantityOf(target.sku) + input.quantity);

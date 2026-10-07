@@ -10,9 +10,9 @@ import { defineConfig } from "vitest/config";
  * browser would cost minutes to learn nothing a DOM implementation does not
  * already tell us.
  *
- * The other half — that the *built output* publishes tools to an agent in a real
- * browser — is `test/browser.mjs`, run by Playwright from the repository's
- * existing chromium project. Splitting it this way rather than adding a second
+ * The other half - that the *built output* publishes tools to an agent in a real
+ * browser - is `test/browser.ts`, run by Playwright through this application's
+ * own `playwright.config.ts`. Splitting it this way rather than adding a second
  * Vitest browser project is deliberate: that infrastructure already exists and
  * duplicating it in an application would be the kind of addition this example
  * is arranged to avoid.

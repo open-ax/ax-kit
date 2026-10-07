@@ -3,10 +3,16 @@
  *
  * A server component, with no `"use client"` anywhere in this file. That is the
  * point of the example: the page renders on the server, the polyfill installs
- * from `instrumentation.ts`, and the tools are registered from an effect in the
- * one client component below. Marking this whole tree client-side to get an
- * import to run in a browser would be the mistake this file is arranged to
- * avoid.
+ * from the `Polyfill` client component mounted in the layout, and the tools are
+ * registered from an effect in the one client component below. Marking this
+ * whole tree client-side to get an import to run in a browser would be the
+ * mistake this file is arranged to avoid.
+ *
+ * `instrumentation.ts` is named here because it is the approach this does *not*
+ * use. That hook runs on the server and never reaches the reader's document, so
+ * it installs nothing in a browser; `install-polyfill.tsx` records the attempt
+ * and the measurement. A reference example that taught the rejected approach
+ * would be worse than one that taught nothing.
  *
  * Structured data for the products and their offers is emitted here rather than
  * in the client component, because it belongs to the rendered document and
@@ -136,8 +142,11 @@ export function Storefront({ products }: Props): React.JSX.Element {
 					each early enough that a small example speaking one would be speaking
 					a draft. What this shop publishes instead is the machine-readable
 					profile AP2 expects, as data, at{" "}
-					<a href="/agent-profile.json">/agent-profile.json</a>, and a catalogue
-					in the shape ACP defines at <a href="/api/catalog">/api/catalog</a>.
+					<a href="/agent-profile.json">/agent-profile.json</a>. The route at{" "}
+					<a href="/api/catalog">/api/catalog</a> answers <code>501</code> on
+					purpose: this shop does not speak ACP, and serving a well-formed
+					payload from a route that implements none of it would be the claim
+					this example refuses to make.
 				</p>
 			</section>
 

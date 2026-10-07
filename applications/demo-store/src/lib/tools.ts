@@ -179,7 +179,11 @@ const ADD_TO_CART: ToolDefinition = {
 			},
 			quantity: {
 				type: "integer",
-				description: "How many to add. Must be at least 1.",
+				// The bounds are stated in prose because the schema cannot enforce
+				// them: this library's validator treats `minimum` and `maximum` as
+				// inert vocabulary. The handler enforces both, and says so here so
+				// the declared contract and the enforced one are the same.
+				description: "How many to add. A whole number, 1 to 1000 inclusive.",
 			},
 		},
 		required: ["sku", "quantity"],

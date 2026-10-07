@@ -23,9 +23,10 @@ export const metadata: Metadata = {
  * - **Agent Payments Protocol (AP2)** — not implemented. The manifest at
  *   `/agent-profile.json` declares what this shop *would* accept, which is the
  *   part an integrator needs and the least code to get wrong.
- * - **Agentic Commerce Protocol (ACP)** — not implemented. The catalogue is
- *   exported in the shape ACP defines at `/api/catalog`, so a reader can see
- *   the format without this example pretending to speak it.
+ * - **Agentic Commerce Protocol (ACP)** — not implemented. A catalogue in the
+ *   shape ACP defines is built in `src/lib/catalogue.ts`, and `/api/catalog`
+ *   answers `501` rather than serving it, so a reader can see the format without
+ *   this example pretending to speak the protocol.
  * - **Merchant Checkout Protocol** — not implemented.
  *
  * The capabilities this example *does* have are WebMCP tool registration, which

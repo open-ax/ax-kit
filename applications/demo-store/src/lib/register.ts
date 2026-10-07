@@ -147,6 +147,29 @@ function describe(value: unknown): string {
  * A reader should be able to see, without opening another file, that every tool
  * that declares an argument validates it.
  */
+/**
+ * Refuse any arguments to a tool that declares none.
+ *
+ * Both `view_cart` and `proceed_to_checkout` declare no schema. A schema that
+ * says nothing accepts still means *nothing*, not *anything*, so a caller that
+ * sends arguments has made a mistake and should be told so rather than quietly
+ * given the right answer to a question they did not ask.
+ *
+ * Shared rather than written twice: the refusal is the teaching moment in both
+ * handlers, and two copies of it would be free to drift apart.
+ */
+function refusesArguments(tool: string): (input: unknown) => void {
+	return (input: unknown) => {
+		if (
+			typeof input === "object" &&
+			input !== null &&
+			Object.keys(input as Record<string, unknown>).length > 0
+		) {
+			throw new BadArguments(tool, "takes no arguments");
+		}
+	};
+}
+
 const HANDLERS: Readonly<Record<string, (input: unknown) => unknown>> = {
 	search_products: (input) => {
 		const query = requiredString(input, "query", "search_products");
@@ -158,16 +181,7 @@ const HANDLERS: Readonly<Record<string, (input: unknown) => unknown>> = {
 		};
 	},
 	view_cart: (input) => {
-		// Declared as taking no arguments, so a caller that sends some is wrong.
-		// Refusing is the teaching moment: a schema that says nothing accepts
-		// still means nothing, not anything.
-		if (
-			typeof input === "object" &&
-			input !== null &&
-			Object.keys(input as Record<string, unknown>).length > 0
-		) {
-			throw new BadArguments("view_cart", "takes no arguments");
-		}
+		refusesArguments("view_cart")(input);
 		return viewCartResult();
 	},
 	add_to_cart: (input) => {
@@ -179,7 +193,13 @@ const HANDLERS: Readonly<Record<string, (input: unknown) => unknown>> = {
 		const code = requiredString(input, "code", "apply_coupon_code");
 		return applyCouponCode({ code });
 	},
-	proceed_to_checkout: () => proceedToCheckout(),
+	proceed_to_checkout: (input) => {
+		// The consequential tool refuses arguments for the same reason the
+		// read-only one does. It is the call that spends money, so the case for
+		// saying "that is not a call I recognise" is stronger here, not weaker.
+		refusesArguments("proceed_to_checkout")(input);
+		return proceedToCheckout();
+	},
 };
 
 /**
@@ -211,11 +231,13 @@ export async function registerStorefrontTools(
 		);
 	}
 
-	// Awaited together rather than in a loop: registration is independent, and
-	// the draft queues a change notification per call, so a sequential loop would
-	// emit three notifications for three tools rather than one batch. An agent
-	// that re-lists on every notification then does three times the work for the
-	// same answer.
+	// Awaited together rather than one at a time, which is a shorter wait and
+	// nothing else. It does *not* batch the change notifications: all five
+	// `registerTool` calls have already been started by the loop above, so
+	// awaiting them in sequence would emit exactly the same five notifications.
+	// Whether those coalesce into one is the registry's business, not this
+	// function's, and claiming otherwise here would teach a reader something
+	// untrue about a limit they are paying for.
 	await Promise.all(handles);
 
 	return () => {
