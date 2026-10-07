@@ -37,7 +37,9 @@ See docs/releasing.md for the full procedure.
 - `@ax-kit/core`: `document.modelContext` with tool registration, filtered
   discovery, invocation, lifecycle events, and unloading cleanup, plus an
   opt-in `@ax-kit/core/ax` entry with removal, lookup, parsed-result, and
-  change-diff conveniences. Pinned draft (`SPEC_VERSION`): Draft Community
+  change-diff conveniences. `@ax-kit/core/auto` installs the surface on import
+  for server-rendered applications, standing down where the platform already
+  provides one. Pinned draft (`SPEC_VERSION`): Draft Community
   Group Report, 2 October 2026.
 - `@ax-kit/react`: `useAxTool` (full definition or name plus handler),
   `AxProvider`, and `isAxSupported` for lifecycle-native tool registration

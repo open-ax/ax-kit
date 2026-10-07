@@ -68,6 +68,85 @@ jobs:
           fi
           echo "ok"
 
+  # The conformance suite, as a gate.
+  #
+  # The `spec-drift` job watches the published draft and opens an issue. That is
+  # a notification, not a control: it fired on the day of the 2026-09-30
+  # upstream change and the issue sat unanswered while this repository's
+  # conformance claim was wrong. A detector whose output nobody must close does
+  # not make anything true.
+  #
+  # So the suite runs on every change and fails the build instead. There is
+  # deliberately no `continue-on-error`, no allow-failure condition and no skip
+  # flag reachable from a pull request: making this green has to mean changing
+  # `packages/playwright/conformance/expected-failures.json` in a reviewed
+  # change, next to the diff that caused it. See
+  # `docs/adr/0006-conformance-is-a-gate.md`.
+  #
+  # A separate job rather than a step in `toolchain` for one reason: it needs
+  # all three engines instead of one, and it takes minutes rather than seconds.
+  # Merging it in would mean installing WebKit and Firefox on every ordinary
+  # pull request in order to run the ordinary tests, or letting a slow job hold
+  # the fast gates hostage.
+  conformance:
+    name: Conformance suite
+    runs-on: ubuntu-latest
+    # Three engines in parallel measured 4.8m on a warm suite cache and the
+    # fetch dominates a cold one. 30 minutes is generous rather than tight,
+    # because a timeout here is indistinguishable from a real failure in the
+    # report a reviewer reads.
+    timeout-minutes: 30
+    # Contents-API enumeration is rate-limited to sixty requests an hour per IP
+    # unauthenticated, and the suite costs one per directory, repeated by each
+    # browser project. The runner reads this name when it is present and stays
+    # unauthenticated when it is not, so this is the difference between a run
+    # that works and a run that reports an enumeration failure as a suite
+    # problem.
+    #
+    # The token is declared on the step that reads it rather than on the job.
+    # At job level it was also in the environment of `pnpm install`,
+    # `playwright install` and `pnpm build` — three commands that execute
+    # dependency code and install binaries, none of which need write access to
+    # anything. The token's `contents: read` scope limits what it can do, but
+    # "read-only" is a property of the credential, not of the process holding it:
+    # a compromised postinstall script does not need to write.
+    steps:
+      # Pinned to SHA (version in trailing comment).
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # Pinned to SHA (version in trailing comment). Reads the pnpm version
+      # from the packageManager field.
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      # Pinned to SHA (version in trailing comment).
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: ".nvmrc"
+          cache: "pnpm"
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      # All three, because the expected-failure list is scored per engine and
+      # a run that skips one silently drops that engine's accounting. The
+      # baseline asserts each engine's exact build, so a version here that
+      # drifts from the list is a red run rather than a quiet one.
+      - name: Install Playwright engines
+        run: pnpm exec playwright install --with-deps chromium firefox webkit
+
+      # The suite runs against the built bundle, not against source, so the
+      # build has to have happened. `test:conformance` depends on `build` in
+      # turbo.json and would arrange this itself; it is spelled out here so the
+      # job's dependency on a build artifact is visible in the job rather than
+      # inferred from a task graph.
+      - name: Build
+        run: pnpm build
+
+      - name: Run the pinned suite on every claimed engine
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: pnpm test:conformance
+
   # Toolchain checks. They live here, with the root manifest, so every change
   # to the polyfill is typechecked, linted, tested, built, measured, and
   # verified installable in both module systems.

@@ -1,0 +1,23 @@
+---
+/**
+ * The one interactive thing on this site, and the only reason the React
+ * integration is loaded at all.
+ *
+ * Wrapping an island is a real cost — the framework runtime, a hydration step, a
+ * chunk — so it is opted into per page rather than mounted globally. A page
+ * without `<Demo />` ships no framework runtime, and `test/browser.ts` measures
+ * that rather than asserting it.
+ *
+ * `client:load` rather than `client:visible` or `client:idle`: the point of this
+ * island is that it runs *immediately* on arrival, because a reader deciding
+ * whether this library is worth adopting should not have to scroll to find out
+ * whether it works.
+ *
+ * The styles live in `src/styles/ax.css` rather than in a `<style>` element here,
+ * because an `.astro` file cannot hold a template literal in one.
+ */
+
+import TryIt from "./TryIt";
+---
+
+<TryIt client:load />

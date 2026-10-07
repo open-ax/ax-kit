@@ -1,0 +1,71 @@
+---
+draft: false
+title: "Annotations"
+description: "What each annotation means, when to set it, and what it costs to get it wrong in either direction."
+---
+
+import { SPEC_VERSION } from "@ax-kit/core";
+
+Everything on this page describes **{SPEC_VERSION.draft}** (upstream
+<code>{SPEC_VERSION.commit}</code>). The
+[draft's definition](https://webmachinelearning.github.io/webmcp/) is linked rather
+than copied, because it is re-dated often.
+
+Annotations are **declarations about intent, not permissions the library
+enforces.** This implementation stores them, returns them on enumeration, and
+leaves it there. What an agent does with a `consequentialHint` is the agent's
+decision, and the polyfill cannot enforce it even in principle — it has no control
+over the caller's behaviour.
+
+That distinction matters more than it first appears. A reader who assumes
+`consequentialHint: true` means *the tool will ask a human* would be wrong; it
+means *this tool declares itself as something a person would want to approve
+first*.
+
+## The four annotations
+
+| Annotation | Type | Means |
+|---|---|---|
+| `readOnlyHint` | boolean | The tool changes nothing. |
+| `consequentialHint` | boolean | The effect is something a person would want to approve first. |
+| `untrustedContentHint` | boolean | The tool's output is untrusted content — model-generated, or from a user. |
+| `debugging` | boolean | The tool is for a debugger or a developer tool, not for production use. |
+
+Only annotation names the draft defines are used anywhere in this project. A
+separate sensitivity annotation has been discussed upstream and is deliberately
+absent: inventing a name the draft does not define is the one failure mode this
+project is built to avoid, and an invented name is a rename waiting to be
+un-done.
+
+## Getting `consequentialHint` wrong
+
+Both directions are real failure modes, which is why this page exists rather than
+a one-line definition.
+
+**Over-annotating is the more common mistake, and it is the more damaging one.**
+Every tool marked consequential trains agents *and users* to dismiss the prompt.
+A confirmation nobody reads is worse than no confirmation, because it consumes
+the user's attention and returns nothing. If your page marks add-to-cart as
+consequential, you have spent the signal that checkout would need.
+
+**Under-annotating is worse for the user than for the agent.** A tool that spends
+money without saying so lets a person approve an action they would have refused,
+and the damage is done before anyone notices the annotation was missing.
+
+So the question is not "how dangerous is this?" but **"would a person want to
+approve this first?"** A checkout passes. Adding an item to a cart does not — the
+person clicking the button has already approved it, and they can empty the cart.
+
+The [reference storefront](https://github.com/open-ax/ax-kit/tree/main/applications/demo-store)
+demonstrates exactly this split: one consequential tool out of five, and the
+reasoning written out beside the table. The
+[live demonstration](/try-it/) shows the annotation in an enumerated listing
+rather than describing it.
+
+## `exposedTo`
+
+Not an annotation — a separate mechanism, and the one that actually narrows what
+an agent can reach. A tool declares which origins may see and invoke it; with no
+entry, only the same-origin owner sees it.
+
+[How exposure is resolved →](/reference/api/)

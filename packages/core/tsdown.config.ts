@@ -19,4 +19,16 @@ export default defineConfig([
 		sourcemap: false,
 		minify: true,
 	},
+	// The auto-installer is a third entry rather than part of the first two,
+	// for the reason `size-limit` cares about: the root budget has very little
+	// headroom, and an install-on-import side effect is opt-in behaviour that a
+	// conformant consumer has no reason to pay for.
+	{
+		entry: { index: "src/auto.ts" },
+		outDir: "dist/auto",
+		format: ["esm", "cjs"],
+		dts: true,
+		sourcemap: false,
+		minify: true,
+	},
 ]);

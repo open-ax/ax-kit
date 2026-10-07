@@ -256,3 +256,21 @@ release note names the new draft. The scheduled drift job
 (`.github/workflows/spec-drift.yml`) opens an issue when the published document
 changes; the baseline hash lives in `.github/spec-drift.sha256`. If the draft
 looks wrong, that is an upstream issue, never a rename in the source.
+
+## The suite is a gate
+
+`pnpm test:conformance` is run by the `conformance` job in
+`.github/workflows/ci.yml` on every change, on all three engines, and it is a
+required status check on `main`. There is no `continue-on-error`, no
+allow-failure condition and no skip flag reachable from a pull request, so a
+failure here cannot be merged around and cannot be made green without editing
+the expected-failure list in a reviewed change.
+
+This was not always true, and the reason it is now is worth recording. The drift
+detector caught the 2026-09-30 upstream change on the day it happened and opened
+an issue; the code was corrected on 2026-10-04, and the issue stayed open without
+a written answer until 2026-10-07. The gate makes the half-finished case — code
+updated to a new draft, baseline not re-derived — a red build instead of a
+silently stale claim. See
+[`adr/0006-conformance-is-a-gate.md`](./adr/0006-conformance-is-a-gate.md) and
+[`adr/0007-spec-drift-2026-10-07.md`](./adr/0007-spec-drift-2026-10-07.md).

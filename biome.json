@@ -1,9 +1,21 @@
 {
-	"$schema": "https://biomejs.dev/schemas/2.5.14/schema.json",
+	"$schema": "https://biomejs.dev/schemas/2.5.15/schema.json",
 	"vcs": {
 		"enabled": true,
 		"clientKind": "git",
 		"useIgnoreFile": true
+	},
+	"files": {
+		"ignoreUnknown": true,
+		"includes": [
+			"**",
+			"!**/dist/**",
+			"!**/node_modules/**",
+			"!**/.astro/**",
+			"!**/*.astro",
+			"!**/*.mdx",
+			"!applications/docs-site/src/data/api-report.json"
+		]
 	},
 	"linter": {
 		"enabled": true,

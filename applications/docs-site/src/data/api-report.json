@@ -1,0 +1,1026 @@
+{
+	"packages": [
+	{
+		"dependencies": [
+		"playwright"
+		],
+		"entries": {
+			".": {
+				"members": [
+				{
+					"kind": "interface",
+					"name": "AuditContextInput",
+					"signature": "interface AuditContextInput"
+				},
+				{
+					"kind": "interface",
+					"name": "AuditFinding",
+					"signature": "interface AuditFinding"
+				},
+				{
+					"kind": "function",
+					"name": "auditLiveUrl",
+					"signature": "export declare function auditLiveUrl(options: LaunchOptions, url: string): Promise<string>"
+				},
+				{
+					"kind": "function",
+					"name": "auditLiveUrlFindings",
+					"signature": "export declare function auditLiveUrlFindings(options: LaunchOptions, url: string): Promise<"
+				},
+				{
+					"kind": "interface",
+					"name": "AuditReport",
+					"signature": "interface AuditReport"
+				},
+				{
+					"kind": "function",
+					"name": "auditSnapshot",
+					"signature": "export declare function auditSnapshot(url: string, context: AuditContextInput): string"
+				},
+				{
+					"kind": "interface",
+					"name": "AuditToolInput",
+					"signature": "interface AuditToolInput"
+				},
+				{
+					"kind": "function",
+					"name": "auditUrl",
+					"signature": "export declare function auditUrl(browser: BrowserLike, url: string): Promise<string>"
+				},
+				{
+					"kind": "type",
+					"name": "BrowserLike",
+					"signature": "type BrowserLike ="
+				},
+				{
+					"kind": "type",
+					"name": "BrowserPageLike",
+					"signature": "type BrowserPageLike ="
+				},
+				{
+					"kind": "const",
+					"name": "BUDGETS",
+					"signature": "export declare const BUDGETS:"
+				},
+				{
+					"kind": "function",
+					"name": "collectContext",
+					"signature": "export declare function collectContext(page: BrowserPageLike): Promise<AuditContextInput>"
+				},
+				{
+					"kind": "function",
+					"name": "collectSettled",
+					"signature": "export declare function collectSettled(page: Page): Promise<AuditContextInput>"
+				},
+				{
+					"kind": "function",
+					"name": "countFailures",
+					"signature": "export declare function countFailures(findings: ReadonlyArray<AuditFinding>): number"
+				},
+				{
+					"kind": "function",
+					"name": "createReport",
+					"signature": "export declare function createReport(url: unknown, findings: unknown): AuditReport"
+				},
+				{
+					"kind": "interface",
+					"name": "DrivenBrowser",
+					"signature": "interface DrivenBrowser"
+				},
+				{
+					"kind": "interface",
+					"name": "DrivenPage",
+					"signature": "interface DrivenPage extends BrowserPageLike"
+				},
+				{
+					"kind": "function",
+					"name": "exitCodeFor",
+					"signature": "export declare function exitCodeFor(context: AuditContextInput): number"
+				},
+				{
+					"kind": "function",
+					"name": "formatReport",
+					"signature": "export declare function formatReport(report: AuditReport): string"
+				},
+				{
+					"kind": "const",
+					"name": "LANE_STATEMENT",
+					"signature": "export declare const LANE_STATEMENT: \"In-page contract audit: edge sees discoverability, journey agents see behavior, this audit sees the in-page contract.\""
+				},
+				{
+					"kind": "function",
+					"name": "launchBrowser",
+					"signature": "export declare function launchBrowser(options: LaunchOptions): Promise<BrowserLike>"
+				},
+				{
+					"kind": "function",
+					"name": "launchDrivenBrowser",
+					"signature": "export declare function launchDrivenBrowser(options: LaunchOptions): Promise<DrivenBrowser>"
+				},
+				{
+					"kind": "interface",
+					"name": "LaunchOptions",
+					"signature": "interface LaunchOptions"
+				},
+				{
+					"kind": "function",
+					"name": "scoreAudit",
+					"signature": "export declare function scoreAudit(context: unknown): AuditFinding[]"
+				}
+				],
+				"runtime": "./dist/index.mjs"
+			}
+		},
+		"name": "@ax-kit/cli",
+		"version": "0.0.0"
+	},
+	{
+		"dependencies": [],
+		"entries": {
+			".": {
+				"members": [
+				{
+					"kind": "function",
+					"name": "installModelContext",
+					"signature": "export declare function installModelContext(doc: Document): ModelContext | undefined"
+				},
+				{
+					"kind": "interface",
+					"name": "ModelContext",
+					"signature": "interface ModelContext extends EventTarget"
+				},
+				{
+					"kind": "interface",
+					"name": "ModelContextExecuteToolOptions",
+					"signature": "interface ModelContextExecuteToolOptions"
+				},
+				{
+					"kind": "interface",
+					"name": "ModelContextGetToolOptions",
+					"signature": "interface ModelContextGetToolOptions"
+				},
+				{
+					"kind": "interface",
+					"name": "ModelContextRegisterToolOptions",
+					"signature": "interface ModelContextRegisterToolOptions"
+				},
+				{
+					"kind": "interface",
+					"name": "ModelContextTool",
+					"signature": "interface ModelContextTool"
+				},
+				{
+					"kind": "interface",
+					"name": "RegisteredTool",
+					"signature": "interface RegisteredTool"
+				},
+				{
+					"kind": "const",
+					"name": "SPEC_VERSION",
+					"signature": "export declare const SPEC_VERSION:"
+				},
+				{
+					"kind": "class",
+					"name": "ToolActivatedEvent",
+					"signature": "export declare class ToolActivatedEvent extends Event"
+				},
+				{
+					"kind": "interface",
+					"name": "ToolAnnotations",
+					"signature": "interface ToolAnnotations"
+				},
+				{
+					"kind": "class",
+					"name": "ToolCancelEvent",
+					"signature": "export declare class ToolCancelEvent extends Event"
+				},
+				{
+					"kind": "type",
+					"name": "ToolExecuteCallback",
+					"signature": "type ToolExecuteCallback = (inputObject: unknown, options: ToolExecuteCallbackOptions) => Promise<unknown>"
+				},
+				{
+					"kind": "interface",
+					"name": "ToolExecuteCallbackOptions",
+					"signature": "interface ToolExecuteCallbackOptions"
+				}
+				],
+				"runtime": "./dist/index.mjs"
+			},
+			"./auto": {
+				"members": [
+				{
+					"kind": "function",
+					"name": "autoInstallModelContext",
+					"signature": "export declare function autoInstallModelContext(): ModelContext | undefined"
+				}
+				],
+				"runtime": "./dist/auto/index.mjs"
+			},
+			"./ax": {
+				"members": [
+				{
+					"kind": "function",
+					"name": "executeToolResult",
+					"signature": "export declare function executeToolResult(context: ModelContext, tool: RegisteredTool, inputObject?: unknown, options?: ModelContextExecuteToolOptions): Promise<unknown>"
+				},
+				{
+					"kind": "function",
+					"name": "getTool",
+					"signature": "export declare function getTool(name: string, doc?: Document, options?: ModelContextGetToolOptions): Promise<RegisteredTool | undefined>"
+				},
+				{
+					"kind": "interface",
+					"name": "ToolChangeDiff",
+					"signature": "export interface ToolChangeDiff"
+				},
+				{
+					"kind": "type",
+					"name": "ToolChangeListener",
+					"signature": "export type ToolChangeListener = (diff: ToolChangeDiff) => void"
+				},
+				{
+					"kind": "function",
+					"name": "trackToolChanges",
+					"signature": "export declare function trackToolChanges(context: ModelContext, listener: ToolChangeListener): Promise<() => void>"
+				},
+				{
+					"kind": "function",
+					"name": "unregisterTool",
+					"signature": "export declare function unregisterTool(name: string, doc?: Document): boolean"
+				}
+				],
+				"runtime": "./dist/ax/index.mjs"
+			}
+		},
+		"name": "@ax-kit/core",
+		"version": "0.0.0"
+	},
+	{
+		"dependencies": [],
+		"entries": {
+			".": {
+				"members": [
+				{
+					"kind": "function",
+					"name": "assertLoopbackBind",
+					"signature": "export declare function assertLoopbackBind(host: unknown): string"
+				},
+				{
+					"kind": "const",
+					"name": "BRIDGE_ERRORS",
+					"signature": "export declare const BRIDGE_ERRORS:"
+				},
+				{
+					"kind": "class",
+					"name": "BridgeClient",
+					"signature": "export declare class BridgeClient"
+				},
+				{
+					"kind": "class",
+					"name": "BridgeRefusal",
+					"signature": "export declare class BridgeRefusal extends Error"
+				},
+				{
+					"kind": "interface",
+					"name": "BridgeRequest",
+					"signature": "interface BridgeRequest"
+				},
+				{
+					"kind": "interface",
+					"name": "BridgeRoutes",
+					"signature": "interface BridgeRoutes"
+				},
+				{
+					"kind": "function",
+					"name": "checkBearer",
+					"signature": "export declare function checkBearer(presented: unknown, expected: unknown): void"
+				},
+				{
+					"kind": "function",
+					"name": "checkUpgradeOrigin",
+					"signature": "export declare function checkUpgradeOrigin(origin: unknown): void"
+				},
+				{
+					"kind": "function",
+					"name": "completeResult",
+					"signature": "export declare function completeResult(data: Record<string, unknown>): Record<string, unknown>"
+				},
+				{
+					"kind": "function",
+					"name": "createBearer",
+					"signature": "export declare function createBearer(): string"
+				},
+				{
+					"kind": "function",
+					"name": "createDaemonInfo",
+					"signature": "export declare function createDaemonInfo(): DaemonInfo"
+				},
+				{
+					"kind": "function",
+					"name": "createDiscoveryFile",
+					"signature": "export declare function createDiscoveryFile(parts: unknown): DiscoveryFile"
+				},
+				{
+					"kind": "function",
+					"name": "createNativeHostManifest",
+					"signature": "export declare function createNativeHostManifest(parts: unknown): NativeHostManifest"
+				},
+				{
+					"kind": "interface",
+					"name": "DaemonInfo",
+					"signature": "interface DaemonInfo"
+				},
+				{
+					"kind": "const",
+					"name": "DISCOVERY_FILE_NAME",
+					"signature": "export declare const DISCOVERY_FILE_NAME: \"relay.json\""
+				},
+				{
+					"kind": "interface",
+					"name": "DiscoveryFile",
+					"signature": "interface DiscoveryFile"
+				},
+				{
+					"kind": "function",
+					"name": "discoveryResult",
+					"signature": "export declare function discoveryResult(info: DaemonInfo): Record<string, unknown>"
+				},
+				{
+					"kind": "function",
+					"name": "dispatchRequest",
+					"signature": "export declare function dispatchRequest(request: unknown, tools: ReadonlyArray<Record<string, unknown>>, info: DaemonInfo): JsonRpcResponse"
+				},
+				{
+					"kind": "interface",
+					"name": "Envelope",
+					"signature": "interface Envelope"
+				},
+				{
+					"kind": "function",
+					"name": "isDeprecatedMethod",
+					"signature": "export declare function isDeprecatedMethod(method: unknown): boolean"
+				},
+				{
+					"kind": "function",
+					"name": "isLoopbackHost",
+					"signature": "export declare function isLoopbackHost(host: unknown): boolean"
+				},
+				{
+					"kind": "interface",
+					"name": "JsonRpcRequest",
+					"signature": "interface JsonRpcRequest"
+				},
+				{
+					"kind": "interface",
+					"name": "JsonRpcResponse",
+					"signature": "interface JsonRpcResponse"
+				},
+				{
+					"kind": "function",
+					"name": "logToStderr",
+					"signature": "export declare function logToStderr(write: (text: string) => void, message: string): void"
+				},
+				{
+					"kind": "const",
+					"name": "MAX_FRAME_BYTES",
+					"signature": "export declare const MAX_FRAME_BYTES: number"
+				},
+				{
+					"kind": "interface",
+					"name": "NativeHostManifest",
+					"signature": "interface NativeHostManifest"
+				},
+				{
+					"kind": "class",
+					"name": "PageBridge",
+					"signature": "export declare class PageBridge"
+				},
+				{
+					"kind": "function",
+					"name": "parseDiscoveryFile",
+					"signature": "export declare function parseDiscoveryFile(text: unknown): DiscoveryFile"
+				},
+				{
+					"kind": "function",
+					"name": "parseFrame",
+					"signature": "export declare function parseFrame(line: unknown): JsonRpcRequest"
+				},
+				{
+					"kind": "const",
+					"name": "PROTOCOL_VERSION",
+					"signature": "export declare const PROTOCOL_VERSION: \"2026-07-28\""
+				},
+				{
+					"kind": "function",
+					"name": "readDiscoveryFile",
+					"signature": "export declare function readDiscoveryFile(directory: string): DiscoveryFile"
+				},
+				{
+					"kind": "function",
+					"name": "readEnvelope",
+					"signature": "export declare function readEnvelope(value: unknown): Envelope | null"
+				},
+				{
+					"kind": "function",
+					"name": "readResponse",
+					"signature": "export declare function readResponse(value: unknown): JsonRpcResponse"
+				},
+				{
+					"kind": "interface",
+					"name": "RequestMeta",
+					"signature": "interface RequestMeta"
+				},
+				{
+					"kind": "function",
+					"name": "resolveDiscoveryDir",
+					"signature": "export declare function resolveDiscoveryDir(env: unknown, onWarn?: (message: string) => void): string"
+				},
+				{
+					"kind": "function",
+					"name": "serializeDiscoveryFile",
+					"signature": "export declare function serializeDiscoveryFile(file: DiscoveryFile): string"
+				},
+				{
+					"kind": "function",
+					"name": "serializeFrame",
+					"signature": "export declare function serializeFrame(response: JsonRpcResponse): string"
+				},
+				{
+					"kind": "function",
+					"name": "splitFrames",
+					"signature": "export declare function splitFrames(buffer: string):"
+				},
+				{
+					"kind": "function",
+					"name": "startTransport",
+					"signature": "export declare function startTransport(options: TransportOptions): Promise<Transport>"
+				},
+				{
+					"kind": "const",
+					"name": "SUPPORTED_VERSIONS",
+					"signature": "export declare const SUPPORTED_VERSIONS: ReadonlyArray<string>"
+				},
+				{
+					"kind": "interface",
+					"name": "Transport",
+					"signature": "interface Transport"
+				},
+				{
+					"kind": "interface",
+					"name": "TransportOptions",
+					"signature": "interface TransportOptions"
+				},
+				{
+					"kind": "function",
+					"name": "writeNativeHostManifest",
+					"signature": "export declare function writeNativeHostManifest(directory: string, binaryPath: string, allowedOrigins: ReadonlyArray<string>): string"
+				}
+				],
+				"runtime": "./dist/index.mjs"
+			}
+		},
+		"name": "@ax-kit/daemon",
+		"version": "0.0.0"
+	},
+	{
+		"dependencies": [],
+		"entries": {
+			".": {
+				"members": [
+				{
+					"kind": "function",
+					"name": "applyArgAllowList",
+					"signature": "export declare function applyArgAllowList(args: unknown, allowedKeys: unknown): Record<string, unknown>"
+				},
+				{
+					"kind": "interface",
+					"name": "ApprovalActivity",
+					"signature": "interface ApprovalActivity"
+				},
+				{
+					"kind": "interface",
+					"name": "ApprovalDetails",
+					"signature": "interface ApprovalDetails"
+				},
+				{
+					"kind": "class",
+					"name": "ApprovalStore",
+					"signature": "export declare class ApprovalStore"
+				},
+				{
+					"kind": "function",
+					"name": "assertHandlerName",
+					"signature": "export declare function assertHandlerName(value: unknown): HandlerName"
+				},
+				{
+					"kind": "function",
+					"name": "assertManifestPosture",
+					"signature": "export declare function assertManifestPosture(value: unknown): ManifestPosture"
+				},
+				{
+					"kind": "function",
+					"name": "assertToolName",
+					"signature": "export declare function assertToolName(name: unknown): void"
+				},
+				{
+					"kind": "const",
+					"name": "AUDIT_TRAIL_DISCLAIMER",
+					"signature": "export declare const AUDIT_TRAIL_DISCLAIMER: \"Local log only: held outside page reach with no integrity guarantee until shipped off-machine.\""
+				},
+				{
+					"kind": "interface",
+					"name": "AuditEntry",
+					"signature": "interface AuditEntry"
+				},
+				{
+					"kind": "function",
+					"name": "canonicalizeArgs",
+					"signature": "export declare function canonicalizeArgs(value: unknown): string"
+				},
+				{
+					"kind": "const",
+					"name": "CONFIRMATION_SURFACE",
+					"signature": "export declare const CONFIRMATION_SURFACE: \"side-panel\""
+				},
+				{
+					"kind": "type",
+					"name": "ConfirmationSurface",
+					"signature": "type ConfirmationSurface = typeof CONFIRMATION_SURFACE"
+				},
+				{
+					"kind": "function",
+					"name": "createHitlKey",
+					"signature": "export declare function createHitlKey(parts: unknown): HitlKey"
+				},
+				{
+					"kind": "function",
+					"name": "createInjectionRequest",
+					"signature": "export declare function createInjectionRequest(handler: unknown, args: unknown): InjectionRequest"
+				},
+				{
+					"kind": "function",
+					"name": "createManifestDocument",
+					"signature": "export declare function createManifestDocument(posture: unknown, name: string, version: string, description: string): ManifestDocument"
+				},
+				{
+					"kind": "function",
+					"name": "defaultManifestDocument",
+					"signature": "export declare function defaultManifestDocument(): ManifestDocument"
+				},
+				{
+					"kind": "function",
+					"name": "defaultManifestPosture",
+					"signature": "export declare function defaultManifestPosture(): ManifestPosture"
+				},
+				{
+					"kind": "interface",
+					"name": "ExternallyConnectable",
+					"signature": "interface ExternallyConnectable"
+				},
+				{
+					"kind": "function",
+					"name": "firefoxManifestPosture",
+					"signature": "export declare function firefoxManifestPosture(): ManifestPosture"
+				},
+				{
+					"kind": "interface",
+					"name": "FrameToolView",
+					"signature": "interface FrameToolView"
+				},
+				{
+					"kind": "const",
+					"name": "HANDLER_NAMES",
+					"signature": "export declare const HANDLER_NAMES: readonly [\"listTools\", \"getTool\", \"executeTool\"]"
+				},
+				{
+					"kind": "type",
+					"name": "HandlerName",
+					"signature": "type HandlerName = (typeof HANDLER_NAMES)[number]"
+				},
+				{
+					"kind": "function",
+					"name": "hashArgs",
+					"signature": "export declare function hashArgs(canonical: string): string"
+				},
+				{
+					"kind": "interface",
+					"name": "HitlKey",
+					"signature": "interface HitlKey"
+				},
+				{
+					"kind": "function",
+					"name": "hitlKeysEqual",
+					"signature": "export declare function hitlKeysEqual(first: HitlKey, second: HitlKey): boolean"
+				},
+				{
+					"kind": "function",
+					"name": "hitlKeyToString",
+					"signature": "export declare function hitlKeyToString(key: HitlKey): string"
+				},
+				{
+					"kind": "interface",
+					"name": "InjectionRequest",
+					"signature": "interface InjectionRequest"
+				},
+				{
+					"kind": "function",
+					"name": "isExposedToCaller",
+					"signature": "export declare function isExposedToCaller(ownerOrigin: string, allowedOrigins: ReadonlyArray<string>, callerOrigin: string): boolean"
+				},
+				{
+					"kind": "function",
+					"name": "isHandlerName",
+					"signature": "export declare function isHandlerName(value: unknown): value is HandlerName"
+				},
+				{
+					"kind": "interface",
+					"name": "ManifestDocument",
+					"signature": "interface ManifestDocument"
+				},
+				{
+					"kind": "interface",
+					"name": "ManifestPosture",
+					"signature": "interface ManifestPosture"
+				},
+				{
+					"kind": "const",
+					"name": "TRANSPORT_KIND",
+					"signature": "export declare const TRANSPORT_KIND: \"injection-only\""
+				},
+				{
+					"kind": "type",
+					"name": "TransportKind",
+					"signature": "type TransportKind = typeof TRANSPORT_KIND"
+				},
+				{
+					"kind": "function",
+					"name": "validateFrameTool",
+					"signature": "export declare function validateFrameTool(value: unknown): FrameToolView"
+				},
+				{
+					"kind": "class",
+					"name": "WorkerAuditTrail",
+					"signature": "export declare class WorkerAuditTrail"
+				}
+				],
+				"runtime": "./dist/index.mjs"
+			}
+		},
+		"name": "@ax-kit/extension",
+		"version": "0.0.0"
+	},
+	{
+		"dependencies": [],
+		"entries": {
+			".": {
+				"members": [
+				{
+					"kind": "class",
+					"name": "AxCompanion",
+					"signature": "export declare class AxCompanion"
+				},
+				{
+					"kind": "interface",
+					"name": "AxExecuteOptions",
+					"signature": "interface AxExecuteOptions"
+				},
+				{
+					"kind": "interface",
+					"name": "AxExpectOptions",
+					"signature": "interface AxExpectOptions"
+				},
+				{
+					"kind": "interface",
+					"name": "AxListOptions",
+					"signature": "interface AxListOptions"
+				},
+				{
+					"kind": "class",
+					"name": "AxMissingSurfaceError",
+					"signature": "export declare class AxMissingSurfaceError extends Error"
+				},
+				{
+					"kind": "type",
+					"name": "AxPage",
+					"signature": "type AxPage = Page &"
+				},
+				{
+					"kind": "class",
+					"name": "AxParseError",
+					"signature": "export declare class AxParseError extends Error"
+				},
+				{
+					"kind": "interface",
+					"name": "AxToolAnnotations",
+					"signature": "interface AxToolAnnotations"
+				},
+				{
+					"kind": "interface",
+					"name": "AxToolSummary",
+					"signature": "interface AxToolSummary"
+				},
+				{
+					"kind": "interface",
+					"name": "AxWaitOptions",
+					"signature": "interface AxWaitOptions"
+				},
+				{
+					"kind": "function",
+					"name": "compareToolNames",
+					"signature": "export declare function compareToolNames(first: string, second: string): number"
+				},
+				{
+					"kind": "function",
+					"name": "executeTool",
+					"signature": "export declare function executeTool<T = unknown>(page: Page, name: string, args?: unknown, options?: AxExecuteOptions): Promise<T>"
+				},
+				{
+					"kind": "unknown",
+					"name": "expect",
+					"signature": "expect"
+				},
+				{
+					"kind": "function",
+					"name": "expectTool",
+					"signature": "export declare function expectTool(page: Page, name: string, options?: AxExpectOptions): Promise<AxToolSummary>"
+				},
+				{
+					"kind": "function",
+					"name": "findToolByName",
+					"signature": "export declare function findToolByName(tools: ReadonlyArray<AxToolSummary>, name: string): AxToolSummary | undefined"
+				},
+				{
+					"kind": "function",
+					"name": "getAvailableTools",
+					"signature": "export declare function getAvailableTools(page: Page, options?: AxListOptions): Promise<AxToolSummary[]>"
+				},
+				{
+					"kind": "function",
+					"name": "resolveInitScriptPath",
+					"signature": "export declare function resolveInitScriptPath(): string"
+				},
+				{
+					"kind": "const",
+					"name": "test",
+					"signature": "export declare const test: TestType<AxTestArgs, AxWorkerArgs>"
+				},
+				{
+					"kind": "function",
+					"name": "waitForTool",
+					"signature": "export declare function waitForTool(page: Page, name: string, options?: AxWaitOptions): Promise<AxToolSummary>"
+				}
+				],
+				"runtime": "./dist/index.mjs"
+			}
+		},
+		"name": "@ax-kit/playwright",
+		"version": "0.0.0"
+	},
+	{
+		"dependencies": [],
+		"entries": {
+			".": {
+				"members": [
+				{
+					"kind": "interface",
+					"name": "AxAnnotations",
+					"signature": "interface AxAnnotations"
+				},
+				{
+					"kind": "type",
+					"name": "AxDispatchOutcome",
+					"signature": "type AxDispatchOutcome = \"bridge\" | \"native\""
+				},
+				{
+					"kind": "type",
+					"name": "AxExecuteCallback",
+					"signature": "type AxExecuteCallback = (inputObject: unknown, options: AxExecuteOptions) => Promise<unknown>"
+				},
+				{
+					"kind": "interface",
+					"name": "AxExecuteOptions",
+					"signature": "interface AxExecuteOptions"
+				},
+				{
+					"kind": "type",
+					"name": "AxMiddleware",
+					"signature": "type AxMiddleware = (next: AxExecuteCallback, args: unknown, options: AxExecuteOptions) => Promise<unknown>"
+				},
+				{
+					"kind": "function",
+					"name": "AxProvider",
+					"signature": "export declare function AxProvider(props: AxProviderProps): ReactNode"
+				},
+				{
+					"kind": "interface",
+					"name": "AxProviderProps",
+					"signature": "interface AxProviderProps"
+				},
+				{
+					"kind": "interface",
+					"name": "AxToolDefinition",
+					"signature": "interface AxToolDefinition"
+				},
+				{
+					"kind": "interface",
+					"name": "AxToolHandle",
+					"signature": "interface AxToolHandle"
+				},
+				{
+					"kind": "interface",
+					"name": "AxToolOptions",
+					"signature": "interface AxToolOptions"
+				},
+				{
+					"kind": "function",
+					"name": "dispatchAxClick",
+					"signature": "export declare function dispatchAxClick(target: Element): AxDispatchOutcome"
+				},
+				{
+					"kind": "function",
+					"name": "isAxSupported",
+					"signature": "export declare function isAxSupported(doc: Document | undefined): boolean"
+				},
+				{
+					"kind": "function",
+					"name": "useAxTool",
+					"signature": "export declare function useAxTool(tool: AxToolDefinition): AxToolHandle"
+				}
+				],
+				"runtime": "./dist/index.mjs"
+			}
+		},
+		"name": "@ax-kit/react",
+		"version": "0.0.0"
+	},
+	{
+		"dependencies": [],
+		"entries": {
+			".": {
+				"members": [
+				{
+					"kind": "interface",
+					"name": "AxAnnotations",
+					"signature": "interface AxAnnotations"
+				},
+				{
+					"kind": "type",
+					"name": "AxExecuteCallback",
+					"signature": "type AxExecuteCallback = (inputObject: unknown, options: AxExecuteOptions) => Promise<unknown>"
+				},
+				{
+					"kind": "interface",
+					"name": "AxExecuteOptions",
+					"signature": "interface AxExecuteOptions"
+				},
+				{
+					"kind": "interface",
+					"name": "AxModelContextLike",
+					"signature": "interface AxModelContextLike"
+				},
+				{
+					"kind": "function",
+					"name": "axTool",
+					"signature": "export declare function axTool(_node: Element, params: AxToolDefinition): ActionReturn<AxToolDefinition>"
+				},
+				{
+					"kind": "interface",
+					"name": "AxToolDefinition",
+					"signature": "interface AxToolDefinition"
+				},
+				{
+					"kind": "function",
+					"name": "axToolEffect",
+					"signature": "export declare function axToolEffect(tool: AxToolDefinition): () => void"
+				},
+				{
+					"kind": "function",
+					"name": "isAxSupported",
+					"signature": "export declare function isAxSupported(doc: Document | undefined): boolean"
+				}
+				],
+				"runtime": "./dist/index.mjs"
+			}
+		},
+		"name": "@ax-kit/svelte",
+		"version": "0.0.0"
+	},
+	{
+		"dependencies": [],
+		"entries": {
+			".": {
+				"members": [
+				{
+					"kind": "interface",
+					"name": "AxAnnotations",
+					"signature": "interface AxAnnotations"
+				},
+				{
+					"kind": "type",
+					"name": "AxExecuteCallback",
+					"signature": "type AxExecuteCallback = (inputObject: unknown, options: AxExecuteOptions) => Promise<unknown>"
+				},
+				{
+					"kind": "interface",
+					"name": "AxExecuteOptions",
+					"signature": "interface AxExecuteOptions"
+				},
+				{
+					"kind": "interface",
+					"name": "AxModelContextLike",
+					"signature": "interface AxModelContextLike"
+				},
+				{
+					"kind": "interface",
+					"name": "AxToolDefinition",
+					"signature": "interface AxToolDefinition"
+				},
+				{
+					"kind": "interface",
+					"name": "AxToolHandle",
+					"signature": "interface AxToolHandle"
+				},
+				{
+					"kind": "function",
+					"name": "isAxSupported",
+					"signature": "export declare function isAxSupported(doc: Document | undefined): boolean"
+				},
+				{
+					"kind": "function",
+					"name": "useAxTool",
+					"signature": "export declare function useAxTool(tool: AxToolDefinition): AxToolHandle"
+				},
+				{
+					"kind": "const",
+					"name": "vAxTool",
+					"signature": "export declare const vAxTool: ObjectDirective<Element, AxToolDefinition>"
+				}
+				],
+				"runtime": "./dist/index.mjs"
+			}
+		},
+		"name": "@ax-kit/vue",
+		"version": "0.0.0"
+	},
+	{
+		"dependencies": [
+		"zod"
+		],
+		"entries": {
+			".": {
+				"members": [
+				{
+					"kind": "function",
+					"name": "asStandardConverter",
+					"signature": "export declare function asStandardConverter(schema: unknown, options?: ConvertOptions | undefined): StandardJsonSchemaConverter"
+				},
+				{
+					"kind": "interface",
+					"name": "ConvertOptions",
+					"signature": "interface ConvertOptions"
+				},
+				{
+					"kind": "function",
+					"name": "convertToInputSchema",
+					"signature": "export declare function convertToInputSchema(schema: unknown, options?: ConvertOptions | undefined): Record<string, unknown>"
+				},
+				{
+					"kind": "function",
+					"name": "extractJsonSchema",
+					"signature": "export declare function extractJsonSchema(schema: unknown, io?: \"input\" | \"output\", target?: string | undefined): Record<string, unknown>"
+				},
+				{
+					"kind": "interface",
+					"name": "LibrarySchemaLike",
+					"signature": "interface LibrarySchemaLike"
+				},
+				{
+					"kind": "const",
+					"name": "MAX_CONVERT_BYTES",
+					"signature": "export declare const MAX_CONVERT_BYTES = 65536"
+				},
+				{
+					"kind": "const",
+					"name": "MAX_CONVERT_DEPTH",
+					"signature": "export declare const MAX_CONVERT_DEPTH = 10"
+				},
+				{
+					"kind": "const",
+					"name": "MAX_CONVERT_KEYS",
+					"signature": "export declare const MAX_CONVERT_KEYS = 500"
+				},
+				{
+					"kind": "interface",
+					"name": "StandardJsonSchemaConverter",
+					"signature": "interface StandardJsonSchemaConverter"
+				}
+				],
+				"runtime": "./dist/index.mjs"
+			}
+		},
+		"name": "@ax-kit/zod",
+		"version": "0.0.0"
+	}
+	]
+}
