@@ -38,12 +38,24 @@
 				"default": "./dist/ax/index.cjs"
 			}
 		},
+		"./auto": {
+			"import": {
+				"types": "./dist/auto/index.d.mts",
+				"default": "./dist/auto/index.mjs"
+			},
+			"require": {
+				"types": "./dist/auto/index.d.cts",
+				"default": "./dist/auto/index.cjs"
+			}
+		},
 		"./package.json": "./package.json"
 	},
 	"files": [
 		"dist"
 	],
-	"sideEffects": false,
+	"sideEffects": [
+		"./dist/auto/*"
+	],
 	"scripts": {
 		"build": "tsdown",
 		"typecheck": "tsc --noEmit -p tsconfig.json",
@@ -60,6 +72,11 @@
 		},
 		{
 			"path": "dist/ax/index.mjs",
+			"limit": "5 kB",
+			"gzip": true
+		},
+		{
+			"path": "dist/auto/index.mjs",
 			"limit": "5 kB",
 			"gzip": true
 		}

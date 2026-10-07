@@ -64,8 +64,10 @@ Notes on scope:
 
 - `document` only. There is no `window` or `navigator` alias on any entry.
   Installation is explicit per document: call `installModelContext(document)`
-  once setup runs. The entry has no import side effects, so bundlers can
-  tree-shake it honestly.
+  once setup runs. The root and `/ax` entries have no import side effects, so
+  bundlers can tree-shake them honestly. The one exception is
+  [`@ax-kit/core/auto`](#auto-installing), which installs on import and says so
+  in its `sideEffects` field.
 - Imperative tools only. The draft's declarative section is a TODO, so there
   is nothing to conform to yet.
 - The context property is defined non-writable and non-configurable as
@@ -84,3 +86,40 @@ Notes on scope:
 `unregisterTool`, single-name `getTool`, parsed-result `executeToolResult`,
 and diff-detail `trackToolChanges`. Importing the root entry never exposes
 them, so a conformance run cannot observe them.
+
+## Auto-installing
+
+`@ax-kit/core/auto` installs the surface against the ambient document when you
+import it. It exists for one situation: a server-rendered application, where the
+one place a polyfill belongs is the framework's client entry hook, which runs
+before hydration for exactly this purpose.
+
+```js
+// client-entry.js — runs before hydration
+import "@ax-kit/core/auto";
+```
+
+```ts
+// A server component. No "use client", no client directive on the tree.
+import { registerStorefrontTools } from "./tools";
+
+export default function Page() {
+  return <Catalog onReady={registerStorefrontTools} />;
+}
+```
+
+Importing it performs no work where there is no `document`, so it is safe in an
+environment that renders on a server. Importing it again does nothing: an
+existing native or polyfilled `document.modelContext` is preserved rather than
+replaced, because a polyfill that overwrites a native implementation makes the
+platform look broken.
+
+It is a separate entry point rather than part of the root one, and separately for
+bytes. The root entry is measured against a hard 5 KB gzip budget with very
+little headroom, and an install-on-import side effect is opt-in behaviour a
+conformant consumer has no reason to pay for.
+
+Installation is refused, not thrown, in an insecure context or where the `tools`
+Permissions Policy feature is denied. A refusal is visible as
+`document.modelContext` being absent; the draft's own error taxonomy covers
+calls against a document that has no surface.
