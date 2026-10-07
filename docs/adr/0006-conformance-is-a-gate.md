@@ -12,16 +12,26 @@ kept it true.
 
 The mechanism was the `spec-drift` workflow. It fetches the published
 specification daily, hashes it, compares against
-`.github/spec-drift.sha256`, and opens an issue when they differ. It fired on
-2026-09-30, the day upstream PR #330 removed the origin-keyed agent cluster
-precondition, and it did its job: the change was noticed the same day.
+`.github/spec-drift.sha256`, and opens an issue when they differ. It opened
+issue #10 on 2026-09-30T12:31Z, the day upstream PR #330 removed the origin-keyed
+agent cluster precondition, and it did its job: the change was noticed the same
+day it landed.
 
-It then sat unanswered for seven days. The hash moved three times while triage
-was pending — the workflow helpfully commented each new value onto issue #10 —
-and meanwhile this repository's conformance claim was wrong, because the code
-still implemented a precondition the draft no longer had. The correction landed
-on 2026-10-04. Between the change and the correction, the repository published
-a claim it did not meet.
+Four dates matter, and they are not the same interval:
+
+| Event | Date |
+|---|---|
+| Upstream removed the precondition | 2026-09-30 |
+| `spec-drift` opened #10 | 2026-09-30T12:31Z |
+| The code was corrected (`351bf41`) | 2026-10-04 |
+| The written triage landed | 2026-10-07 |
+
+So the detection was immediate, the code was wrong for **four days**, and the
+issue stayed open without a written answer for **seven days** — which is the
+number that matters most, because the written answer is the thing nobody
+required. The hash moved three times in between; the workflow helpfully
+commented each new value onto the open issue, so the gap was visible to anyone
+who looked and enforced by nothing.
 
 The suite itself was never the problem. `pnpm test:conformance` exists, it
 runs the proposal's suite against the built bundle on all three engines, and it
@@ -43,6 +53,26 @@ because it needs all three engines rather than one and takes minutes rather
 than seconds. It is a required status check on `main`, so a conformance
 failure cannot be merged around.
 
+### What the detector does and does not do
+
+The scheduled job is unchanged. It watches upstream and opens an issue, because
+detection is a different job from enforcement and the detector is genuinely good
+at detection — it caught the change the same day it happened.
+
+What changes is what a *detected* drift now costs. The suite job runs the pinned
+revision of the proposal's suite, so a change to the published document does not
+by itself turn it red: the pin and the suite revision move deliberately, in a
+reviewed change, and that change is where the judgement about the new draft gets
+made. What turns red is the moment somebody has updated the code to a new draft
+without updating the expected-failure list — which is the failure that actually
+happened here, and which the detector alone would not have caught.
+
+So the gate does not enforce *triage*. It enforces that a change to behaviour
+was accompanied by a re-derived baseline. Triage still depends on a person
+answering the question the issue asks, and this decision does not change that;
+it makes the consequence of a half-finished triage show up as a red build
+rather than as a line in an issue list.
+
 Three things are deliberately absent, and their absence is the decision:
 
 - No `continue-on-error`.
@@ -54,18 +84,6 @@ A contributor cannot make this green. Making it green means changing
 change, beside the diff that caused the new failure. That is the property worth
 having: the list is a claim about upstream and about this implementation, so
 editing it deserves the same scrutiny as editing the code, and gets it.
-
-### The drift detector stays, and keeps its shape
-
-The scheduled job is unchanged. It watches upstream and opens an issue, because
-detection is a different job from enforcement and the detector is genuinely good
-at detection — it caught the change the same day it happened.
-
-What changes is what a *detected* drift now costs. Before this decision, an
-open drift issue was a line in an issue list. After it, an open drift issue is a
-build that has been red since the next push, which is a fact that gets
-attended to. The detector's weakness was never that it was silent; it was that
-being loud had no consequence.
 
 ### A required check, not a documented one
 

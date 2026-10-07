@@ -267,9 +267,10 @@ failure here cannot be merged around and cannot be made green without editing
 the expected-failure list in a reviewed change.
 
 This was not always true, and the reason it is now is worth recording. The drift
-detector alone caught the 2026-09-30 upstream change on the day it happened and
-the resulting issue then sat unanswered for seven days while this repository's
-conformance claim was wrong. Opening an issue is a notification, not a control.
-The gate is what makes the claim hold between one triage and the next. See
+detector caught the 2026-09-30 upstream change on the day it happened and opened
+an issue; the code was corrected on 2026-10-04, and the issue stayed open without
+a written answer until 2026-10-07. The gate makes the half-finished case — code
+updated to a new draft, baseline not re-derived — a red build instead of a
+silently stale claim. See
 [`adr/0006-conformance-is-a-gate.md`](./adr/0006-conformance-is-a-gate.md) and
 [`adr/0007-spec-drift-2026-10-07.md`](./adr/0007-spec-drift-2026-10-07.md).
