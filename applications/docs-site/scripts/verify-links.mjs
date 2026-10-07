@@ -18,7 +18,7 @@
  * resolves, and a check that implied more would be a check that lies.
  */
 
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -76,16 +76,6 @@ const pages = htmlFiles(DIST);
  * compared to a URL. Comparing paths to paths instead would make this set
  * disagree with every trailing-slash link on the site — which is most of them.
  */
-const known = new Set(
-	pages.map((page) => {
-		const path = `/${relative(DIST, page).replace(/\\/g, "/")}`;
-		// A page built at `quickstart/index.html` is served at `/quickstart/`.
-		return path.endsWith("/index.html")
-			? path.slice(0, -"index.html".length)
-			: path;
-	}),
-);
-
 const problems = [];
 let checked = 0;
 

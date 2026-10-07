@@ -120,6 +120,26 @@ little headroom, and an install-on-import side effect is opt-in behaviour a
 conformant consumer has no reason to pay for.
 
 Installation is refused, not thrown, in an insecure context or where the `tools`
-Permissions Policy feature is denied. A refusal is visible as
-`document.modelContext` being absent; the draft's own error taxonomy covers
-calls against a document that has no surface.
+Permissions Policy feature is denied.
+
+**Check for the surface before using it.** A refusal leaves no property behind, so
+`document.modelContext.registerTool(…)` is a `TypeError` on `undefined` — a plain
+JavaScript error thrown *before* any draft method runs, not one of the specified
+names. The draft's error taxonomy covers calls that reach an installed surface, so
+a caller that has not checked should not expect to see it:
+
+```ts
+import "@ax-kit/core/auto";
+
+const context = document.modelContext;
+if (context === undefined) {
+	// No surface: an insecure context, or a denied `tools` policy. The page
+	// still works — a tool surface is additive, not required to use the site.
+} else {
+	await context.registerTool(tool);
+}
+```
+
+For the same reason, `autoInstallModelContext()` resolves to `undefined` both when
+it refused and when there was already a surface to preserve. Reading
+`document.modelContext` is what tells those two apart.

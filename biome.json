@@ -13,7 +13,8 @@
 			"!**/node_modules/**",
 			"!**/.astro/**",
 			"!**/*.astro",
-			"!**/*.mdx"
+			"!**/*.mdx",
+			"!applications/docs-site/src/data/api-report.json"
 		]
 	},
 	"linter": {

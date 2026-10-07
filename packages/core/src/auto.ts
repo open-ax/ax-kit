@@ -44,10 +44,16 @@ import type { ModelContext } from "./types.js";
  * Safe to call anywhere, any number of times, and safe to import in an
  * environment with no DOM. Where the platform already provides
  * `document.modelContext`, or where this module has already installed it, the
- * existing surface is preserved and returned.
+ * existing surface is left untouched and **`undefined` is returned** — this
+ * function installs, it does not look up, and a caller that wants the surface
+ * reads `document.modelContext`.
+ *
+ * That is worth knowing, because it is the difference between "nothing happened"
+ * and "nothing needed doing", and a caller cannot tell them apart from the
+ * return value alone. Reading the property is what distinguishes them.
  *
  * A refusal — an insecure context, or a denied `tools` Permissions Policy
- * feature — is reported as `undefined` rather than thrown. This is a
+ * feature — is also reported as `undefined` rather than thrown. This is a
  * side-effecting import, and an import that throws takes the importing
  * application down with it. Both refusals stay observable afterwards through
  * the draft's own error taxonomy, so an application that wants to report them

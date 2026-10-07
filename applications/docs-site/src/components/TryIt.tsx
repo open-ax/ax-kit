@@ -350,7 +350,7 @@ export default function TryIt(): React.JSX.Element {
 				<p className="ax-try__muted">Nothing yet.</p>
 			) : (
 				<ol className="ax-try__log">
-					{log.map((entry, index) => (
+					{log.map((entry) => (
 						<li key={`${entry.label}-${entry.kind}`}>
 							<span className="ax-try__label">{entry.label}</span>
 							{entry.kind === "result" && (
