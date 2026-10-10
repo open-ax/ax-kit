@@ -378,14 +378,14 @@ export default function TryIt(): React.JSX.Element {
 		<div className="ax-try">
 			<p>
 				Everything below is running in your browser against the published entry
-				points. Register, enumerate, invoke, and watch what two malformed calls
+				points. Register, enumerate, invoke and watch what two malformed calls
 				do.
 			</p>
 			<p className="ax-try__muted">
 				With <em>this library</em> answering, both are refused. It checks the
 				arguments against the declared <code>inputSchema</code> before a tool's{" "}
-				<code>execute</code> runs, and reports the failure as the draft's
-				generic <code>UnknownError</code> — so an agent cannot tell a bad{" "}
+				<code>execute</code> runs. It reports the failure as the draft's
+				generic <code>UnknownError</code>, so an agent cannot tell a bad{" "}
 				<code>query</code> from a missing one. That is a limitation worth seeing
 				rather than a conformance claim.
 			</p>
@@ -393,10 +393,10 @@ export default function TryIt(): React.JSX.Element {
 				<b>
 					If your browser ships its own <code>document.modelContext</code>
 				</b>
-				, it is that surface which answers here, not this library —{" "}
+				, it is that surface which answers here, not this library:{" "}
 				<code>installModelContext</code> preserves an existing implementation
 				rather than replacing it. The draft does not require a native surface to
-				check <code>inputSchema</code>, and this demonstration's handlers do not
+				check <code>inputSchema</code>. This demonstration's handlers do not
 				throw, so on such a browser both calls may succeed. That would be the
 				native surface behaving as specified, not a fault here.
 			</p>
@@ -458,7 +458,7 @@ export default function TryIt(): React.JSX.Element {
 											</code>
 										)
 									) : (
-										<span className="ax-try__muted">no — takes none</span>
+										<span className="ax-try__muted">takes none</span>
 									)}
 								</td>
 							</tr>
@@ -570,7 +570,7 @@ export default function TryIt(): React.JSX.Element {
 			<p className="ax-try__note">
 				<strong>One tool is consequential and four are not.</strong>{" "}
 				<code>proceed_to_checkout</code> spends money and cannot be undone. The
-				two cart mutations are reversible, cost nothing, and a user who clicked{" "}
+				two cart mutations are reversible and cost nothing. A user who clicked{" "}
 				<em>add to cart</em> has already confirmed it. Over-annotating trains
 				agents and users to dismiss confirmations, which is the failure mode the
 				annotation exists to prevent.
