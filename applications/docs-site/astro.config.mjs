@@ -177,6 +177,59 @@ export default defineConfig({
 				"@fontsource-variable/geist-mono",
 				"./src/styles/ax.css",
 			],
+			// Code blocks in the same greys as the page, in both schemes.
+			//
+			// The framework's default is Night Owl — a blue-and-purple theme, the
+			// loudest thing on any page built out of grey. Every code block on the
+			// site is set through these two themes instead, so the syntax
+			// highlighting follows the page's own palette rather than importing a
+			// second one.
+			expressiveCode: {
+				themes: [
+					greyTheme({
+						name: "ax-grey-light",
+						type: "light",
+						bg: "#fafafa",
+						// Measured against `#fafafa`, not eyeballed. The previous ramp
+						// put comments at `#a3a3a3` — 2.42:1, which fails WCAG AA
+						// (4.5:1) — and separated comments from punctuation by 0.89 of a
+						// contrast point, so the two were the same grey to the eye. That
+						// is why the blocks read as flat: not a font problem, and not
+						// hue, but too few *distinguishable* steps in one ramp.
+						//
+						// The order is unchanged — comments recede, literals sit mid-ramp,
+						// keywords go to the ink — but the steps are now far enough apart
+						// to tell apart at a glance, and nothing a reader has to read is
+						// below 4.5:1. Measured against `#fafafa`, from the top down:
+						// key 18.62, fg 12.10, value 6.12, faint 4.89, muted 3.22.
+						// Punctuation is the one step under the threshold, and deliberately
+						// so: braces and semicolons are decoration, and holding them to a
+						// text threshold is what flattens the other four.
+						fg: "#333333", //  12.10:1 — functions, variables
+						muted: "#8c8c8c", //  3.22:1 — punctuation; decoration, not read as text
+						faint: "#6e6e6e", //  4.89:1 — comments: recede, but stay legible
+						value: "#5f5f5f", //  6.12:1 — strings, numbers, constants
+						key: "#0d0d0d", // 18.62:1 — keywords, properties: the ink
+					}),
+					greyTheme({
+						name: "ax-grey-dark",
+						type: "dark",
+						bg: "#161616",
+						// The same five decisions against `#161616`: key 16.16,
+						// fg 12.21, value 8.34, faint 6.59, muted 5.24. Comments were at
+						// `#5e5e5e` — 2.79:1 — and failed in this scheme too, which is the
+						// half of the problem that a light-scheme-only check never sees.
+						fg: "#d4d4d4", // 12.21:1
+						muted: "#8a8a8a", // 5.24:1
+						faint: "#9c9c9c", // 6.59:1
+						value: "#b0b0b0", // 8.34:1
+						key: "#f2f2f2", // 16.16:1
+					}),
+				],
+				// Follow the site's own theme rather than the code block's, so a
+				// block never renders dark on a light page.
+				useStarlightDarkModeSwitch: true,
+			},
 			components: {
 				// An island is opt-in per page through `<TryIt />`, and this slot is
 				// what keeps an ordinary page free of the framework runtime. No global
