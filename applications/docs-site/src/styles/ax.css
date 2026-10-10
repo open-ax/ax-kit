@@ -286,7 +286,29 @@ body {
 	background: var(--ax-page);
 	color: var(--ax-body);
 	-webkit-font-smoothing: antialiased;
-	text-size-adjust: 100%;
+	text-rendering: optimizeLegibility;
+}
+
+/* Ligatures off, so `=>` and `!=` read as typed rather than as arrows. */
+code,
+pre,
+kbd,
+samp {
+	font-family: var(--sl-font-mono);
+	font-variant-ligatures: none;
+	font-feature-settings:
+		"liga" 0,
+		"calt" 0;
+}
+
+::selection {
+	background: var(--ax-selection);
+}
+
+:focus-visible {
+	outline: 2px solid var(--sl-focus-ring-color);
+	outline-offset: 2px;
+	border-radius: 3px;
 }
 
 /* Prose reads differently from interface text, and the reference site says so
