@@ -204,25 +204,66 @@
 	--sl-text-h5: 0.875rem;
 
 	--sl-nav-height: 3.5rem;
-	--sl-sidebar-gap: 1.5rem;
-	--sl-aside-gap: 2rem;
-}
+	--sl-nav-pad-x: 1.5rem;
+	--sl-content-pad-x: 1.5rem;
+	--sl-sidebar-width: 15.5rem;
+	--sl-sidebar-pad-x: 1rem;
 
-:root {
-	--sl-heading-font: var(--sl-font);
-	--sl-heading-font-weight: 600;
-	/* Negative tracking, from the reference site's `.name`. Headings set tight
-	 * read as considered; the framework's default of normal tracking reads as a
-	 * template. */
-	--sl-heading-letter-spacing: -0.015em;
 	--sl-code-font: var(--sl-font-mono);
 	--sl-code-font-size: 0.8125em;
 	--sl-code-line-height: 1.7;
-	--sl-code-radius: 4px;
+	--sl-code-radius: var(--ax-radius-sm);
 	--sl-code-border: 1px solid var(--ax-rule);
 	--sl-code-bg: var(--ax-surface);
-	--sl-code-header-bg: #f4f4f2;
-	--sl-code-line-highlight-color: #f0f0ee;
+	--sl-code-header-bg: var(--ax-surface);
+	--sl-code-line-highlight-color: var(--ax-overlay);
+
+	/* ── The vertical rhythm ────────────────────────────────────────────────
+	 *
+	 * Two steps and no others. `--ax-flow` separates one block of prose from the
+	 * next; `--ax-flow-section` opens a new section under a heading.
+	 *
+	 * These are tokens rather than values written into rules because the rhythm
+	 * has to be *one* decision. Before this, every block type carried its own
+	 * margin — paragraphs a bottom margin, code blocks and tables a top margin,
+	 * headings both — and since adjoining margins collapse, the gap between two
+	 * blocks was decided by whichever type happened to come *second*. Paragraph
+	 * then code block sat 18px apart; code block then paragraph sat **zero**
+	 * apart, so every code block touched the sentence beneath it. No individual
+	 * rule was wrong. The set was. */
+	--ax-flow: 1.25rem;
+	--ax-flow-section: 2.5rem;
+
+	/* The space between the page's title and whatever fixed bar sits above it.
+	 *
+	 * The framework offsets the page body by exactly the height of the header
+	 * plus the mobile "On this page" bar and nothing more, so the `<h1>` begins on
+	 * the same pixel the bar ends and the two touch. */
+	--ax-page-head-gap: 1.5rem;
+
+	/* How far a jumped-to heading is held below the fixed header. Without it an
+	 * anchor link scrolls the heading *underneath* the header, which is where a
+	 * heading it just navigated to becomes invisible. */
+	--ax-anchor-offset: 5.5rem;
+}
+
+/* ── One responsive step ────────────────────────────────────────────────────
+ *
+ * Below the framework's own 50rem breakpoint the page is one column: no
+ * sidebar, no contents rail, the header collapsed to its essentials. Type and
+ * spacing step down at that same width, because the breakpoint is a fact about
+ * the layout and reusing it keeps "narrow" meaning one thing everywhere rather
+ * than one thing for the grid and another for the type.
+ *
+ * Everything stays on the 4px grid: 24→16, 40→32, 20→16. The `sl-content-pad-x`
+ * step is the Tailwind convention — `px-6` on desktop, `px-4` on a phone. */
+@media (max-width: 50rem) {
+	:root {
+		--sl-content-pad-x: 1rem;
+		--ax-flow: 1rem;
+		--ax-flow-section: 2rem;
+		--ax-page-head-gap: 1rem;
+	}
 }
 
 /* ── The page ────────────────────────────────────────────────────────────── */
