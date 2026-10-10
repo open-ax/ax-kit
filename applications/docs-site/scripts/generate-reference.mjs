@@ -222,6 +222,14 @@ const front = [
 	"draft: false",
 	"title: API reference",
 	"description: Every exported name, grouped by entry point, generated from the published type declarations.",
+	// The page carries 46 `###` headings — one per exported name — and without
+	// this the table of contents lists every one of them: 57 entries, a list
+	// nobody scans. Capped at `##`, the contents rail shows the ten entry-point
+	// sections and the names stay where they belong, in the page body under
+	// their own headings. A per-page cap rather than a site-wide one, because
+	// the guide pages have no `###` at all and need no cap.
+	"tableOfContents:",
+	"  maxHeadingLevel: 2",
 	"---",
 	"",
 	"This page is **generated** from the published type declarations of every package in this",
