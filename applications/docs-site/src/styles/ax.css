@@ -640,8 +640,70 @@ samp {
 	margin-bottom: 2.25rem;
 }
 
-.site-header {
-	background: var(--ax-bg);
+.ax-page-head h1 {
+	font-size: var(--sl-text-h1);
+	line-height: 1.2;
+	font-weight: 600;
+	letter-spacing: -0.026em;
+	color: var(--ax-ink);
+	margin: 0;
+}
+
+.ax-lede {
+	margin: 0.625rem 0 0;
+	/* Fluid with the title: 16px on a phone, 18px from 800px up. A fixed lede
+	 * beside a fluid title is either larger than a small title or smaller than
+	 * a large one; this keeps the step between them constant. */
+	font-size: clamp(1rem, 0.9375rem + 0.3125vw, 1.125rem);
+	line-height: 1.6;
+	color: var(--ax-muted);
+	text-wrap: pretty;
+	/*
+	 * No max-width. The lede is set at a larger size than the body, so a `ch`
+	 * cap wide enough for the body is far too narrow here and leaves the
+	 * description ending in a ragged stub while the paragraphs beneath it run
+	 * the full column. Constraining it to the column's own width keeps the
+	 * left edge — the thing the eye actually tracks — aligned.
+	 */
+}
+
+/*
+ * The head and the body are two framework panels. The rule between them is
+ * removed and the gap collapsed so the title reads as the first thing in the
+ * article rather than as a title card above a rule.
+ */
+.content-panel {
+	padding: 0 var(--sl-content-pad-x);
+}
+
+.content-panel + .content-panel {
+	border-top: 0;
+}
+
+.content-panel > .sl-container > * {
+	margin-top: 0;
+}
+
+.content-panel > .sl-container > * + * {
+	margin-top: var(--sl-content-gap-y);
+}
+
+main {
+	padding-top: 2rem;
+}
+
+/* ── Header ─────────────────────────────────────────────────────────────────
+ *
+ * One hairline across the full width, and content inside it aligned to the
+ * same grid as the page below: the lockup, the search field, and the trailing
+ * controls all sit on the column edges rather than floating at arbitrary
+ * offsets inside a wider bar.
+ */
+
+.page > .header {
+	background: color-mix(in srgb, var(--ax-page) 85%, transparent);
+	-webkit-backdrop-filter: saturate(1.5) blur(14px);
+	backdrop-filter: saturate(1.5) blur(14px);
 	border-bottom: 1px solid var(--ax-rule);
 }
 
