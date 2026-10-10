@@ -169,20 +169,38 @@
 	 * reads as a template, and at 13px it reads as a label. */
 	--sl-heading-letter-spacing: -0.021em;
 
-	--sl-text-base: 0.9375rem;
-	--sl-text-sm: 0.8125rem;
+	/* ── The type scale ─────────────────────────────────────────────────────
+	 *
+	 * Every step sits on the 4px grid and matches a step every popular system
+	 * uses: 12 / 14 / 16 / 18 / 20 / 24 / 30. Tailwind calls them `xs` through
+	 * `3xl`; Material calls 14 `body-medium` and 16 `body-large`; Apple sets
+	 * prose at 17 and captions at 11–12. Nothing here is a bespoke size, which
+	 * is what "standard" means: a reader who has read any documentation this
+	 * year has already read type at these sizes.
+	 *
+	 * Body text was 15px and UI text 13px — each exactly 1px off the standard
+	 * steps, close enough to look accidental and far enough to feel it. They
+	 * are 16 and 14 now.
+	 *
+	 * The two display sizes are `clamp()`, not fixed steps: fixed type is
+	 * either too loud on a phone or too quiet on a monitor, and the alternative
+	 * is a breakpoint that swaps one fixed size for another at an arbitrary
+	 * width. The middle term is in `vw` so the size tracks the viewport, and
+	 * the two ends pin it: 24px at 360px wide, 30px from 800px up. */
+	--sl-text-base: 1rem;
+	--sl-text-sm: 0.875rem;
 	--sl-text-xs: 0.75rem;
 
-	/* The reference site's 38rem, widened a little for a page with a sidebar and
-	 * a table of contents. Not much: the width at which a line of English stops
-	 * being comfortable is not a function of taste. */
+	/* 704px of prose — about 72 characters of English a line, which is as far
+	 * as a measure stays comfortable. */
 	--sl-content-width: 44rem;
 	--sl-line-height: 1.75;
+	--sl-line-height-headings: 1.25;
 
-	--sl-text-h1: 1.75rem;
-	--sl-text-h2: 1.3125rem;
-	--sl-text-h3: 1.0625rem;
-	--sl-text-h4: 0.9375rem;
+	--sl-text-h1: clamp(1.5rem, 1.25rem + 1.25vw, 1.875rem);
+	--sl-text-h2: 1.25rem;
+	--sl-text-h3: 1rem;
+	--sl-text-h4: 1rem;
 	--sl-text-h5: 0.875rem;
 
 	--sl-nav-height: 3.5rem;
