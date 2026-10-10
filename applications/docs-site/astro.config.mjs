@@ -252,8 +252,24 @@ export default defineConfig({
 				// bare `<h1>`. The section label comes from the entry's path, so
 				// no page can forget it.
 				PageTitle: "./src/components/PageTitle.astro",
+				// The brand lockup: the OpenAX mark and word. Renders both colourways
+				// of the raster and the stylesheet picks by `data-theme`, because the
+				// two files are two different drawings — not inverses — and the
+				// framework's single-`src` `logo` option could only ever serve one.
+				SiteTitle: "./src/components/SiteTitle.astro",
 			},
 			head: [
+				// The touch icon. iOS ignores the favicon and fetches this on
+				// "add to home screen"; without it the shortcut gets a screenshot
+				// of the page. Built from the same raster as the favicon, at the
+				// 180px Apple asks for.
+				{
+					tag: "link",
+					attrs: {
+						rel: "apple-touch-icon",
+						href: "/apple-touch-icon.png",
+					},
+				},
 				// A machine-readable summary of the documentation, served as data.
 				// Offered rather than asserted as a standard: the convention exists as
 				// a proposal with a small number of adopters, and this project does not

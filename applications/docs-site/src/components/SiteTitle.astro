@@ -1,0 +1,23 @@
+---
+const { siteTitle, siteTitleHref } = Astro.locals.starlightRoute;
+---
+
+<a href={siteTitleHref} class="site-title sl-flex" translate="no">
+	<img
+		class="site-title__mark site-title__mark--light"
+		src="/ax-mark-light.png"
+		alt=""
+		width="480"
+		height="330"
+		decoding="async"
+	/>
+	<img
+		class="site-title__mark site-title__mark--dark"
+		src="/ax-mark-dark.png"
+		alt=""
+		width="480"
+		height="330"
+		decoding="async"
+	/>
+	<span class="site-title__word">{siteTitle}</span>
+</a>
