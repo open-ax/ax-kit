@@ -72,17 +72,40 @@ export default defineConfig({
 		// `<TryIt client:load />`; no page ships the runtime unless it carries one.
 		react(),
 		starlight({
-			title: "ax-kit",
+			// The organisation, not the repository.
+			//
+			// The header lockup names who publishes the documentation, and that is
+			// OpenAX; `ax-kit` is one project under it. The same mark serves both —
+			// the organisation's own profile page sets `alt="OpenAX"` on this
+			// repository's `assets/ax-mark-*.png`, so there is one brand and one
+			// drawing, not a logo and a wordmark that have to agree.
+			//
+			// This is also what stops the browser tab reading `ax-kit | ax-kit`:
+			// the site's title becomes the delimiter's right-hand side, so the
+			// landing page — whose own frontmatter title is `ax-kit` — reads
+			// `ax-kit | OpenAX` instead of naming itself twice.
+			title: "OpenAX",
 			description:
 				"A correct, tiny, dependency-free implementation of WebMCP's ModelContext.",
-			// The repository's own brand mark rather than a copy, so the site cannot
-			// drift from the README's image. `.gitignore` excludes the root `assets/`
-			// from the site's own public directory, which is why this is not a bare
-			// `/ax-mark.png`.
-			logo: {
-				src: "../../assets/ax-mark-light.png",
-				replacesTitle: false,
-			},
+			// The tab mark. A PNG built from the real brand raster
+			// (`public/ax-mark-dark.png`: white silhouette on the `#0b1220` tile),
+			// not the hand-drawn SVG that used to sit here — that path was narrower,
+			// more symmetrical, and its swoosh thinner than the real mark, and a logo
+			// that does not match is worse than one that costs 696 bytes. The old
+			// `/favicon.svg` is deleted with this change: leaving the file while
+			// pointing elsewhere is how dead assets accumulate unnoticed.
+			//
+			// Top-level, because it is a site option, not a component override. It
+			// was first written one block too deep, inside `components:` — where the
+			// schema silently strips unknown keys, so every page kept the default
+			// `/favicon.svg` and the link gate failed the build on the deleted file.
+			// A misplaced option that fails silently is worse than one that errors.
+			favicon: "/favicon-32x32.png",
+			// No `logo`. The mark is placed by the `SiteTitle` override instead, from
+			// this application's own `public/`: the mark is a two-tone raster, so
+			// the framework's single-`src` `logo` option could only ever serve one
+			// of its two colourways and the other scheme would get the wrong one.
+			// `SiteTitle` renders both and the stylesheet picks by `data-theme`.
 			// The array form, not the object form: v0.33.0 changed the syntax and
 			// the object form is rejected outright rather than deprecated. Found by
 			// running the build, which is the only way to find it.
@@ -176,76 +199,3 @@ export default defineConfig({
 		},
 	},
 });
-/**
- * A syntax theme in pure grey.
- *
- * One rule set for both schemes: comments recede (faint, italic), literals sit
- * mid-ramp, and keywords and properties go to the ink. Berth's code themes are
- * the same idea — quiet tokens, no rainbow — except theirs give strings a
- * slate tint. This site's rule is white, black and grey, so the tint is gone
- * and the hierarchy is carried by lightness, weight and italics alone.
- *
- * Italic comments are the second channel: with hue unavailable, two greys of
- * similar value would be indistinguishable, and the italic is what tells a
- * comment from a string at a glance.
- */
-function greyTheme({ name, type, bg, fg, muted, faint, value, key }) {
-	const rules = [
-		{
-			scope: ["comment", "punctuation.definition.comment"],
-			settings: { foreground: faint, fontStyle: "italic" },
-		},
-		{
-			scope: [
-				"string",
-				"string.quoted",
-				"string.template",
-				"constant.other.symbol",
-			],
-			settings: { foreground: value },
-		},
-		{
-			scope: ["constant.numeric", "constant.language", "constant.character"],
-			settings: { foreground: value },
-		},
-		{
-			scope: [
-				"support.type.property-name",
-				"meta.object-literal.key",
-				"entity.name.tag",
-				"variable.other.property",
-			],
-			settings: { foreground: key },
-		},
-		{
-			scope: ["keyword", "storage", "storage.type", "keyword.operator.new"],
-			settings: { foreground: key },
-		},
-		{
-			scope: [
-				"entity.name.function",
-				"support.function",
-				"entity.name.command",
-			],
-			settings: { foreground: fg },
-		},
-		{
-			scope: ["variable.parameter", "variable.other.readwrite", "variable"],
-			settings: { foreground: fg },
-		},
-		{
-			scope: ["punctuation", "meta.brace", "keyword.operator"],
-			settings: { foreground: muted },
-		},
-	];
-	return {
-		name,
-		type,
-		colors: { "editor.background": bg, "editor.foreground": fg },
-		fg,
-		bg,
-		settings: [{ settings: { foreground: fg, background: bg } }, ...rules],
-		tokenColors: rules,
-	};
-}
-
