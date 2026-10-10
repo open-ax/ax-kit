@@ -460,6 +460,134 @@ samp {
 	color: var(--ax-ink);
 	font-weight: 600;
 	text-wrap: balance;
+	margin: 0;
+}
+
+.sl-markdown-content h2:not(:where(.not-content *)) {
+	font-size: var(--sl-text-h2);
+	letter-spacing: -0.014em;
+	margin-top: 2.75rem;
+	margin-bottom: 0.875rem;
+}
+
+.sl-markdown-content h3:not(:where(.not-content *)) {
+	font-size: var(--sl-text-h3);
+	letter-spacing: -0.008em;
+	margin-top: 2rem;
+	margin-bottom: 0.625rem;
+}
+
+.sl-markdown-content h4:not(:where(.not-content *)) {
+	font-size: var(--sl-text-h4);
+	margin-top: 1.75rem;
+	margin-bottom: 0.5rem;
+}
+
+.sl-markdown-content :is(p, ul, ol):not(:where(.not-content *)) {
+	margin-top: 0;
+	margin-bottom: 1.125rem;
+}
+
+.sl-markdown-content :is(ul, ol):not(:where(.not-content *)) {
+	padding-inline-start: 1.25rem;
+}
+
+.sl-markdown-content li:not(:where(.not-content *)) {
+	margin-top: 0.375rem;
+	margin-bottom: 0.375rem;
+	padding-inline-start: 0.125rem;
+}
+
+.sl-markdown-content li::marker {
+	color: var(--ax-faint);
+}
+
+.sl-markdown-content strong:not(:where(.not-content *)) {
+	color: var(--ax-ink);
+	font-weight: 600;
+}
+
+.sl-markdown-content hr:not(:where(.not-content *)) {
+	border: 0;
+	border-top: 1px solid var(--ax-rule);
+	margin: 2.5rem 0;
+}
+
+/* ── Vertical rhythm ────────────────────────────────────────────────────────
+ *
+ * One rule, and it is the fix for the spacing on every page at once.
+ *
+ * Adjoining vertical margins collapse, so the gap between two blocks has always
+ * been `max(bottom of the first, top of the second)` — which means the *second*
+ * element's type decided the gap, and different types disagreed. Measured down
+ * the quickstart page before this rule:
+ *
+ * | after              | before        |
+ * |--------------------|---------------|
+ * | paragraph          | 18px          |
+ * | paragraph → code   | 18px          |
+ * | **code → paragraph** | **0px**     |
+ * | code → code        | 16px          |
+ * | heading → code     | 46px          |
+ * | code → heading     | 30px          |
+ *
+ * A code block carries a top margin and no bottom margin, a paragraph the
+ * reverse. So every code block sat flush against the sentence under it — the
+ * frame's border and the text below it touching — while a heading followed by a
+ * code block got 46px and a code block followed by a heading got 30px, for the
+ * same pair of adjacent blocks in the opposite order.
+ *
+ * The rule below removes the disagreement: every top-level block gets a top
+ * margin from the same token and no bottom margin at all. The gap is then a
+ * property of the rhythm rather than of which two types happened to meet, and
+ * it is the same whether the code block comes before or after the paragraph.
+ *
+ * `:first-child` rather than `:first-of-type`, because the first child is
+ * whatever the page author wrote first — a paragraph, a heading, a table — and
+ * each type needs the exemption equally.
+ */
+
+/*
+ * The `:not(.not-content *)` guard is what gives this rule enough weight.
+ *
+ * Without it the selector is `(0,1,0)` and loses to the paragraph rule above,
+ * which is `(0,1,1)` — so paragraphs kept `margin-top: 0` while code blocks
+ * took the new margin, and the gap between a code block and the paragraph under
+ * it stayed at zero. The guard also has the same job it has everywhere else in
+ * this file: blocks nested inside an aside or a card are laid out by whatever
+ * contains them, not by the page's flow.
+ */
+.sl-markdown-content > *:not(.not-content *) {
+	margin-top: var(--ax-flow);
+	margin-bottom: 0;
+}
+
+.sl-markdown-content > :first-child {
+	margin-top: 0;
+}
+
+/*
+ * Headings open a section rather than continue one, so they take the larger
+ * step. They arrive wrapped in the framework's own `.sl-heading-wrapper`, and it
+ * is the wrapper that carries the margin — the heading inside it keeps a small
+ * bottom margin so that the gap *below* a heading is the ordinary flow gap.
+ */
+.sl-markdown-content > .sl-heading-wrapper:not(.not-content *) {
+	margin-top: var(--ax-flow-section);
+}
+
+/* A heading immediately after a heading is two headings of one section, not
+ * two sections, and takes the ordinary step. */
+.sl-markdown-content > .sl-heading-wrapper + .sl-heading-wrapper {
+	margin-top: var(--ax-flow);
+}
+
+/*
+ * A `<hr>` is already ruled on both sides by the rule above; the flow margin
+ * would double it.
+ */
+.sl-markdown-content > hr {
+	margin-top: calc(var(--ax-flow-section) * 1.5);
 }
 
 /* ── Links ─────────────────────────────────────────────────────────────────
