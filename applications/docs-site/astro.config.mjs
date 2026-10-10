@@ -176,3 +176,76 @@ export default defineConfig({
 		},
 	},
 });
+/**
+ * A syntax theme in pure grey.
+ *
+ * One rule set for both schemes: comments recede (faint, italic), literals sit
+ * mid-ramp, and keywords and properties go to the ink. Berth's code themes are
+ * the same idea — quiet tokens, no rainbow — except theirs give strings a
+ * slate tint. This site's rule is white, black and grey, so the tint is gone
+ * and the hierarchy is carried by lightness, weight and italics alone.
+ *
+ * Italic comments are the second channel: with hue unavailable, two greys of
+ * similar value would be indistinguishable, and the italic is what tells a
+ * comment from a string at a glance.
+ */
+function greyTheme({ name, type, bg, fg, muted, faint, value, key }) {
+	const rules = [
+		{
+			scope: ["comment", "punctuation.definition.comment"],
+			settings: { foreground: faint, fontStyle: "italic" },
+		},
+		{
+			scope: [
+				"string",
+				"string.quoted",
+				"string.template",
+				"constant.other.symbol",
+			],
+			settings: { foreground: value },
+		},
+		{
+			scope: ["constant.numeric", "constant.language", "constant.character"],
+			settings: { foreground: value },
+		},
+		{
+			scope: [
+				"support.type.property-name",
+				"meta.object-literal.key",
+				"entity.name.tag",
+				"variable.other.property",
+			],
+			settings: { foreground: key },
+		},
+		{
+			scope: ["keyword", "storage", "storage.type", "keyword.operator.new"],
+			settings: { foreground: key },
+		},
+		{
+			scope: [
+				"entity.name.function",
+				"support.function",
+				"entity.name.command",
+			],
+			settings: { foreground: fg },
+		},
+		{
+			scope: ["variable.parameter", "variable.other.readwrite", "variable"],
+			settings: { foreground: fg },
+		},
+		{
+			scope: ["punctuation", "meta.brace", "keyword.operator"],
+			settings: { foreground: muted },
+		},
+	];
+	return {
+		name,
+		type,
+		colors: { "editor.background": bg, "editor.foreground": fg },
+		fg,
+		bg,
+		settings: [{ settings: { foreground: fg, background: bg } }, ...rules],
+		tokenColors: rules,
+	};
+}
+
