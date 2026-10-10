@@ -592,28 +592,25 @@ samp {
 
 /* ── Links ─────────────────────────────────────────────────────────────────
  *
- * The reference site underlines prose links in the text colour with a rule
- * beneath, thickening to the text colour on hover. That is quieter than a
- * coloured link and reads as deliberate, so it is what prose links do here.
+ * Prose links underline in the ink at 30%, firming to the ink on hover.
+ * Interface links — sidebar, header, footer, pagination — do not: underlining
+ * them would draw a line down every column on the page.
  */
 
 .sl-markdown-content a:not(:where(.not-content *)) {
-	color: var(--ax-text);
+	color: var(--ax-ink);
 	text-decoration: underline;
-	text-decoration-color: var(--ax-rule-strong);
+	text-decoration-color: color-mix(in srgb, var(--ax-ink) 30%, transparent);
 	text-decoration-thickness: 1px;
-	text-underline-offset: 4px;
+	text-underline-offset: 3px;
 	transition: text-decoration-color 120ms ease-out;
 }
 
 .sl-markdown-content a:not(:where(.not-content *)):hover {
-	text-decoration-color: var(--ax-text);
+	text-decoration-color: var(--ax-ink);
 }
 
-/* Interface links — the sidebar, the header, the footer, pagination — are not
- * prose and are not underlined. Colour is enough, and underlining them would
- * draw lines down the whole page. */
-.site-header :is(a, a:hover),
+.page :is(.header a, .header a:hover),
 .sidebar-content a,
 .pagination-links a,
 .sl-markdown-content :is(h2, h3) a {
