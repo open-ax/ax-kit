@@ -21,7 +21,7 @@
 		},
 		{
 			"title": "Annotations",
-			"description": "What each annotation means, when to set it, and what it costs to get it wrong in either direction.",
+			"description": "What each annotation means, when to set it and what it costs to get it wrong in either direction.",
 			"url": "/reference/annotations"
 		},
 		{
@@ -31,32 +31,32 @@
 		},
 		{
 			"title": "Conformance",
-			"description": "What this project claims, what it measures, and the gaps it has not closed.",
+			"description": "What this project claims, what it measures and the gaps it has not closed.",
 			"url": "/reference/conformance"
 		},
 		{
 			"title": "Errors",
-			"description": "Every failure mode, the condition that produces it, and what a caller can and cannot learn from it.",
+			"description": "Every failure mode, the condition that produces it and what a caller can and cannot learn from it.",
 			"url": "/reference/errors"
 		},
 		{
 			"title": "Reporting a vulnerability",
-			"description": "A private route to report a security problem, and what happens to the report.",
+			"description": "A private route to report a security problem and what happens to the report.",
 			"url": "/security/reporting"
 		},
 		{
 			"title": "Threat model",
-			"description": "What this library can reach, what an agent can do through it, what a page author is exposed to, and what it deliberately does not defend against.",
+			"description": "What this library can reach, what an agent can do through it, what a page author is exposed to and what it deliberately does not defend against.",
 			"url": "/security/threat-model"
 		},
 		{
 			"title": "Security whitepaper",
-			"description": "Every claim traced to a public primary source, and every divergence from the current draft stated rather than omitted.",
+			"description": "Every claim traced to a public primary source and every divergence from the current draft stated rather than omitted.",
 			"url": "/security/whitepaper"
 		},
 		{
 			"title": "Try it in your browser",
-			"description": "Register a tool, enumerate the surface, invoke it, and watch it refuse — on this page, without installing anything.",
+			"description": "Register a tool, enumerate the surface, invoke it and watch it refuse on this page, without installing anything.",
 			"url": "/try-it"
 		}
 	]
