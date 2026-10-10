@@ -1430,62 +1430,95 @@ mobile-starlight-toc summary .toggle::before {
 		overflow-wrap: anywhere;
 	}
 
-/* The rule under the page heading. The framework draws it in its accent, which
- * here is a grey, and a grey rule under a grey heading reads as a mistake. */
-.page-header {
-	border-bottom: 1px solid var(--ax-rule);
+	/* A wrapped line hangs indented rather than restarting under the line
+	 * number or the block's own left padding. */
+	.sl-markdown-content .expressive-code .ec-line {
+		padding-left: calc(var(--ec-pad-inline-start, 0) + 2ch);
+		text-indent: -2ch;
+	}
 }
 
-/* ── Cards, asides and callouts ────────────────────────────────────────────
+/* ── Asides ───────────────────────────────────────────────────────────────
  *
- * The reference site has one border colour and uses it for everything. A card
- * with a shadow and a callout with a coloured left border is three visual
- * languages where one is enough.
+ * One outline all round and a glyph. The framework colours each variant and
+ * stripes the near edge; there is no accent on this site to spend, so every
+ * variant renders the same neutral way and says what it is with its icon and
+ * title.
  */
 
-.sl-markdown-content :is(.card, .card + .card > .card-title) {
+.sl-markdown-content .starlight-aside {
+	display: flex;
+	gap: 0.75rem;
+	margin: 1.5rem 0;
+	padding: 0.875rem 1rem;
 	border: 1px solid var(--ax-rule);
-	border-radius: 6px;
+	border-radius: var(--ax-radius);
 	background: var(--ax-surface);
-	box-shadow: none;
+	font-size: 0.875rem;
+	line-height: 1.65;
+	color: var(--ax-body);
 }
 
-.sl-markdown-content .aside {
-	border-left: 2px solid var(--ax-rule-strong);
-	background: transparent;
-	border-radius: 0;
-	padding: 0.25rem 0 0.25rem 1rem;
+.sl-markdown-content
+	:is(
+		.starlight-aside--note,
+		.starlight-aside--tip,
+		.starlight-aside--caution,
+		.starlight-aside--danger
+	) {
+	--sl-color-asides-text-accent: var(--ax-muted);
+	--sl-color-asides-border: var(--ax-rule);
+	background-color: var(--ax-surface);
+}
+
+.sl-markdown-content .starlight-aside__title {
+	color: var(--ax-ink);
+	font-size: 0.8125rem;
+	font-weight: 600;
+	gap: 0.4375rem;
+}
+
+.sl-markdown-content .starlight-aside__icon {
+	color: var(--ax-faint);
 }
 
 .sl-markdown-content .starlight-aside__content {
 	color: var(--ax-body);
 }
 
+.sl-markdown-content
+	.starlight-aside__content
+	code:not(:where(.not-content *)) {
+	background: var(--ax-page);
+}
+
 /* ── Tables ────────────────────────────────────────────────────────────────
  *
- * The API reference is mostly tables, so they get treated properly: a rule under
- * the header, a rule between rows, no vertical lines, and no zebra striping. A
- * zebra-striped table is noise in a document where the rows are already
- * separated by whitespace.
+ * The reference is mostly tables, so they carry the page: a quiet header in
+ * the muted grey with no fill behind it, hairline rows, and no zebra. Zebra is
+ * noise in a document whose rows are already separated by whitespace.
  */
 
 .sl-markdown-content table {
-	border-collapse: collapse;
+	border-collapse: separate;
+	border-spacing: 0;
 	width: 100%;
 	font-size: var(--sl-text-sm);
+	line-height: 1.6;
 }
 
 .sl-markdown-content :is(th, td) {
 	border: 0;
 	border-bottom: 1px solid var(--ax-rule);
-	/* Right padding on every column except the last. Removing it everywhere
-	 * makes two-column tables run their headers together — "Entry point" and
-	 * "Names" read as one word, which is what it looked like before this was
-	 * fixed by giving every cell but the last its own gutter. */
-	padding: 0.5rem 1.25rem 0.5rem 0;
+	padding: 0.625rem 0.875rem;
 	text-align: left;
 	vertical-align: top;
 	color: var(--ax-body);
+	background: transparent;
+}
+
+.sl-markdown-content :is(th, td):first-child {
+	padding-left: 0;
 }
 
 .sl-markdown-content :is(th, td):last-child {
@@ -1493,147 +1526,248 @@ mobile-starlight-toc summary .toggle::before {
 }
 
 .sl-markdown-content th {
-	color: var(--ax-text);
-	font-weight: 600;
+	color: var(--ax-muted);
+	font-size: 0.75rem;
+	font-weight: 500;
+	letter-spacing: 0.01em;
 	border-bottom-color: var(--ax-rule-strong);
 	white-space: nowrap;
 }
 
-/* ── Code ────────────────────────────────────────────────────────────────── */
-
-/*
- * Inline code.
- *
- * The framework renders it inside a `<code>` nested in a `<span>`, so a
- * `:not(pre) > code` selector never matched and the weak default stood —
- * pale grey text in a pale grey box, which on the API reference means most of the
- * content. Selected by element with an explicit `:not(pre)` ancestor chain
- * instead, which reaches the node the framework actually emits.
- */
-.sl-markdown-content code {
-	background: var(--ax-surface);
-	border: 1px solid var(--ax-rule-strong);
-	padding: 0.0625rem 0.3rem;
-	border-radius: 3px;
-	font-size: 0.8125em;
-	color: var(--ax-text);
-	white-space: nowrap;
+.sl-markdown-content tr:last-child :is(th, td) {
+	border-bottom: 0;
 }
 
-.sl-markdown-content pre code {
-	background: transparent;
-	border: 0;
+/* A name in the first column reads as the identifier it is, not as a chip. */
+.sl-markdown-content td:first-child {
+	color: var(--ax-ink);
+}
+
+.sl-markdown-content td code:not(:where(.not-content *)) {
+	background: none;
 	padding: 0;
-	border-radius: 0;
-	color: inherit;
-	white-space: pre;
+	font-size: 0.94em;
+	overflow-wrap: normal;
+	word-break: normal;
 }
 
-.sl-markdown-content pre {
-	background: var(--ax-surface);
+.sl-markdown-content th code:not(:where(.not-content *)) {
+	background: none;
+	padding: 0;
+	font-size: 0.94em;
+}
+
+/* On a phone a two-column table becomes a list: the name above its
+ * description, full width, rather than two cramped columns. Wider tables keep
+ * their columns and scroll inside their own frame. */
+@media (max-width: 40rem) {
+	.sl-markdown-content table:not(:has(th:nth-child(3))) thead {
+		display: none;
+	}
+	.sl-markdown-content table:not(:has(th:nth-child(3))),
+	.sl-markdown-content table:not(:has(th:nth-child(3))) tbody,
+	.sl-markdown-content table:not(:has(th:nth-child(3))) tr,
+	.sl-markdown-content table:not(:has(th:nth-child(3))) td {
+		display: block;
+		width: 100%;
+	}
+	.sl-markdown-content table:not(:has(th:nth-child(3))) tr + tr {
+		border-top: 1px solid var(--ax-rule);
+	}
+	.sl-markdown-content table:not(:has(th:nth-child(3))) td {
+		border: 0;
+		padding: 0;
+	}
+	.sl-markdown-content table:not(:has(th:nth-child(3))) td:first-child {
+		padding-top: 0.75rem;
+		padding-bottom: 0.125rem;
+		font-weight: 500;
+	}
+	.sl-markdown-content table:not(:has(th:nth-child(3))) td:last-child {
+		padding-bottom: 0.75rem;
+	}
+	.sl-markdown-content table:has(th:nth-child(3)) {
+		min-width: 560px;
+	}
+}
+
+/* ── Cards ─────────────────────────────────────────────────────────────────
+ *
+ * An outline that firms on hover. The framework tints each card by its
+ * position in the grid — four fills where one is enough.
+ */
+
+.sl-markdown-content :is(.card, .sl-link-card, .sl-link-button) {
 	border: 1px solid var(--ax-rule);
+	border-radius: var(--ax-radius);
+	background: var(--ax-page);
 	box-shadow: none;
+	transition:
+		border-color 120ms ease-out,
+		background-color 120ms ease-out;
+}
+
+.sl-markdown-content
+	:is(.card:hover, .sl-link-card:hover, .sl-link-button:hover) {
+	background: var(--ax-surface);
+	border-color: var(--ax-rule-strong);
+}
+
+.sl-markdown-content .card {
+	--sl-card-border: var(--ax-rule);
+	--sl-card-bg: var(--ax-surface-sunk);
+	padding: 1rem;
+}
+
+.sl-markdown-content .card .title,
+.sl-markdown-content .sl-link-card .title {
+	color: var(--ax-ink);
+	font-size: 0.875rem;
+	font-weight: 600;
+}
+
+/* ── Pagination ────────────────────────────────────────────────────────── */
+
+.pagination-links a {
+	background: var(--ax-page);
+	box-shadow: none;
+	border-radius: var(--ax-radius);
+	transition:
+		border-color 120ms ease-out,
+		background-color 120ms ease-out;
+}
+
+.pagination-links a:hover {
+	background: var(--ax-surface);
+	border-color: var(--ax-rule-strong);
+}
+
+.pagination-links .link-title {
+	color: var(--ax-ink);
+	font-size: 0.875rem;
+}
+
+/* ── Search ────────────────────────────────────────────────────────────────
+ *
+ * The dialog is Pagefind's own widget and takes its text colour from a token.
+ * Left alone it renders result excerpts near-white on a white surface; the
+ * three tokens below are enough, and Pagefind's layout is untouched.
+ */
+
+#starlight__search {
+	--pagefind-ui-text: var(--ax-body);
+	--pagefind-ui-background: var(--ax-page);
+	--pagefind-ui-border: var(--ax-rule);
+	--pagefind-ui-primary: var(--ax-ink);
+	--pagefind-ui-tag: var(--ax-surface-sunk);
+}
+
+#starlight__search .pagefind-ui mark {
+	color: var(--ax-ink);
+	background: var(--ax-surface-sunk);
+	font-weight: 600;
 }
 
 /*
- * Terminal chrome.
+ * The search field sets its own text at 16px.
  *
- * Shells are labelled with a bar carrying three dots, which is worth keeping:
- * it is the only thing on the page that tells a reader whether to paste the line
- * into a shell or read it as library code. What is worth changing is the colour.
- * The bar takes its background from the framework's grey ramp, and this palette's
- * ramp lands it on a mid-dark grey — a dark strip across a near-white page, with
- * dots a shade darker still, which reads as a rendering fault rather than as
- * chrome.
- *
- * A light bar with mid-grey dots says the same thing in the same register as
- * everything else here.
+ * Below 16px, focusing a field makes Safari zoom the whole page to the field —
+ * a behaviour no stylesheet can intercept after the fact, so the size is set
+ * here rather than worked around anywhere else. 16px is also the base step, so
+ * this costs nothing visually.
  */
-.sl-markdown-content .expressive-code .frame.is-terminal .header {
-	background: #f4f4f2;
+#starlight__search .pagefind-ui__search-input {
+	font-size: 1rem;
 }
 
-.sl-markdown-content .expressive-code .frame.is-terminal .header::before {
-	box-shadow: inset 99rem 99rem var(--ax-muted);
-}
-
-/* ── Landing page ────────────────────────────────────────────────────────────
+/* ── Landing page ──────────────────────────────────────────────────────────
  *
- * No hero, no splash template. The reference site leads with a name and a
- * paragraph, and a documentation site that does the same reads as though a
- * person wrote it.
+ * No hero, no splash template. The frontmatter `title` is the page's `<h1>`
+ * and is rendered by the framework, so this block deliberately has none: an
+ * earlier version added a second one and the page read "ax-kit" twice.
  */
 
 .ax-front {
-	max-width: 44rem;
-	padding: 0.5rem 0 2rem;
+	max-width: var(--sl-content-width);
+	padding-bottom: 3rem;
 }
 
-/*
- * The page heading comes from the frontmatter `title` and the framework
- * renders it. This block deliberately has **no** `h1` — an earlier version had
- * one and the page showed "ax-kit" twice, once from the framework and once from
- * here. The first thing on the page is already the heading.
- */
-
 .ax-front__sub {
-	color: var(--ax-muted);
-	font-size: 0.9375rem;
-	margin: 0 0 2.5rem;
+	color: var(--ax-ink);
+	font-size: 1.125rem;
+	line-height: 1.55;
+	text-wrap: balance;
+	margin: 0 0 1.5rem;
+	max-width: 46ch;
+}
+
+.ax-front__sub p {
+	margin: 0;
 }
 
 .ax-front h2 {
-	font-size: 0.8125rem;
+	font-size: 1rem;
 	font-weight: 600;
-	letter-spacing: 0.04em;
-	text-transform: uppercase;
-	color: var(--ax-muted);
-	margin: 2.5rem 0 0.75rem;
+	letter-spacing: -0.008em;
+	color: var(--ax-ink);
+	text-transform: none;
+	/* Half the prose section gap: on the landing page these headings sit inside
+	 * a short page of lists, not inside a long article, and the full 2.75rem
+	 * leaves a band of nothing above every one of them. */
+	margin: 2rem 0 0.875rem;
 }
 
 .ax-front p {
 	color: var(--ax-body);
 	line-height: 1.75;
 	text-wrap: pretty;
-	margin: 0 0 1rem;
-	max-width: 42rem;
+	margin: 0 0 1.125rem;
+	max-width: 64ch;
 }
 
 .ax-front__actions {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 0.625rem;
-	margin: 2rem 0 0;
+	gap: 0.5rem;
+	margin: 1.75rem 0 0;
 }
 
 .ax-front .ax-front__actions a,
 .ax-front .ax-front__actions a:hover {
-	display: inline-block;
-	padding: 0.4375rem 0.875rem;
-	border: 1px solid var(--ax-text);
-	border-radius: 6px;
+	display: inline-flex;
+	align-items: center;
+	height: 2.25rem;
+	padding: 0 0.875rem;
+	border: 1px solid var(--ax-ink);
+	border-radius: var(--ax-radius-sm);
+	background: var(--ax-ink);
 	font-size: var(--sl-text-sm);
 	font-weight: 500;
-	color: var(--ax-text);
+	color: var(--ax-page);
 	text-decoration: none;
 	transition:
 		background-color 120ms ease-out,
+		border-color 120ms ease-out,
 		color 120ms ease-out;
 }
 
 .ax-front .ax-front__actions a:hover {
-	background: var(--ax-text);
-	color: var(--ax-bg);
+	background: var(--ax-body);
+	border-color: var(--ax-body);
 }
 
+/* The secondary action is an outline, so the pair reads primary-then-
+ * alternative without either shouting. */
 .ax-front .ax-front__actions a[aria-variant="minimal"] {
+	background: transparent;
 	border-color: var(--ax-rule-strong);
-	color: var(--ax-muted);
+	color: var(--ax-body);
 }
 
 .ax-front .ax-front__actions a[aria-variant="minimal"]:hover {
 	background: var(--ax-surface);
-	color: var(--ax-text);
+	border-color: var(--ax-faint);
+	color: var(--ax-ink);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1649,10 +1783,26 @@ mobile-starlight-toc summary .toggle::before {
 }
 
 .ax-front__list li {
-	padding: 0.5rem 0;
+	padding: 0.75rem 0;
 	border-bottom: 1px solid var(--ax-rule);
 	color: var(--ax-body);
 	font-size: var(--sl-text-sm);
+	line-height: 1.65;
+}
+
+/*
+ * The list items carry a paragraph, and the prose rule gives every paragraph a
+ * 1.125rem bottom margin. In a list whose own rhythm is set by padding and a
+ * hairline, that margin is invisible vertical space between the text and the
+ * rule below it — which is why the rows read as twice as tall as their
+ * content.
+ */
+.ax-front__list li p {
+	margin: 0;
+}
+
+.ax-front__list li:first-child {
+	padding-top: 0;
 }
 
 .ax-front__list li:last-child {
@@ -1660,20 +1810,28 @@ mobile-starlight-toc summary .toggle::before {
 }
 
 .ax-front__list strong {
-	color: var(--ax-text);
+	color: var(--ax-ink);
 	font-weight: 600;
 }
 
-/* ── The live demonstration ────────────────────────────────────────────────────
+.ax-front__list a {
+	text-decoration: none;
+}
+
+.ax-front__list a:hover strong {
+	text-decoration: underline;
+	text-underline-offset: 3px;
+}
+
+/* ── The live demonstration ─────────────────────────────────────────────────
  *
- * One border, one radius, one type size — the same vocabulary as the reference
- * site's rules. An island that looked designed differently from the page around
- * it would read as a widget bolted on.
+ * One border, one radius, one type size — the page's own vocabulary. An island
+ * designed differently from its surroundings reads as a widget bolted on.
  */
 
 .ax-try {
-	border: 1px solid var(--ax-rule-strong);
-	border-radius: 8px;
+	border: 1px solid var(--ax-rule);
+	border-radius: var(--ax-radius);
 	padding: 1.25rem;
 	margin: 1.5rem 0;
 	background: var(--ax-surface);
@@ -1684,16 +1842,17 @@ mobile-starlight-toc summary .toggle::before {
 }
 
 .ax-try h4 {
-	font-size: 0.75rem;
-	font-weight: 600;
-	letter-spacing: 0.04em;
-	text-transform: uppercase;
+	font-size: 0.6875rem;
+	font-weight: 500;
+	letter-spacing: 0.02em;
+	text-transform: none;
 	color: var(--ax-muted);
-	margin: 1.5rem 0 0.625rem;
+	margin: 1.75rem 0 0.75rem;
 }
 
 .ax-try__table {
-	border-collapse: collapse;
+	border-collapse: separate;
+	border-spacing: 0;
 	width: 100%;
 	font-size: var(--sl-text-sm);
 	margin: 0;
