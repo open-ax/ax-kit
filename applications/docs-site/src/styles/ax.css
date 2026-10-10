@@ -283,8 +283,8 @@ html {
 }
 
 body {
-	background: var(--ax-bg);
-	color: var(--ax-text);
+	background: var(--ax-page);
+	color: var(--ax-body);
 	-webkit-font-smoothing: antialiased;
 	text-size-adjust: 100%;
 }
