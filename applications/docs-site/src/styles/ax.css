@@ -623,7 +623,22 @@ samp {
 	}
 }
 
-/* ── Header ──────────────────────────────────────────────────────────────── */
+/* ── Page head ───────────────────────────────────────────────────────────
+ *
+ * Two lines. The title at 30px, then the description at 17px in the muted
+ * grey — which is the one piece of information a title cannot carry.
+ *
+ * The padding is not decoration. The framework offsets the page body by the
+ * height of the header plus — below its desktop breakpoint — the mobile "On
+ * this page" bar, and by nothing more. The `<h1>` therefore began on the very
+ * pixel that bar ended, and every page title on a phone sat flush against the
+ * rule above it. Measured, the gap was 0px.
+ */
+
+.ax-page-head {
+	padding-top: var(--ax-page-head-gap);
+	margin-bottom: 2.25rem;
+}
 
 .site-header {
 	background: var(--ax-bg);
