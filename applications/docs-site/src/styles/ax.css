@@ -1994,3 +1994,82 @@ mobile-starlight-toc summary .toggle::before {
 		transition: none;
 	}
 }
+
+/* ── 404 ───────────────────────────────────────────────────────────────────
+ *
+ * A code, a sentence, and the three places worth going. Rendered as a normal
+ * content page, so the sidebar and search still work on it.
+ */
+
+.ax-not-found {
+	display: grid;
+	justify-items: start;
+	gap: 0.75rem;
+	max-width: 44ch;
+	padding: 3rem 0 4rem;
+}
+
+.ax-not-found p {
+	color: var(--ax-body);
+	margin: 0;
+}
+
+.ax-not-found .ax-not-found-code {
+	font-size: var(--sl-text-sm);
+	font-weight: 500;
+	color: var(--ax-faint);
+}
+
+.ax-not-found-links {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	margin-top: 0.75rem;
+}
+
+.ax-not-found-links a {
+	display: inline-flex;
+	align-items: center;
+	height: 2.25rem;
+	padding: 0 0.875rem;
+	border: 1px solid var(--ax-rule-strong);
+	border-radius: var(--ax-radius-sm);
+	font-size: var(--sl-text-sm);
+	font-weight: 500;
+	color: var(--ax-body);
+	text-decoration: none;
+	transition:
+		border-color 120ms ease-out,
+		background-color 120ms ease-out,
+		color 120ms ease-out;
+}
+
+.ax-not-found-links a:first-child {
+	background: var(--ax-ink);
+	border-color: var(--ax-ink);
+	color: var(--ax-page);
+}
+
+.ax-not-found-links a:hover {
+	border-color: var(--ax-faint);
+	color: var(--ax-ink);
+}
+
+.ax-not-found-links a:first-child:hover {
+	background: var(--ax-body);
+	border-color: var(--ax-body);
+	color: var(--ax-page);
+}
+
+/* ── Motion ──────────────────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		transition-duration: 0.01ms;
+		animation-duration: 0.01ms;
+		animation-iteration-count: 1;
+		scroll-behavior: auto;
+	}
+}
