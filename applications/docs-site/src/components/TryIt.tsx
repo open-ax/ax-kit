@@ -411,6 +411,11 @@ export default function TryIt(): React.JSX.Element {
 					<p>Registering…</p>
 				)
 			) : (
+				// The scroll wrapper below is what keeps this table usable on a
+				// phone: four columns do not fit 360px, and without it the table
+				// either crushes its code column into wrapping mid-identifier
+				// or pushes the whole page sideways.
+				<div className="ax-try__scroll" tabIndex={0} role="region" aria-label="Registered tools">
 				<table className="ax-try__table">
 					<thead>
 						<tr>
@@ -460,51 +465,67 @@ export default function TryIt(): React.JSX.Element {
 						))}
 					</tbody>
 				</table>
+				</div>
 			)}
 
 			<h4>Invoke one</h4>
-			<p className="ax-try__actions">
-				<button
-					type="button"
-					onClick={() =>
-						void invoke(
-							"search_products",
-							{ query: "mug" },
-							"search — well formed",
-						)
-					}
-				>
-					search_products, well formed
-				</button>
-				<button
-					type="button"
-					onClick={() =>
-						void invoke(
-							"search_products",
-							{ query: 42 },
-							"search — query is a number",
-						)
-					}
-				>
-					search_products, query is a number
-				</button>
-				<button
-					type="button"
-					onClick={() =>
-						void invoke("search_products", {}, "search — no query at all")
-					}
-				>
-					search_products, no query
-				</button>
-				<button
-					type="button"
-					onClick={() =>
-						void invoke("proceed_to_checkout", undefined, "checkout")
-					}
-				>
-					proceed_to_checkout
-				</button>
+			<p className="ax-try__muted">
+				The first two calls are well formed and succeed. The last two break
+				the declared <code>inputSchema</code> and are refused with{" "}
+				<code>UnknownError</code> before any tool code runs.
 			</p>
+			<div className="ax-try__group">
+				<p className="ax-try__group-label">Calls that succeed</p>
+				<p className="ax-try__actions">
+					<button
+						type="button"
+						onClick={() =>
+							void invoke(
+								"search_products",
+								{ query: "mug" },
+								"search with query mug",
+							)
+						}
+					>
+						{"search_products({ query: \"mug\" })"}
+					</button>
+					<button
+						type="button"
+						onClick={() =>
+							void invoke("proceed_to_checkout", undefined, "checkout")
+						}
+					>
+						proceed_to_checkout()
+					</button>
+				</p>
+			</div>
+			<div className="ax-try__group">
+				<p className="ax-try__group-label">
+					Calls that are refused with <code>UnknownError</code>
+				</p>
+				<p className="ax-try__actions">
+					<button
+						type="button"
+						onClick={() =>
+							void invoke(
+								"search_products",
+								{ query: 42 },
+								"search with numeric query",
+							)
+						}
+					>
+						{"search_products({ query: 42 })"}
+					</button>
+					<button
+						type="button"
+						onClick={() =>
+							void invoke("search_products", {}, "search with no query")
+						}
+					>
+						{"search_products({})"}
+					</button>
+				</p>
+			</div>
 
 			<h4>What came back</h4>
 			{log.length === 0 ? (

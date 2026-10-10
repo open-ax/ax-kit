@@ -242,7 +242,9 @@ describe("the live demonstration", () => {
 			).toHaveText("no");
 
 			// Invocation. The result is displayed as the string the draft specifies.
-			await page.getByRole("button", { name: /well formed/ }).click();
+			await page
+				.getByRole("button", { name: 'search_products({ query: "mug" })' })
+				.click();
 			await expect(page.locator(".ax-try__log")).toContainText(
 				"search_products",
 			);
@@ -251,14 +253,18 @@ describe("the live demonstration", () => {
 			// twice proved only that *a* refusal happened: the second click could have
 			// done nothing and the test would still have passed. Each entry carries the
 			// label it was invoked under, so the label is what identifies it.
-			await page.getByRole("button", { name: /query is a number/ }).click();
+			await page
+				.getByRole("button", { name: "search_products({ query: 42 })" })
+				.click();
 			await expect(
 				page.locator(".ax-try__log li", {
-					hasText: "query is a number",
+					hasText: "numeric query",
 				}),
 			).toContainText("UnknownError");
 
-			await page.getByRole("button", { name: /no query/ }).click();
+			await page
+				.getByRole("button", { name: "search_products({})" })
+				.click();
 			await expect(
 				page.locator(".ax-try__log li", { hasText: "no query" }),
 			).toContainText("UnknownError");
