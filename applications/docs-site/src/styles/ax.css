@@ -1115,135 +1115,320 @@ mobile-starlight-toc summary .toggle::before {
 	background: none;
 }
 
-}
-
-.sidebar-content a:hover {
-	color: var(--ax-text);
-}
-
-/*
- * The current page. The framework marks it with a filled pill in its accent,
- * which here is a near-black grey and reads as a selection the user made rather
- * than a location they are at. A light surface plus a dark label says the same
- * thing without the shouting.
+/* ── Inline code ──────────────────────────────────────────────────────────
+ *
+ * A chip on the sunken fill and no border. The border was here to make the
+ * chip legible against a white page, and on a light fill it is one more line
+ * on every sentence that mentions an API.
  */
-.sidebar-content [aria-current="page"],
-.sidebar-content a[aria-current="page"] {
-	color: var(--ax-text);
-	font-weight: 500;
+
+.sl-markdown-content code:not(:where(.not-content *)) {
+	background: var(--ax-surface-sunk);
+	border: 0;
+	padding: 0.1em 0.3em;
+	border-radius: var(--ax-radius-sm);
+	font-size: 0.875em;
+	color: var(--ax-ink);
+	overflow-wrap: anywhere;
+}
+
+.sl-markdown-content :is(h1, h2, h3, h4) code:not(:where(.not-content *)) {
+	background: none;
+	font-size: 0.94em;
+}
+
+/* ── Code blocks ──────────────────────────────────────────────────────────
+ *
+ * One ground, one hairline, one radius. The terminal bar keeps its three dots
+ * because they are the only thing on the page that tells a reader whether to
+ * paste a line into a shell or read it as library code — but the bar is now
+ * the same ground as the code with a hairline under it, not a darker strip.
+ */
+
+.sl-markdown-content .expressive-code,
+.sl-markdown-content figure {
+	border: 1px solid var(--ax-rule);
+	border-radius: var(--ax-radius);
 	background: var(--ax-surface);
-	box-shadow: inset 2px 0 0 var(--ax-text);
-	border-radius: 2px;
+	box-shadow: none;
+	overflow: hidden;
 }
 
-.sidebar-content strong {
-	color: var(--ax-text);
-	font-weight: 600;
+.sl-markdown-content .expressive-code .frame {
+	--code-background: var(--ax-surface);
+	border: 0;
+	border-radius: var(--ax-radius);
+	box-shadow: none;
+	background: var(--ax-surface);
 }
 
-/* The group label, which is the lightest thing on the page by default and is
- * what made the navigation read as disabled rather than quiet. */
-.sidebar-content :is(strong, .top-level > summary > span) {
-	color: var(--ax-text);
+.sl-markdown-content .expressive-code .frame.is-terminal .header {
+	background: var(--ax-surface-sunk);
+	border-bottom: 1px solid var(--ax-rule);
+	/* 1.75rem is the shortest bar that still centres the three 6px dots on the
+	 * pixel grid; at 0.5rem they sit on a half-pixel and read as smudged. */
+	padding: 0;
 }
 
-.right-sidebar-panel,
-.right-sidebar-panel :is(a, a:hover) {
-	color: var(--ax-muted);
+.sl-markdown-content .expressive-code .frame.is-terminal .header::before {
+	box-shadow: inset 99rem 99rem var(--ax-faint);
+	opacity: 0.7;
+}
+
+.sl-markdown-content .expressive-code pre,
+.sl-markdown-content .expressive-code code {
 	background: transparent;
-	text-decoration: none;
+	border: 0;
+	box-shadow: none;
+	font-size: 0.8125rem;
+	font-weight: 500;
+	line-height: 1.7;
 }
 
-/*
- * The theme control.
+/* The copy button keeps the code ground behind it, so code scrolled under it
+ * never shows through. */
+.sl-markdown-content .expressive-code .copy code {
+	background: var(--ax-surface);
+}
+
+/* ── The label row ──────────────────────────────────────────────────────────
  *
- * A site that ships one colour scheme has nothing to toggle, so the control is
- * removed rather than styled — a switch that cannot change anything is worse than
- * no switch, because it invites the reader to look for a dark mode that is not
- * there.
+ * A code block's caption: the three dots of a terminal, or a filename.
  *
- * The element is `<starlight-theme-select>`, a custom element wrapping a
- * `<label>` and a `<select>`. Two earlier attempts used `.theme-toggle` and
- * `[data-component="ThemeToggle"]`, neither of which this framework version
- * emits, so the control stayed on the page rendering its own options in near-
- * white on near-white: visible as unreadable text rather than absent. The name
- * below was read out of the built HTML rather than guessed.
+ * ## Why the height is fixed rather than left to padding
+ *
+ * Because the copy control is centred inside this row, and the row has to be a
+ * number of pixels for "centred" to mean anything. Padding gives a height that
+ * depends on the line-height of whatever the row happens to contain, which is
+ * how the two label kinds ended up 35px and 40px tall for the same content.
+ * One height, both kinds, and the control sits at exactly half of it.
+ *
+ * ## Why the filename was set at 14.4px
+ *
+ * It was not set there; it was *inherited* — the row took the page's prose size,
+ * so a filename was set larger than the code it was labelling and in full ink
+ * rather than the muted grey. A label that shouts over its own content is
+ * backwards. It is a caption: small, quiet, and one step down.
+ *
+ * ## Why the empty row is removed rather than padded
+ *
+ * Every frame carries a `<figcaption>`, and on a plain block it is empty. Left
+ * alone it is a 35px strip of nothing above the code, which is the "no top gap"
+ * of the copy control's complaint one level up: the button had a caption row's
+ * worth of space reserved above it and then sat on the first line of code. With
+ * the empty row gone, a plain block starts at its code and the control, on a
+ * pointer device, sits beside the first line where the extra padding on that
+ * line was already reserved for it.
  */
-starlight-theme-select {
+.sl-markdown-content .expressive-code .frame figcaption.header {
+	display: flex;
+	align-items: center;
+	height: 2rem;
+	padding: 0 0.75rem;
+	margin: 0;
+	background: var(--ax-surface-sunk);
+	border-bottom: 1px solid var(--ax-rule);
+	position: relative;
+}
+
+/* No dots, no filename, no row.
+ *
+ * Written as "hide unless the title has text" rather than "hide when the title
+ * is empty" because a plain block's `<figcaption>` has no `.title` child *at
+ * all* — `:has(> .title:empty)` asks for a child that is not there, matches
+ * nothing, and the empty 32px row stays on every block of ordinary code. */
+.sl-markdown-content .expressive-code .frame:not(.is-terminal) figcaption.header:not(
+		:has(> .title:not(:empty))
+	) {
 	display: none;
 }
 
-.site-header :is(a, a:hover) {
-	color: var(--ax-body);
-}
-
-.site-header .site-title {
-	color: var(--ax-text);
-	font-weight: 600;
-	letter-spacing: -0.01em;
-}
-
-.site-header :is(.search, .search-input) :is(input, button) {
-	color: var(--ax-body);
-	border-color: var(--ax-rule);
-}
-
-.site-header :is(.search, .search-input) input::placeholder {
+.sl-markdown-content .expressive-code figcaption .title {
+	/* A filename is a code artifact, so it is set in the code face — 12px
+	 * Geist Mono at the same 500 weight as the block beneath it — rather than
+	 * in the UI face. In Hanken at 11px it read as chrome around the code; in
+	 * mono it reads as the name of what follows. No tracking: letterspaced
+	 * mono reads as a ransom note rather than a path. */
+	font-family: var(--sl-font-mono);
+	font-size: 0.75rem;
+	font-weight: 500;
+	letter-spacing: 0;
 	color: var(--ax-muted);
 }
 
-/*
- * Search results.
- *
- * The search dialog is Pagefind's own widget, and it takes its text colour from
- * `--pagefind-ui-text`, which the framework sets to `--sl-color-gray-2`. This
- * palette redefines that token as `#f2f2f1` — near-white — so result excerpts and
- * the highlighted `<mark>` terms were rendered at roughly the same value as the
- * white surface behind them. Titles stayed legible only because the framework
- * styles those separately.
- *
- * Overriding the two tokens is enough: the dialog's surface is left alone, and
- * Pagefind's own layout is untouched.
- */
-#starlight__search .pagefind-ui {
-	--pagefind-ui-text: var(--ax-body);
-}
-
-#starlight__search .pagefind-ui mark {
-	color: var(--ax-text);
-	background: var(--ax-surface);
+/* A document glyph before the filename, drawn as a mask like every other
+ * glyph on this site. Scoped to non-empty titles so terminal bars — whose
+ * title is empty and whose mark is the three dots — are left alone. */
+.sl-markdown-content .expressive-code figcaption .title:not(:empty)::before {
+	content: "";
+	display: inline-block;
+	width: 0.75rem;
+	height: 0.75rem;
+	margin-right: 0.375rem;
+	vertical-align: -0.125rem;
+	background-color: var(--ax-faint);
+	-webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 3h7l4 4v12a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z'/%3E%3Cpath d='M13 3v4h4'/%3E%3C/svg%3E");
+	mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 3h7l4 4v12a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z'/%3E%3Cpath d='M13 3v4h4'/%3E%3C/svg%3E");
+	-webkit-mask-repeat: no-repeat;
+	mask-repeat: no-repeat;
+	-webkit-mask-size: contain;
+	mask-size: contain;
 }
 
 /*
- * The header's trailing controls. The repository link is built as
- * `.social-icons > a > span.sr-only + svg`, and the icon inherits its colour
- * from `currentColor` on the anchor — so the anchor's colour is what has to
- * change. Two earlier attempts missed it: one selected `.social-links`, which is
- * not the class the framework emits, and one set `.site-header a`, which the
- * anchor's own rule outranks. Read out of the built HTML this time.
+ * The copy control, centred in the label row when there is one.
+ *
+ * `1rem` is half of the `2rem` above, and the `translateY` puts the middle of
+ * the button on that line whatever its own height ends up being. Scoped to the
+ * two frame kinds that *have* a row, so a plain block's control keeps the
+ * framework's own position.
  */
-.site-header .social-icons a,
-.site-header .social-icons a:visited,
-.site-header .social-icons svg {
-	color: var(--ax-body);
-	fill: currentColor;
+.sl-markdown-content .expressive-code .frame:has(
+	figcaption.header > .title:not(:empty)
+) .copy,
+.sl-markdown-content .expressive-code .frame.is-terminal .copy {
+	inset-block-start: 1rem;
+	inset-inline-end: 0.375rem;
+	transform: translateY(-50%);
 }
 
-.site-header .social-icons a:hover {
-	color: var(--ax-text);
+/* ── Copy control ──────────────────────────────────────────────────────────
+ *
+ * A glyph, not a chip.
+ *
+ * ## No box
+ *
+ * The framework builds the button out of three layers: a `<div>` that fills it
+ * with a background on hover, a `::before` that draws a border round it, and
+ * the `::after` that carries the icon as a mask. Together they read as a small
+ * square panel sitting in the corner of every block — the same "bolted on"
+ * look the old theme `<select>` had in the header, and it was fixed the same
+ * way: the fill and the border are gone, and all that is left is the mark. The
+ * hit area stays a full square regardless, because that is the difference
+ * between an easy target and a fussy one, and it is invisible either way.
+ *
+ * ## Smaller, and placed on purpose
+ *
+ * The framework ships it at 2.5rem square — 40px — dropping to 2rem on a device
+ * with a pointer. On a 13px code block that is a billboard. It is 2rem where
+ * there is no hover to reveal it and 1.5rem where there is, with the glyph
+ * inset in proportion: the icon is drawn by masking whatever fills the space
+ * left after the `::after` margin, so the margin *is* the glyph's size and the
+ * two move together.
+ *
+ * Plain blocks get an even 10px of air on the top and the right. Blocks with a
+ * label row get the control centred in that row instead — see the label-row
+ * section above — so the two cases never share a position and cannot drift.
+ *
+ * ## A check, not a green label
+ *
+ * The framework confirms a copy with a green tooltip that slides in beside the
+ * button. It is the only green on this site, it covers the first line of the
+ * block while it is up, and it says the same thing twice — once as a colour and
+ * once as the word "Copied!".
+ *
+ * So the glyph changes instead: the clipboard becomes a tick, in this site's own
+ * ink. `.feedback` is the only signal the framework gives that a copy happened,
+ * and it is what the selector keys off. The mask paints with `background-color`,
+ * not `color` — setting `color` on a mask paints nothing, which is exactly what
+ * an earlier version did, and the tick silently kept the old colour.
+ *
+ * The tooltip is hidden *visually*, not removed. It carries `aria-live`, so it
+ * is how a screen reader learns the copy worked; `display: none` would take that
+ * with it and leave the confirmation sighted-only. It is clipped to a pixel
+ * instead — still announced, no longer seen.
+ */
+.sl-markdown-content .expressive-code .copy {
+	gap: 0;
+	inset-block-start: 0.625rem;
+	inset-inline-end: 0.625rem;
 }
 
-/* The header's own rule, because the framework's default is tuned for a
- * coloured accent and a grey one does not read against it. */
-.site-header {
-	border-bottom: 1px solid var(--ax-rule);
+.sl-markdown-content .expressive-code .copy button {
+	width: 2rem;
+	height: 2rem;
+	background: none;
 }
 
-/* The header's own rule, because the framework's default is tuned for a
- * coloured accent and a grey one does not read against it. */
-.site-header {
-	border-bottom: 1px solid var(--ax-rule);
+/* The fill layer and the border. Decorative, and the decoration is the box. */
+.sl-markdown-content .expressive-code .copy button div,
+.sl-markdown-content .expressive-code .copy button::before {
+	display: none;
 }
+
+.sl-markdown-content .expressive-code .copy button::after {
+	margin: 0.5rem;
+	background-color: var(--ax-muted);
+}
+
+.sl-markdown-content .expressive-code .copy button:hover::after {
+	background-color: var(--ax-ink);
+}
+
+/*
+ * Keyboard users get the same affordance as pointer users. The button is in the
+ * tab order, and without this a keyboard focus lands on a control whose only
+ * visible state is the global focus ring — with no indication that *this* glyph
+ * is the one about to fire.
+ */
+.sl-markdown-content .expressive-code .copy button:focus-visible::after {
+	background-color: var(--ax-ink);
+}
+
+@media (hover: hover) {
+	.sl-markdown-content .expressive-code .copy button {
+		width: 1.5rem;
+		height: 1.5rem;
+	}
+
+	.sl-markdown-content .expressive-code .copy button::after {
+		/* 6px on a 24px button: a 12px glyph beside 13px code. */
+		margin: 0.375rem;
+	}
+}
+
+/* Kept in the accessibility tree, out of the layout. */
+.sl-markdown-content .expressive-code .copy .feedback {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+	border: 0;
+}
+
+/* The tick. A mask, so it takes the background colour and needs no second
+ * asset — the same reason the theme control's glyphs are drawn rather than
+ * loaded. */
+.sl-markdown-content .expressive-code .copy:has(.feedback.show) button::after {
+	-webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6L9 17l-5-5'/%3E%3C/svg%3E");
+	mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6L9 17l-5-5'/%3E%3C/svg%3E");
+	-webkit-mask-repeat: no-repeat;
+	mask-repeat: no-repeat;
+	-webkit-mask-size: contain;
+	mask-size: contain;
+	background-color: var(--ax-ink);
+	opacity: 1;
+}
+
+/*
+ * On a phone, code wraps instead of scrolling.
+ *
+ * A block that scrolls sideways on a phone is a block whose right-hand side —
+ * and its copy button — the reader cannot reach without a horizontal drag,
+ * and a horizontally-scrolling code block inside a vertically-scrolling page
+ * is worse than useless. Below 40rem every block wraps; above it, longer
+ * blocks still scroll inside their own frame, which is the right trade on a
+ * screen with a pointer.
+ */
+@media (max-width: 40rem) {
+	.sl-markdown-content .expressive-code pre {
+		white-space: pre-wrap;
+		overflow-wrap: anywhere;
+	}
 
 /* The rule under the page heading. The framework draws it in its accent, which
  * here is a grey, and a grey rule under a grey heading reads as a mistake. */
