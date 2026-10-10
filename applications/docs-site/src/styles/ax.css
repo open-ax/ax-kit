@@ -311,17 +311,154 @@ samp {
 	border-radius: 3px;
 }
 
-/* Prose reads differently from interface text, and the reference site says so
- * with `text-wrap: pretty`: no single-word last line, and no hyphen. `balance`
- * is for headings, where a ragged two-line heading looks broken. */
-.sl-markdown-content p,
-.sl-markdown-content li {
+/* ── The three columns ──────────────────────────────────────────────────────
+ *
+ * The content column is centred in the viewport, and it takes a little arithmetic
+ * to say so because the framework's layout is deliberately not centred.
+ *
+ * The framework divides the desktop page into a fixed left sidebar, a flexible
+ * middle, and a right-hand contents pane — and it sizes that right pane to
+ * absorb *all* the slack:
+ *
+ *     right pane = max(sidebar, sidebar + (100% - content - sidebar) / 2)
+ *
+ * The right pane is therefore never as wide as the left one, and the content
+ * inside the middle column is then pushed to one side of it with
+ * `margin-inline: auto 0`. At 1440px the right pane works out at 368px against
+ * the left sidebar's 248px, so the prose column does not sit in the middle of
+ * the window — with a 344px gutter on one side and a 392px gutter on the other.
+ * It reads as a page nobody laid out on purpose, which is exactly what it is.
+ *
+ * ## Why the rails cannot simply be equal
+ *
+ * The obvious fix — make both outer panes the same width — is what centres the
+ * content, and it is not a choice so much as an identity. With a left rail of
+ * `L`, a right rail of `R` and the content centred in the pane between them,
+ * the content's centre lands at `L + (100% - L - R) / 2`, which equals the
+ * viewport's centre only when `L === R`. Any difference between the two rails
+ * shifts the column by half of it.
+ *
+ * That is worth knowing because the two rails want different widths: the left
+ * one holds labels like "Annotations" and "Conformance", and the right one holds
+ * a list of this page's own headings, which are short. Forcing the right rail to
+ * match the left makes the contents pane visibly too wide.
+ *
+ * So the rails are sized independently and the *padding* absorbs the difference.
+ * A pane whose padding is smaller on the side of the wider rail by exactly half
+ * the difference between the two puts its content box back on the viewport's
+ * centre line — which is the whole of what the three declarations below do.
+ */
+
+:root {
+	/*
+	 * The contents rail, sized to its contents rather than to the navigation rail
+	 * beside it — but only a little narrower than it.
+	 *
+	 * Narrower, because it holds one page's headings rather than the site's whole
+	 * navigation, and matching the sidebar left a column of empty space down its
+	 * right side. Not *much* narrower: at 13.5rem the longer headings wrapped to
+	 * two lines often enough that the list stopped reading as a list, and a
+	 * contents rail that breaks its own entries is worse than a slightly wide
+	 * one. 15rem is the third step of that same judgement — wider again, but
+	 * still short of the navigation rail, which is where "too wide" started.
+	 *
+	 * Safe to move in either direction without un-centring the column: the two
+	 * padding declarations below take whichever of the two rails is wider and
+	 * give the difference back on that side, so the content stays on the
+	 * window's centre line for any pair of values.
+	 */
+	--sl-aside-width: 15rem;
+}
+
+@media (min-width: 72rem) {
+	[data-has-sidebar][data-has-toc] .right-sidebar-container {
+		width: var(--sl-aside-width);
+	}
+
+	/*
+	 * The contents panel is `position: fixed` with `width: 100%`, and for a fixed
+	 * element `100%` resolves against the *viewport*, not against its container.
+	 * So the panel was a full-window-wide box parked at the container's left edge,
+	 * overhanging the page by 17px and putting the table of contents' hit area
+	 * outside the layout.
+	 *
+	 * Nothing looked broken, which is why it survived: the headings and links
+	 * inside are left-aligned and the box clips itself, so the overhang is
+	 * invisible until you click where the page is not. Giving it the container's
+	 * width puts it back where a fixed panel belongs.
+	 */
+	[data-has-sidebar][data-has-toc] .right-sidebar {
+		width: var(--sl-aside-width);
+	}
+
+	/*
+	 * `100% - var(--sl-aside-width)`, and *not* `- var(--sl-sidebar-width)`
+	 * as well.
+	 *
+	 * This row begins where the navigation rail ends — the two are siblings, not
+	 * nested — so its own `100%` has already had the sidebar subtracted. An
+	 * earlier version subtracted it a second time and the content pane came out
+	 * 248px too narrow, which pushed the contents pane left and left a column of
+	 * dead space the width of the navigation rail down the right-hand edge of
+	 * every page. The gap looked like a margin the layout had failed to close,
+	 * which is exactly what it was.
+	 */
+	[data-has-sidebar][data-has-toc] .main-pane {
+		width: calc(100% - var(--sl-aside-width));
+		/* `auto` on both sides, against the framework's `auto 0`. */
+		--sl-content-margin-inline: auto;
+	}
+
+	/*
+	 * The correction, and it is the only arithmetic in this file.
+	 *
+	 * The two rails want different widths — the navigation rail holds labels
+	 * like "Annotations", the contents rail holds one page's headings — and a
+	 * column centred between two unequal rails is not centred on the window. It
+	 * sits off by half the difference, which is 16px here and was very visible.
+	 *
+	 * So the difference is taken back out of the padding: the side facing the
+	 * *wider* rail is given it back as extra padding, which moves the content
+	 * box back onto the window's centre line. Each side is clamped independently
+	 * with `max(0px, …)` so that whichever rail is narrower cannot be given a
+	 * negative padding and throw the column the other way.
+	 */
+	[data-has-sidebar][data-has-toc] .content-panel {
+		padding-inline-start: calc(
+			var(--sl-content-pad-x) +
+				max(0px, var(--sl-aside-width) - var(--sl-sidebar-width))
+		);
+		padding-inline-end: calc(
+			var(--sl-content-pad-x) +
+				max(0px, var(--sl-sidebar-width) - var(--sl-aside-width))
+		);
+	}
+}
+
+/*
+ * A page with no table of contents has only one outer pane, and the middle
+ * column is then already centred by the framework — the rule above is scoped to
+ * the both-panes case precisely so this one is left alone.
+ */
+
+/* ── Prose ─────────────────────────────────────────────────────────────────
+ *
+ * `pretty` for running text, so no line ends in a single word; `balance` for
+ * headings, where a ragged second line reads as a mistake.
+ */
+
+.sl-markdown-content {
+	line-height: var(--sl-line-height);
+}
+
+.sl-markdown-content :is(p, li) {
 	color: var(--ax-body);
 	text-wrap: pretty;
 }
 
 .sl-markdown-content :is(h1, h2, h3, h4, h5, h6) {
-	color: var(--ax-text);
+	color: var(--ax-ink);
+	font-weight: 600;
 	text-wrap: balance;
 }
 
