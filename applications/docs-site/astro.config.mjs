@@ -236,6 +236,14 @@ export default defineConfig({
 				// replaces rather than wraps, and dropping it would take the
 				// canonical link and the `llms.json` alternate with it.
 				Head: "./src/components/Head.astro",
+				// The theme control. The framework's own is a three-option native
+				// `<select>`, which cannot be styled — `appearance: none` is honoured
+				// inconsistently and some platforms draw the whole widget — and it
+				// spends header width on a word about the system rather than the page.
+				// This writes the same three things the framework's writes: the
+				// `data-theme` attribute, the `starlight-theme` preference, and
+				// `updatePickers` so the mobile menu's own control stays in step.
+				ThemeSelect: "./src/components/ThemeToggle.astro",
 				// An island is opt-in per page through `<TryIt />`, and this slot is
 				// what keeps an ordinary page free of the framework runtime. No global
 				// island is registered here, deliberately.

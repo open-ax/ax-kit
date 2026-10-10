@@ -858,11 +858,65 @@ ax-theme-toggle {
  * stays 2rem square regardless, because that is the difference between an
  * easy target and a fussy one, and it is invisible either way.
  *
- * The ramp's numbering is not a lightness ordering — in the framework's own
- * light theme `gray-6` is *darker* than `gray-5` — so remapping it to this
- * palette produced a sidebar of near-invisible links on a near-white page. Named
- * colours at the point of use cannot be misread that way, and there are three
- * places here rather than a twelve-stop ramp to get right.
+ * The focus ring *is* kept. It is the only indication a keyboard user gets that
+ * the control is where focus went, and dropping it would trade a preference
+ * about how the control looks for the ability to use it.
+ */
+.ax-theme-toggle__button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 2rem;
+	height: 2rem;
+	padding: 0;
+	cursor: pointer;
+	border: 0;
+	border-radius: var(--ax-radius-sm);
+	background: none;
+	color: var(--ax-muted);
+	transition: color 120ms ease-out;
+}
+
+.ax-theme-toggle__button:hover {
+	color: var(--ax-ink);
+}
+
+/* Show the glyph for the scheme you would switch *to*. A moon on a dark page is
+ * the "go to light" affordance, which is what a reader expects, and the
+ * opposite of showing the scheme currently on screen. */
+.ax-theme-toggle__icon {
+	display: block;
+}
+
+.ax-theme-toggle__button[data-theme="dark"] .ax-theme-toggle__icon--sun,
+.ax-theme-toggle__button[data-theme="light"] .ax-theme-toggle__icon--moon {
+	display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.header button[data-open-modal],
+	.ax-theme-toggle__button,
+	.header .social-icons a {
+		transition: none;
+	}
+}
+
+/*
+ * The group label is the framework's own markup — a `<summary>` holding a
+ * `<span class="large">` inside a `<span class="group-label">`. Both spans
+ * carry the framework's heading size, so both are set here; leaving either one
+ * out is what makes a section label render as a bold heading with a small word
+ * floating inside it.
+ */
+
+/* ── Sidebar ──────────────────────────────────────────────────────────────
+ *
+ * The current page is ink at medium weight on a sunken fill. Berth marks it
+ * with an accent pill and ax-kit previously with a stripe down one side; a
+ * fill says "you are here" without either, and survives at any width.
+ *
+ * Section labels are 11px at medium weight in the faint grey — a label, not a
+ * heading. Set bold they out-shout every link beneath them.
  */
 
 .sidebar-content {
