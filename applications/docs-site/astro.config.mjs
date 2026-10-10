@@ -231,6 +231,11 @@ export default defineConfig({
 				useStarlightDarkModeSwitch: true,
 			},
 			components: {
+				// The document head, so navigation swaps the document instead of
+				// reloading it. Renders the framework's own head first — the slot
+				// replaces rather than wraps, and dropping it would take the
+				// canonical link and the `llms.json` alternate with it.
+				Head: "./src/components/Head.astro",
 				// An island is opt-in per page through `<TryIt />`, and this slot is
 				// what keeps an ordinary page free of the framework runtime. No global
 				// island is registered here, deliberately.

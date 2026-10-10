@@ -266,7 +266,21 @@
 	}
 }
 
-/* ── The page ────────────────────────────────────────────────────────────── */
+html {
+	scrollbar-gutter: stable;
+	-webkit-text-size-adjust: 100%;
+
+	/* In-page links glide instead of teleporting.
+	 *
+	 * The table of contents on the right is a list of ordinary fragment links, so
+	 * this one property is the whole behaviour — there is no scroll script to
+	 * write and no animation to keep in step with it. `scroll-padding-top` is
+	 * the half that is easy to forget: without it the browser scrolls the target
+	 * heading flush to the top of the viewport, where the fixed header covers it,
+	 * and the reader lands on a page with no visible heading. */
+	scroll-behavior: smooth;
+	scroll-padding-top: var(--ax-anchor-offset);
+}
 
 body {
 	background: var(--ax-bg);
