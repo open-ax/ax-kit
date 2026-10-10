@@ -1,100 +1,151 @@
 /*
  * The site's visual language.
  *
- * This is the OpenAX organisation site's design language, applied to
- * documentation. It is a deliberate point of view rather than a theme:
+ * Minimal on purpose, and minimal means *decided*: one greyscale ramp, one type
+ * scale, one border colour, one radius, one font. Every rule below is a token
+ * or a consequence of a token, so the page cannot drift into a second look.
  *
- * - **Near-monochrome.** One accent-free greyscale ramp and no colour at all
- *   except in code and links. Documentation's job is to be read; a palette is a
- *   tax on that.
- * - **Light mode only.** The reference site is `color-scheme: light` with no dark
- *   scheme at all. Supporting two schemes is two things to keep right, and this
- *   site would rather be one thing done properly. The dark media query below
- *   exists only so the framework's own default does not fight this.
- * - **One font, self-hosted, variable weight.** No display face, no monospace
- *   novelty: the code font is a UI monospace, which is what a reader expects and
- *   what diffs and identifiers actually want.
- * - **A narrow measure.** 38rem of prose, left-aligned. The reference site's
- *   figure, and the width at which a line of English stops being comfortable.
- * - **One emphasis weight.** 600 for emphasis, nothing bolder. Hierarchy comes
- *   from size and colour, not from weight.
+ * - **White, black, grey.** Nothing on this site is coloured except syntax,
+ *   and the syntax is grey too. Berth's docs site keeps one amber dot for "this
+ *   needs you"; that idea is right, but this site has no accent to spend, so
+ *   state is carried by weight, italics and a glyph instead.
+ * - **Two lines of page head.** A title and a description. Berth puts an
+ *   eyebrow above the title naming the section; the sidebar says the same thing
+ *   three centimetres to the left, so here it is a second copy of a fact the
+ *   reader already has.
+ * - **No rules between blocks.** Sections are separated by space, not by
+ *   lines. A hairline under the page head or above an `h2` reads as structure
+ *   that has to be maintained, and every page then pays for it.
+ * - **Small details.** Hairlines at one weight, a 2px focus ring offset by 2px,
+ *   optical alignment of the header against the content column, inline code at
+ *   0.875em so it never outgrows its line, and a copy button that keeps the
+ *   code ground behind it so scrolled code never shows through.
  *
- * Everything here is an override of the framework's own tokens rather than a
- * restyle of its elements. That is deliberate: overriding tokens means a
- * framework upgrade cannot silently un-style the site, whereas restyling elements
- * means it can.
- */
-
-/* ── Palette ────────────────────────────────────────────────────────────────
- *
- * The ramp, in the reference site's order: background, rule, muted, body, text.
- * Only six greys, because a documentation site should not need more and a ramp
- * with twelve stops is twelve opportunities to pick the wrong one.
+ * The ramp is defined twice, once per scheme, and named by role — `--ax-ink`
+ * rather than `--gray-900` — because a name that says where it is used cannot
+ * be misapplied the way a number on a ramp can.
  */
 
 :root {
-	--sl-color-white: #111111;
-	--sl-color-gray-1: #fafafa;
-	--sl-color-gray-2: #f2f2f1;
-	--sl-color-gray-3: #e8e8e6;
-	--sl-color-gray-4: #d4d4d4;
-	--sl-color-gray-5: #b8b8b6;
-	--sl-color-gray-6: #737373;
-	--sl-color-black: #ffffff;
-
-	/* The accent is a grey. Every link, focus ring and active marker is drawn
-	 * with it, so nothing on the page is coloured except code. */
-	--sl-color-accent-low: #ededec;
-	--sl-color-accent-high: #111111;
-	--sl-color-accent: #3d3d3b;
-
-	/* Borders and surfaces, named for what they are rather than by number, so a
-	 * rule is `var(--rule)` at the point of use and the palette stays in one
-	 * place. */
-	--ax-bg: #fafafa;
-	--ax-surface: #ffffff;
-	--ax-rule: #e4e4e2;
-	--ax-rule-strong: #d4d4d4;
-	--ax-text: #111111;
-	--ax-body: #3d3d3b;
-	--ax-muted: #737373;
-
-	/* The reference site's focus ring: 2px, offset, in the text colour. Visible,
-	 * never a glow. */
-	--sl-focus-ring-color: #111111;
-	--sl-focus-ring-width: 2px;
-	--sl-focus-ring-offset: 3px;
-
 	color-scheme: light;
-}
 
-/* Only one scheme. The framework defaults to following the reader's preference,
- * and a site that ships one palette should say so rather than switching to
- * another at dusk. */
-@media (prefers-color-scheme: dark) {
-	:root {
-		--sl-color-white: #111111;
-		--sl-color-gray-1: #fafafa;
-		--sl-color-black: #ffffff;
-	}
+	/* The ramp. Six greys and three surfaces; a documentation page does not
+	 * need more, and each stop is one more chance to pick the wrong one. */
+	--ax-ink: #1c1c1c;
+	--ax-body: #454545;
+	--ax-muted: #737373;
+	--ax-faint: #a3a3a3;
+	--ax-rule: #e8e8e8;
+	--ax-rule-strong: #d6d6d6;
+	--ax-page: #ffffff;
+	--ax-surface: #fafafa;
+	--ax-surface-sunk: #f4f4f4;
+	--ax-overlay: rgb(28 28 28 / 0.04);
+
+	/* A selection that is visible without shouting. */
+	--ax-selection: rgb(28 28 28 / 0.1);
+
+	--ax-radius: 8px;
+	--ax-radius-sm: 5px;
+
+	/* Framework tokens, mapped onto the ramp above. The framework's grey scale
+	 * is numbered dark-to-light in light mode and light-to-dark in dark mode,
+	 * and its components read it that way — the search shortcut chip sits on
+	 * `gray-6` — so these are remapped in the framework's order rather than in
+	 * lightness order. */
+	--sl-color-white: var(--ax-ink);
+	--sl-color-black: var(--ax-page);
+	--sl-color-gray-1: #242424;
+	--sl-color-gray-2: #3d3d3d;
+	--sl-color-gray-3: #5f5f5f;
+	--sl-color-gray-4: #8f8f8f;
+	--sl-color-gray-5: #cccccc;
+	--sl-color-gray-6: #f1f1f1;
+	--sl-color-accent: var(--ax-body);
+	--sl-color-accent-high: var(--ax-ink);
+	--sl-color-accent-low: var(--ax-surface-sunk);
+	--sl-color-text: var(--ax-body);
+	--sl-color-text-accent: var(--ax-ink);
+	--sl-color-text-invert: #ffffff;
+	--sl-color-bg: var(--ax-page);
+	--sl-color-bg-nav: var(--ax-page);
+	--sl-color-bg-sidebar: var(--ax-page);
+	--sl-color-bg-inline-code: var(--ax-surface-sunk);
+	--sl-color-bg-accent: var(--ax-ink);
+	--sl-color-hairline-light: var(--ax-rule);
+	--sl-color-hairline: var(--ax-rule);
+	--sl-color-hairline-shade: var(--ax-rule);
+	--sl-color-backdrop-overlay: rgb(28 28 28 / 0.4);
+
+	--sl-focus-ring-color: var(--ax-ink);
+	--sl-focus-ring-width: 2px;
+	--sl-focus-ring-offset: 2px;
+
+	--sl-shadow-sm: 0 1px 2px rgb(28 28 28 / 0.04);
+	--sl-shadow-md: 0 2px 8px rgb(28 28 28 / 0.06);
+	--sl-shadow-lg: 0 12px 32px rgb(28 28 28 / 0.1);
 }
 
 :root[data-theme="dark"] {
-	--sl-color-white: #111111;
-	--sl-color-gray-1: #fafafa;
-	--sl-color-gray-2: #f2f2f1;
-	--sl-color-gray-3: #e8e8e6;
-	--sl-color-gray-4: #d4d4d4;
-	--sl-color-gray-5: #b8b8b6;
-	--sl-color-gray-6: #737373;
-	--sl-color-black: #ffffff;
-	--sl-color-accent-low: #ededec;
-	--sl-color-accent-high: #111111;
-	--sl-color-accent: #3d3d3b;
-	--sl-focus-ring-color: #111111;
+	color-scheme: dark;
+
+	--ax-ink: #ededed;
+	--ax-body: #b8b8b8;
+	--ax-muted: #8f8f8f;
+	--ax-faint: #6b6b6b;
+	--ax-rule: #2b2b2b;
+	--ax-rule-strong: #3d3d3d;
+	--ax-page: #131313;
+	--ax-surface: #191919;
+	--ax-surface-sunk: #202020;
+	--ax-overlay: rgb(255 255 255 / 0.05);
+
+	--ax-selection: rgb(255 255 255 / 0.12);
+
+	--sl-color-white: var(--ax-ink);
+	--sl-color-black: var(--ax-page);
+	--sl-color-gray-1: #ededed;
+	--sl-color-gray-2: #c7c7c7;
+	--sl-color-gray-3: #9c9c9c;
+	--sl-color-gray-4: #757575;
+	--sl-color-gray-5: #454545;
+	--sl-color-gray-6: #262626;
+	--sl-color-accent: var(--ax-body);
+	--sl-color-accent-high: var(--ax-ink);
+	--sl-color-accent-low: var(--ax-surface-sunk);
+	--sl-color-text: var(--ax-body);
+	--sl-color-text-accent: var(--ax-ink);
+	--sl-color-text-invert: #131313;
+	--sl-color-bg: var(--ax-page);
+	--sl-color-bg-nav: var(--ax-page);
+	--sl-color-bg-sidebar: var(--ax-page);
+	--sl-color-bg-inline-code: var(--ax-surface-sunk);
+	--sl-color-bg-accent: var(--ax-ink);
+	--sl-color-hairline-light: var(--ax-rule);
+	--sl-color-hairline: var(--ax-rule);
+	--sl-color-hairline-shade: var(--ax-rule);
+	--sl-color-backdrop-overlay: rgb(0 0 0 / 0.6);
+
+	--sl-focus-ring-color: var(--ax-ink);
+
+	--sl-shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
+	--sl-shadow-md: 0 2px 8px rgb(0 0 0 / 0.35);
+	--sl-shadow-lg: 0 12px 32px rgb(0 0 0 / 0.5);
 }
 
-/* ── Typography ──────────────────────────────────────────────────────────── */
+/* ── Type ────────────────────────────────────────────────────────────────
+ *
+ * One family for the page, one monospace for code. Hanken Grotesk and Geist
+ * Mono, self-hosted: a documentation page that fetches a font from a third
+ * party tells that third party who read it, and this site makes no
+ * third-party requests at all.
+ *
+ * The family names carry a `Variable` suffix — read out of the installed
+ * packages' own `index.css`, which declare `font-family: 'Hanken Grotesk
+ * Variable'`. Asking for the un-suffixed name matches no `@font-face` rule, so
+ * the browser falls through to `system-ui` and the font is downloaded on every
+ * page and never used.
+ */
 
 :root {
 	/*
