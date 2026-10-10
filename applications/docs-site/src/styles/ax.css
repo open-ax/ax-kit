@@ -990,6 +990,131 @@ ax-theme-toggle {
 	font-size: var(--sl-text-sm);
 }
 
+/* ── Table of contents ────────────────────────────────────────────────────
+ *
+ * A list of the page's own headings, in the faint grey, at the size where a
+ * list of forty entries stays scannable.
+ */
+
+.right-sidebar-panel {
+	padding-top: 1.75rem;
+}
+
+/*
+ * The contents rail is narrower than the prose column, but the framework's own
+ * `.sl-container` inside it is sized from the page's content token rather than
+ * from the rail — so it rendered 33px wider than the space it sits in and
+ * overhung the right edge of the page by that much. Capped here rather than by
+ * overriding the token, because the token is correct for the column it was
+ * written for and only wrong in here.
+ */
+.right-sidebar-panel .sl-container {
+	max-width: 100%;
+}
+
+.right-sidebar-panel h2 {
+	display: flex;
+	align-items: center;
+	gap: 0.375rem;
+	color: var(--ax-muted);
+	font-size: 0.6875rem;
+	font-weight: 500;
+	letter-spacing: 0.02em;
+	text-transform: none;
+	margin-bottom: 0.75rem;
+}
+
+/* ── The mobile "On this page" bar ─────────────────────────────────────────
+ *
+ * The collapsed bar reads "On this page › Overview": a label *about* the list
+ * followed by the list's current entry. The label is the redundant half — the
+ * bar sits directly under the header on every page, and nothing else on it
+ * could be a list of this page's headings. So the bar carries only the current
+ * entry, and the pill that opens it carries only marks: the list glyph and the
+ * caret.
+ *
+ * The text is collapsed with `font-size: 0`, not removed. It stays in the
+ * accessibility tree, so the summary keeps its spoken name, and both marks
+ * survive because neither is font-sized: the caret is a fixed 16px SVG and the
+ * glyph is a 12px mask. Anything `em`-sized in that pill would collapse with
+ * the text, which is the thing to check if anything is ever added to it.
+ */
+mobile-starlight-toc summary .toggle {
+	font-size: 0;
+	gap: 0.5rem;
+	padding-inline: 0.5rem;
+}
+
+/* A list mark before the label, on desktop and in the mobile dropdown alike.
+ *
+ * The label on its own is eleven pixels of grey that reads as leftover chrome
+ * rather than as the start of a list — which is what it is. The glyph says
+ * "this is a list of what follows" before a word is read, the way the three
+ * dots on a terminal bar say "this is runnable" before the code is read.
+ *
+ * Drawn as a mask for the usual reason: it takes `background-color` and needs
+ * no asset, and it follows the theme with nothing to swap. `flex: none`, so a
+ * long label wraps against the text rather than crushing the mark.
+ */
+.right-sidebar-panel h2::before,
+mobile-starlight-toc summary .toggle::before {
+	content: "";
+	flex: none;
+	align-self: center;
+	width: 0.75rem;
+	height: 0.75rem;
+	background-color: var(--ax-faint);
+	-webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='M9 6h12M9 12h12M9 18h12'/%3E%3Ccircle cx='4' cy='6' r='1.4' fill='%23000' stroke='none'/%3E%3Ccircle cx='4' cy='12' r='1.4' fill='%23000' stroke='none'/%3E%3Ccircle cx='4' cy='18' r='1.4' fill='%23000' stroke='none'/%3E%3C/svg%3E");
+	mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='M9 6h12M9 12h12M9 18h12'/%3E%3Ccircle cx='4' cy='6' r='1.4' fill='%23000' stroke='none'/%3E%3Ccircle cx='4' cy='12' r='1.4' fill='%23000' stroke='none'/%3E%3Ccircle cx='4' cy='18' r='1.4' fill='%23000' stroke='none'/%3E%3C/svg%3E");
+	-webkit-mask-repeat: no-repeat;
+	mask-repeat: no-repeat;
+	-webkit-mask-size: contain;
+	mask-size: contain;
+}
+
+.right-sidebar-panel :is(a, a:hover) {
+	color: var(--ax-faint);
+	font-size: 0.75rem;
+	text-decoration: none;
+	line-height: 1.5;
+	transition: color 120ms ease-out;
+}
+
+/*
+ * The list hangs under the label's text, not under its glyph.
+ *
+ * The heading is a flex row — 12px mark, 6px gap, then the words — and the list
+ * below it starts at the row's own left edge, which puts every entry directly
+ * under the mark. Entries aligned to a decoration read as a mistake; aligned
+ * to the "O" of "On this page" they read as belonging to it. So the root list
+ * takes exactly the mark plus the gap as its start padding: 1.125rem.
+ *
+ * Scoped to the root `ul`, so nested levels keep their own relative indent on
+ * top of it rather than doubling it. And scoped to the desktop panel — the
+ * mobile dropdown keeps full-width rows, which is what a touch target wants.
+ */
+.right-sidebar-panel starlight-toc > nav > ul {
+	padding-inline-start: 1.125rem;
+}
+
+.right-sidebar-panel a:hover {
+	color: var(--ax-ink);
+}
+
+/* The heading currently in view, marked by weight rather than by a rail. */
+.right-sidebar-panel a[aria-current="location"],
+.right-sidebar-panel a[aria-current="true"] {
+	color: var(--ax-ink);
+	font-weight: 500;
+}
+
+.right-sidebar-panel code {
+	font-size: 0.92em;
+	padding: 0;
+	border: 0;
+	background: none;
+}
+
 }
 
 .sidebar-content a:hover {
