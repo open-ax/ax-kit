@@ -707,13 +707,156 @@ main {
 	border-bottom: 1px solid var(--ax-rule);
 }
 
-.site-header__inner {
-	max-width: 68rem;
+.header .title-wrapper {
+	padding: 0;
+	margin: 0;
 }
 
-/* ── Sidebar and table of contents ──────────────────────────────────────────
+.site-title {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.625rem;
+	color: var(--ax-ink);
+	/* 16px at weight 700, tracked like the organisation's own wordmark
+	 * (openax.pages.dev sets its name at 600/−0.02em; at this smaller size the
+	 * extra weight keeps it from going grey next to the mark). The previous
+	 * 15px/600 sat a step below every other size on the page and read as small
+	 * beside a 22px-wide mark — the imbalance the "smaller logo or bigger word"
+	 * complaint was pointing at. */
+	font-size: 1rem;
+	font-weight: 700;
+	letter-spacing: -0.02em;
+	text-decoration: none;
+	white-space: nowrap;
+	line-height: 1;
+}
+
+/*
+ * The mark is a raster now, not a drawn path — see `SiteTitle.astro` for why,
+ * and for the measurement that settled it. The box is sized here rather than
+ * left to the image so the word beside it does not move when the file decodes.
  *
- * Colours set directly rather than through the framework's grey ramp.
+ * `height: auto` with an explicit `width` keeps the 480:330 proportion, which a
+ * fixed height would flatten. 20px wide against a 16px word: the glyph is
+ * landscape, so matching the word's width would double its visual weight —
+ * logotype convention is a mark slightly narrower than the word is tall.
+ */
+.site-title__mark {
+	width: 1.25rem;
+	height: auto;
+	flex: none;
+	display: block;
+}
+
+.site-title__mark--dark {
+	display: none;
+}
+
+/*
+ * Swapped on the attribute the theme provider writes — the same one every other
+ * rule in this file keys off, so the mark, the prose and the code blocks all
+ * change scheme from one `data-theme` value and cannot disagree about which
+ * scheme is on screen.
+ */
+:root[data-theme="dark"] .site-title__mark--light {
+	display: none;
+}
+
+:root[data-theme="dark"] .site-title__mark--dark {
+	display: block;
+}
+
+.site-title__word {
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+/* Search: a quiet field, not a box with a shadow. */
+.header button[data-open-modal] {
+	height: 2rem;
+	gap: 0.5rem;
+	padding-inline: 0.625rem 0.5rem;
+	font-size: var(--sl-text-sm);
+	font-weight: 400;
+	color: var(--ax-muted);
+	background: var(--ax-surface);
+	border: 1px solid var(--ax-rule);
+	border-radius: var(--ax-radius-sm);
+	box-shadow: none;
+	transition:
+		border-color 120ms ease-out,
+		background-color 120ms ease-out;
+}
+
+.header button[data-open-modal]:hover {
+	background: var(--ax-surface-sunk);
+	border-color: var(--ax-rule-strong);
+	color: var(--ax-body);
+}
+
+.header button[data-open-modal] > kbd {
+	background: transparent;
+	border: 1px solid var(--ax-rule);
+	border-radius: 4px;
+	padding: 0.0625rem 0.25rem;
+	font-size: 0.6875rem;
+	color: var(--ax-faint);
+}
+
+.header .right-group,
+.header .social-icons {
+	gap: 0.75rem;
+}
+
+.header .social-icons::after {
+	display: none;
+}
+
+.header .social-icons a,
+.header .social-icons a:visited,
+.header .social-icons svg {
+	color: var(--ax-muted);
+	fill: currentColor;
+	transition: color 120ms ease-out;
+}
+
+.header .social-icons a:hover {
+	color: var(--ax-ink);
+}
+
+/*
+ * The theme control.
+ *
+ * A button, sized and coloured like the search field beside it so the header
+ * reads as one row of controls rather than two kinds of control — which is what
+ * the old native `<select>` looked like next to it, and part of why it read as
+ * bolted on rather than placed.
+ *
+ * ## Why the selectors name the custom element rather than a class
+ *
+ * `ax-theme-toggle` is a type selector matching the custom element, and
+ * `ax-theme-toggle button` is the button inside it. An earlier version put the
+ * same class on the button and then wrote `.ax-theme-toggle button` — a button
+ * *inside* a button, which matches nothing at all. Every rule below parsed, and
+ * every one of them was inert: the control rendered unstyled at its default
+ * size with both glyphs showing at once, because a rule that matches nothing
+ * fails silently and looks identical to a rule that was never written.
+ *
+ * So the wrapper is named by its element and the button has its own class, and
+ * no selector in this block can be satisfied by the wrong nesting.
+ */
+ax-theme-toggle {
+	display: inline-flex;
+}
+
+/*
+ * No border, no background, at rest or on hover.
+ *
+ * The control is a glyph, and a glyph in a rounded rectangle reads as a chip
+ * sitting in the header rather than as part of it. So the only thing that
+ * changes when a pointer arrives is the colour of the mark — and the hit area
+ * stays 2rem square regardless, because that is the difference between an
+ * easy target and a fussy one, and it is invisible either way.
  *
  * The ramp's numbering is not a lightness ordering — in the framework's own
  * light theme `gray-6` is *darker* than `gray-5` — so remapping it to this
