@@ -148,31 +148,26 @@
  */
 
 :root {
-	/*
-	 * The family name is `Hanken Grotesk Variable`, not `Hanken Grotesk` — read out
-	 * of the installed package's own `index.css`, which declares
-	 * `font-family: 'Hanken Grotesk Variable'`.
+	/* Hanken Grotesk for the page, Geist Mono for code.
 	 *
-	 * Asking for the un-suffixed name matches no `@font-face` rule, so the browser
-	 * fell straight through to `system-ui` and the self-hosted font was downloaded
-	 * on every page and never used. The whole point of self-hosting here is to stop
-	 * making third-party requests; paying for the download and rendering someone
-	 * else's font is worse than not self-hosting at all.
+	 * Hanken is the organisation's own face — openax.pages.dev sets it as its
+	 * `--font-sans` — so the documentation reads as the same family rather than
+	 * a second one. Both self-hosted: a documentation page that fetches a font
+	 * from a third party tells that third party who read it, and this site
+	 * makes no third-party requests at all.
 	 */
-	--sl-font: var(
-		--font-sans,
-		"Hanken Grotesk Variable",
-		"Hanken Grotesk",
-		system-ui,
-		-apple-system,
-		"Segoe UI",
-		Helvetica,
-		Arial,
-		sans-serif
-	);
+	--sl-font:
+		"Hanken Grotesk Variable", "Hanken Grotesk", ui-sans-serif, system-ui,
+		-apple-system, "Segoe UI", sans-serif;
 	--sl-font-mono:
-		ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas,
-		"Liberation Mono", monospace;
+		"Geist Mono Variable", "Geist Mono", ui-monospace, "SF Mono", Menlo,
+		monospace;
+
+	--sl-heading-font: var(--sl-font);
+	--sl-heading-font-weight: 600;
+	/* Tracking tightens as the size grows: a 30px heading with normal tracking
+	 * reads as a template, and at 13px it reads as a label. */
+	--sl-heading-letter-spacing: -0.021em;
 
 	--sl-text-base: 0.9375rem;
 	--sl-text-sm: 0.8125rem;
