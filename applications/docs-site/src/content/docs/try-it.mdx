@@ -1,14 +1,14 @@
 ---
 draft: false
 title: "Try it in your browser"
-description: "Register a tool, enumerate the surface, invoke it, and watch it refuse — on this page, without installing anything."
+description: "Register a tool, enumerate the surface, invoke it and watch it refuse on this page, without installing anything."
 ---
 
 import Demo from "../../components/Demo.astro";
 
 A page that tells you a tool surface rejects a badly-typed call teaches less than
-a page where you type one and watch it fail. So: register, enumerate, invoke, and
-refuse, below, on this page.
+a page where you type one and watch it fail. So: register, enumerate, invoke
+and refuse, below, on this page.
 
 import { SPEC_VERSION } from "@ax-kit/core";
 
@@ -20,7 +20,7 @@ Everything on this page describes **{SPEC_VERSION.draft}** (upstream
 ## What you are looking at
 
 Five tools, registered through `@ax-kit/core`'s published entry points and
-enumerated through the draft's own `getTools()`. The table is what an agent sees —
+enumerated through the draft's own `getTools()`. The table is what an agent sees:
 the same names and the same argument shapes as the
 [reference storefront](https://github.com/open-ax/ax-kit/tree/main/applications/demo-store),
 so the vocabulary is identical across this project.
@@ -32,23 +32,22 @@ malformed arguments.
 
 **The result is a string.** `executeTool` resolves to `Promise<DOMString>` over a
 JSON serialization, so a handler returning `{ tool: "…" }` comes back as
-`{"tool":"…"}` with quotes, and the caller parses it. This is the specification's
+`{"tool":"…"}` with quotes. The caller parses it. This is the specification's
 behaviour, not a limitation of the polyfill.
 
 **Both refusals above come from schema validation, not from a throwing
 handler.** The library checks the arguments against the declared `inputSchema`
-before `execute` runs, and reports the failure as the specification's generic
+before `execute` runs. It reports the failure as the specification's generic
 `UnknownError`. So an agent sending `query: 42` and an agent sending no `query` at
 all both see `UnknownError` and cannot tell them apart. That is a limitation worth
-seeing rather than a conformance claim: the draft specifies one failure name, and
-this library maps both causes onto it.
+seeing rather than a conformance claim: the draft specifies one failure name.
 
 A handler that throws produces the same `UnknownError`, so a readable message from
 your handler reaches your log and not the agent. If an agent must distinguish
 "bad arguments" from "the tool failed", validate before invoking.
 
 **One tool is consequential and four are not.** `proceed_to_checkout` spends money
-and cannot be undone. The two cart mutations are reversible, cost nothing, and a
+and cannot be undone. The two cart mutations are reversible and cost nothing. A
 user who clicked *add to cart* has already confirmed it. Over-annotating trains
 everyone to dismiss confirmations, which is the failure mode the annotation exists
 to prevent. [Why, in more detail →](/reference/annotations/)
@@ -64,6 +63,6 @@ Permissions-Policy: tools=(self)
 
 Without that header the example appears to work on a development machine and
 silently does nothing in a deployment. Most browsers outside the proposal's origin
-trial have no native support, so the demonstration installs the polyfill itself —
-and it stands down rather than replacing a native implementation where one
+trial have no native support, so the demonstration installs the polyfill itself
+and stands down rather than replacing a native implementation where one
 exists.

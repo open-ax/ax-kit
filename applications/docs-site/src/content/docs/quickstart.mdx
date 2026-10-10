@@ -17,7 +17,7 @@ You want a page to offer typed tools to an agent. Four steps.
 npm install @ax-kit/core
 ```
 
-Zero runtime dependencies. The ESM entry stays under 5&nbsp;kB gzipped, and that
+Zero runtime dependencies. The ESM entry stays under 5&nbsp;kB gzipped. That
 is a hard build failure rather than a sentence in a README.
 
 ## 2. Install the surface
@@ -32,11 +32,11 @@ const context = installModelContext(document);
 
 `installModelContext` is explicit rather than run on import, so a bundler can
 tree-shake it and nothing happens until you ask. It returns `undefined` where the
-platform marks the context non-secure or the `tools` permission policy is denied —
-check for that if your page must work in both states.
+platform marks the context non-secure or the `tools` permission policy is denied.
+Check for that if your page must work in both states.
 
 In a server-rendered framework, import [`@ax-kit/core/auto`](/reference/api/) from the
-client entry hook instead, and it installs on import. That entry point exists
+client entry hook instead. It installs on import. That entry point exists
 because marking your whole component tree client-side just to get an import to run
 in a browser throws away server rendering.
 
@@ -94,13 +94,13 @@ async headers() {
 ```
 
 The tool surface is gated behind a Permissions Policy feature. Ship the header
-even where you are sure it is unnecessary, and know what it does *not* do: it is
+even where you are sure it is unnecessary. Know what it does *not* do: it is
 not a loopback exemption. Loopback trust affects whether a document counts as a
 [secure context](https://developer.mozilla.org/docs/Web/Security/Secure_Contexts),
 which is a separate check from the `tools` policy.
 
 What actually happens without the header depends on what the browser can
-observe, and the honest summary is narrower than "it stops working". This library
+observe. The honest summary is narrower than "it stops working". This library
 refuses installation on an **observable denial** and assumes permission when it
 cannot observe one:
 
@@ -111,12 +111,12 @@ cannot observe one:
 - If the Permissions Policy API is absent entirely, the same assumption applies.
 
 So the header is worth shipping because it turns a silent allowance into an
-enforced one on browsers that know the feature — not because the page is
+enforced one on browsers that know the feature: not because the page is
 guaranteed to degrade without it.
 
 ## Does it work?
 
-[Try it on this page](/try-it/) — register, enumerate, invoke, and watch it
+[Try it on this page](/try-it/): register, enumerate, invoke and watch it
 refuse. No installation, in your own browser.
 
 ## Two lifetimes
@@ -129,7 +129,7 @@ await context.registerTool(tool, { signal: controller.signal });
 controller.abort(); // removes the tool
 ```
 
-That signal controls **availability** — whether the tool can be discovered and
+That signal controls **availability**: whether the tool can be discovered and
 called at all. Execution has its own signal, passed per call, that cancels **one
 invocation** and nothing else:
 
@@ -139,8 +139,8 @@ const pending = context.executeTool(tool, input, { signal: call.signal });
 call.abort(); // cancels this call. The tool stays registered.
 ```
 
-Conflating them is the most common bug built on this surface, and it produces two
-symptoms that look unrelated: a tool that vanishes when a call times out, and an
+Conflating them is the most common bug built on this surface. It produces two
+symptoms that look unrelated: a tool that vanishes when a call times out and an
 invocation that keeps running after its tool is removed.
 
 ## Next
@@ -148,6 +148,6 @@ invocation that keeps running after its tool is removed.
 | | |
 |---|---|
 | [API reference](/reference/api/) | Every exported name, generated from the declarations |
-| [Annotations](/reference/annotations/) | What each one means, and what over-annotating costs |
+| [Annotations](/reference/annotations/) | What each one means and what over-annotating costs |
 | [Errors](/reference/errors/) | Every failure mode and the condition that produces it |
-| [Threat model](/security/threat-model/) | What this library can reach, and what it does not defend against |
+| [Threat model](/security/threat-model/) | What this library can reach and what it does not defend against |

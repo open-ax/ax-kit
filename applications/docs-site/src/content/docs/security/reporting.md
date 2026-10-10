@@ -1,11 +1,11 @@
 ---
 draft: false
 title: "Reporting a vulnerability"
-description: "A private route to report a security problem, and what happens to the report."
+description: "A private route to report a security problem and what happens to the report."
 ---
 
 **Please do not open a public issue for a vulnerability.** A public issue is
-visible to everyone before anyone has looked at it, and a proof of concept in
+visible to everyone before anyone has looked at it. A proof of concept in
 one is a working exploit for whoever finds the thread first.
 
 ## The route
@@ -43,13 +43,13 @@ registered by another origin and it ran" tells a maintainer where to look;
 | Stage | What to expect |
 |---|---|
 | Acknowledgement | Within a few days |
-| Assessment | Whether it is a real issue, and what it affects |
+| Assessment | Whether it is a real issue and what it affects |
 | Fix | A fix, or an explanation of why the behaviour is correct |
 | Credit | Named in the advisory unless you ask otherwise |
 
 Before the first published release the project's stated posture is best-effort:
 security fixes only, no backports to older versions. That is the right posture
-for a pre-1.0 polyfill whose value is conformance, and it is the same posture the
+for a pre-1.0 polyfill whose value is conformance. It is the same posture the
 repository's own policy file states.
 
 ## What is not a vulnerability
@@ -58,7 +58,7 @@ Some of these look like findings and are not. Each is listed because the reasoni
 is what a page author needs, not just a maintainer.
 
 **A tool handler doing something dangerous.** The handler is your code, running
-in your page's realm. The library cannot constrain it, and the surface adds
+in your page's realm. The library cannot constrain it. The surface adds
 discovery rather than capability.
 
 **An agent invoking a tool you did not expect it to.** Every registered tool is
@@ -67,7 +67,7 @@ restriction is `exposedTo`; per-tool restriction does not exist in the draft.
 
 **A tool result containing untrusted content.** The `untrustedContentHint`
 annotation is a declaration the library delivers and cannot enforce. What a
-consumer does with a result is outside its reach — that is the
+consumer does with a result is outside its reach. That is the
 [threat model](/security/threat-model/), stated in advance.
 
 **Tools not being visible across documents.** This implementation's registry is
