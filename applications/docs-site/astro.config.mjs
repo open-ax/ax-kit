@@ -248,6 +248,10 @@ export default defineConfig({
 				// what keeps an ordinary page free of the framework runtime. No global
 				// island is registered here, deliberately.
 				Footer: "./src/components/Footer.astro",
+				// The page head: berth's eyebrow, title and lede rather than a
+				// bare `<h1>`. The section label comes from the entry's path, so
+				// no page can forget it.
+				PageTitle: "./src/components/PageTitle.astro",
 			},
 			head: [
 				// A machine-readable summary of the documentation, served as data.
