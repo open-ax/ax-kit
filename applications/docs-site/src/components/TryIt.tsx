@@ -128,7 +128,7 @@ function readArguments(schema: unknown):
 			name: string;
 			type: string;
 			required: boolean;
-	  } | null>
+	  }>
 	| undefined {
 	if (typeof schema !== "object" || schema === null || Array.isArray(schema)) {
 		return undefined;
@@ -187,6 +187,20 @@ type Outcome =
 	  };
 
 /**
+ * `Outcome` without its `id`, as a union of the variants rather than one shape.
+ *
+ * The built-in `Omit` is not distributive: applied to a union it collapses to a
+ * single object type carrying only the keys every variant shares, so a caller
+ * passing `detail` or `value` is rejected against a type that no longer has them.
+ * That is why the log entries below need this rather than `Omit`.
+ */
+type Unidentified = Outcome extends infer Single
+	? Single extends Outcome
+		? Omit<Single, "id">
+		: never
+	: never;
+
+/**
  * The next log entry's id.
  *
  * Every entry needs a key React can distinguish, and two obvious choices are
@@ -225,7 +239,7 @@ export default function TryIt(): React.JSX.Element {
 
 	// The id is stamped here rather than at each call site, so an entry cannot be
 	// logged without one.
-	const note = useCallback((outcome: Omit<Outcome, "id">) => {
+	const note = useCallback((outcome: Unidentified) => {
 		nextOutcomeId += 1;
 		const entry = { ...outcome, id: nextOutcomeId } as Outcome;
 		setLog((previous) => [...previous, entry]);
