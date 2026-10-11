@@ -99,6 +99,22 @@ releases will be cut with Changesets.
 
 ### Fixed
 
+- The documentation site's `typecheck` was not a check. `astro check` was run
+  without `@astrojs/check` installed, so it offered to install it and exited 0;
+  and with no `tsconfig.json` of its own it resolved the repository root
+  config, whose `include` covers only `packages/*` — so it reported on other
+  packages and never on this site. The site now has a `tsconfig.json`, the
+  checker is a declared devDependency, `typecheck` runs `astro sync` first so a
+  clean checkout has the generated types, and errors in both `.ts`/`.tsx` and
+  `.astro` files fail the run. Five real type errors in `TryIt.tsx` were found
+  this way and are fixed. This is what made the release workflow fail: the
+  missing checker is a hard error on a runner, where nothing can answer the
+  prompt.
+- `applications/docs-site`: `readArguments` declared `| null` in its element
+  type and never returned one, and the log-entry helper used a non-distributive
+  `Omit` over a union, which collapsed the variants to their shared keys. Both
+  rejected valid calls at compile time.
+
 - `@ax-kit/daemon`: the loopback pull seam is typed as the queued envelope
   rather than `unknown`. An adapter answering "idle" with `undefined` instead
   of `null` previously reached a client as a `null` body under a `200`, which
