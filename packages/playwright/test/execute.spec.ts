@@ -224,7 +224,7 @@ test("rejects unknown tools and schema violations", async ({ page }) => {
 			.then(() => undefined);
 	});
 	await expect(page.ax.executeTool("guarded_tool", { q: 42 })).rejects.toThrow(
-		"tool did not complete",
+		"DataError",
 	);
 });
 
