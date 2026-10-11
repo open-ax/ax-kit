@@ -1,7 +1,7 @@
 ---
 draft: false
 title: "Errors"
-description: "Every failure mode, the condition that produces it, and what a caller can and cannot learn from it."
+description: "Every failure mode, the condition that produces it and what a caller can and cannot learn from it."
 ---
 
 import { SPEC_VERSION } from "@ax-kit/core";
@@ -31,13 +31,13 @@ try {
 | `InvalidStateError` | `DOMException` | The document has no browsing context, or the tool name is invalid, duplicated, or its description is missing or empty. |
 | `SecurityError` | `DOMException` | An entry in `exposedTo` or `fromOrigins` is unparseable, untrustworthy, or an opaque origin. |
 | `NotAllowedError` | `DOMException` | The `tools` Permissions Policy feature is denied for this document. |
-| `NotSupportedError` | `DOMException` | The target document or tool origin cannot be used — an opaque origin, for instance. |
+| `NotSupportedError` | `DOMException` | The target document or tool origin cannot be used: an opaque origin, for instance. |
 | `UnknownError` | `DOMException` | The execution was cancelled, the target went away, or **the tool's callback threw.** |
 | `TypeError` | `Error` | A WebIDL conversion failed: a primitive where an object was required, or a `title` that is not convertible to `USVString`. |
 
 ## The one that surprises people
 
-**A tool callback that throws rejects with `UnknownError`, and your message does
+**A tool callback that throws rejects with `UnknownError`. Your message does
 not reach the caller.**
 
 That is the draft's behaviour rather than a choice here: the specification says a
@@ -46,33 +46,33 @@ arguments carefully and throws a readable error has improved their own logs and
 nothing else.
 
 If an agent needs to distinguish "your arguments were wrong" from "the tool
-failed", the distinction has to come from somewhere other than the exception —
+failed", the distinction has to come from somewhere other than the exception:
 a result object with an error field, or validating before invoking. The
 [reference storefront](https://github.com/open-ax/ax-kit/tree/main/applications/demo-store/src/lib/register.ts)
-shows the first, and says so at the point where it matters.
+shows the first and says so at the point where it matters.
 
-## Preconditions, and which ones a polyfill can honour
+## Preconditions and which ones a polyfill can honour
 
 | Precondition | What happens without it |
 |---|---|
 | `[SecureContext]` | Installation returns `undefined`; no surface is defined. The platform marks the context non-secure and a polyfill cannot override that. |
-| Origin-keyed agent cluster | **Removed.** The 2 October 2026 draft deleted this requirement from all three methods. Earlier drafts required it, and this library did too until the correction landed — see [`docs/adr/0007`](https://github.com/open-ax/ax-kit/blob/main/docs/adr/0007-spec-drift-2026-10-07.md). |
+| Origin-keyed agent cluster | **Removed.** The 2 October 2026 draft deleted this requirement from all three methods. Earlier drafts required it. This library did too until the correction landed (see [`docs/adr/0007`](https://github.com/open-ax/ax-kit/blob/main/docs/adr/0007-spec-drift-2026-10-07.md)). |
 | `tools` Permissions Policy | Installation returns `undefined` and calls reject with `NotAllowedError`, wherever the platform lets a script observe the denial. |
 
 The Permissions Policy row has a real limit worth stating. Where the browser
-enforces denial itself, a polyfill sees nothing and assumes it is allowed — which
+enforces denial itself, a polyfill sees nothing and assumes it is allowed, which
 is correct, because the browser has already prevented the surface from being
 useful. Where the API *is* observable, it decides. Chromium outside the
-proposal's origin trial reports the feature as *absent* rather than *denied*, and
-the two are indistinguishable to a script.
+proposal's origin trial reports the feature as *absent* rather than *denied*.
+The two are indistinguishable to a script.
 
-## Two lifetimes, and where that shows up
+## Two lifetimes and where that shows up
 
 `InvalidStateError` and `UnknownError` both appear when a tool is removed while an
-agent holds a reference to it, and the pair means different things:
+agent holds a reference to it. The pair means different things:
 
 - **Registration signal aborted** → the tool is gone. A later `getTools()` will not
-  list it, and a call with a stale reference rejects.
+  list it. A call with a stale reference rejects.
 - **Execution signal aborted** → that one call is cancelled. The tool is still
   registered, because its lifetime is a different signal.
 

@@ -3,6 +3,79 @@ import starlight from "@astrojs/starlight";
 import { defineConfig } from "astro/config";
 
 /**
+ * A syntax theme in pure grey.
+ *
+ * One rule set for both schemes: comments recede (faint, italic), literals sit
+ * mid-ramp, and keywords and properties go to the ink. Berth's code themes are
+ * the same idea — quiet tokens, no rainbow — except theirs give strings a
+ * slate tint. This site's rule is white, black and grey, so the tint is gone
+ * and the hierarchy is carried by lightness, weight and italics alone.
+ *
+ * Italic comments are the second channel: with hue unavailable, two greys of
+ * similar value would be indistinguishable, and the italic is what tells a
+ * comment from a string at a glance.
+ */
+function greyTheme({ name, type, bg, fg, muted, faint, value, key }) {
+	const rules = [
+		{
+			scope: ["comment", "punctuation.definition.comment"],
+			settings: { foreground: faint, fontStyle: "italic" },
+		},
+		{
+			scope: [
+				"string",
+				"string.quoted",
+				"string.template",
+				"constant.other.symbol",
+			],
+			settings: { foreground: value },
+		},
+		{
+			scope: ["constant.numeric", "constant.language", "constant.character"],
+			settings: { foreground: value },
+		},
+		{
+			scope: [
+				"support.type.property-name",
+				"meta.object-literal.key",
+				"entity.name.tag",
+				"variable.other.property",
+			],
+			settings: { foreground: key },
+		},
+		{
+			scope: ["keyword", "storage", "storage.type", "keyword.operator.new"],
+			settings: { foreground: key },
+		},
+		{
+			scope: [
+				"entity.name.function",
+				"support.function",
+				"entity.name.command",
+			],
+			settings: { foreground: fg },
+		},
+		{
+			scope: ["variable.parameter", "variable.other.readwrite", "variable"],
+			settings: { foreground: fg },
+		},
+		{
+			scope: ["punctuation", "meta.brace", "keyword.operator"],
+			settings: { foreground: muted },
+		},
+	];
+	return {
+		name,
+		type,
+		colors: { "editor.background": bg, "editor.foreground": fg },
+		fg,
+		bg,
+		settings: [{ settings: { foreground: fg, background: bg } }, ...rules],
+		tokenColors: rules,
+	};
+}
+
+/**
  * The documentation site.
  *
  * Three decisions here are load-bearing, and each one is a response to something
@@ -72,17 +145,40 @@ export default defineConfig({
 		// `<TryIt client:load />`; no page ships the runtime unless it carries one.
 		react(),
 		starlight({
-			title: "ax-kit",
+			// The organisation, not the repository.
+			//
+			// The header lockup names who publishes the documentation, and that is
+			// OpenAX; `ax-kit` is one project under it. The same mark serves both —
+			// the organisation's own profile page sets `alt="OpenAX"` on this
+			// repository's `assets/ax-mark-*.png`, so there is one brand and one
+			// drawing, not a logo and a wordmark that have to agree.
+			//
+			// This is also what stops the browser tab reading `ax-kit | ax-kit`:
+			// the site's title becomes the delimiter's right-hand side, so the
+			// landing page — whose own frontmatter title is `ax-kit` — reads
+			// `ax-kit | OpenAX` instead of naming itself twice.
+			title: "OpenAX",
 			description:
 				"A correct, tiny, dependency-free implementation of WebMCP's ModelContext.",
-			// The repository's own brand mark rather than a copy, so the site cannot
-			// drift from the README's image. `.gitignore` excludes the root `assets/`
-			// from the site's own public directory, which is why this is not a bare
-			// `/ax-mark.png`.
-			logo: {
-				src: "../../assets/ax-mark-light.png",
-				replacesTitle: false,
-			},
+			// The tab mark. A PNG built from the real brand raster
+			// (`public/ax-mark-dark.png`: white silhouette on the `#0b1220` tile),
+			// not the hand-drawn SVG that used to sit here — that path was narrower,
+			// more symmetrical, and its swoosh thinner than the real mark, and a logo
+			// that does not match is worse than one that costs 696 bytes. The old
+			// `/favicon.svg` is deleted with this change: leaving the file while
+			// pointing elsewhere is how dead assets accumulate unnoticed.
+			//
+			// Top-level, because it is a site option, not a component override. It
+			// was first written one block too deep, inside `components:` — where the
+			// schema silently strips unknown keys, so every page kept the default
+			// `/favicon.svg` and the link gate failed the build on the deleted file.
+			// A misplaced option that fails silently is worse than one that errors.
+			favicon: "/favicon-32x32.png",
+			// No `logo`. The mark is placed by the `SiteTitle` override instead, from
+			// this application's own `public/`: the mark is a two-tone raster, so
+			// the framework's single-`src` `logo` option could only ever serve one
+			// of its two colourways and the other scheme would get the wrong one.
+			// `SiteTitle` renders both and the stylesheet picks by `data-theme`.
 			// The array form, not the object form: v0.33.0 changed the syntax and
 			// the object form is rejected outright rather than deprecated. Found by
 			// running the build, which is the only way to find it.
@@ -134,23 +230,119 @@ export default defineConfig({
 					],
 				},
 			],
-			// The self-hosted variable font, then the whole stylesheet. Both come
-			// from the framework's own extension point rather than from a `<link>`
-			// in a layout, so the stylesheet loads in the order the cascade needs —
-			// after the framework's tokens, so its overrides win without a single
-			// `!important`.
+			// The self-hosted variable fonts, then the whole stylesheet. All three
+			// come from the framework's own extension point rather than from a
+			// `<link>` in a layout, so the stylesheet loads in the order the
+			// cascade needs — after the framework's tokens, so its overrides win
+			// without a single `!important`.
 			//
 			// Self-hosted rather than fetched from a font CDN: a documentation page
 			// that makes a third-party request on load tells a third party who read
 			// it, and this site makes no third-party requests at all.
-			customCss: ["@fontsource-variable/hanken-grotesk", "./src/styles/ax.css"],
+			//
+			// The family names carry a `Variable` suffix — read out of the installed
+			// packages' own `index.css`, which declare `font-family: 'Geist Mono
+			// Variable'`. Asking for the un-suffixed name matches no `@font-face`
+			// rule, so the browser falls through to `system-ui`: the file is
+			// downloaded on every page and never used.
+			customCss: [
+				"@fontsource-variable/hanken-grotesk",
+				"@fontsource-variable/geist-mono",
+				"./src/styles/ax.css",
+			],
+			// Code blocks in the same greys as the page, in both schemes.
+			//
+			// The framework's default is Night Owl — a blue-and-purple theme, the
+			// loudest thing on any page built out of grey. Every code block on the
+			// site is set through these two themes instead, so the syntax
+			// highlighting follows the page's own palette rather than importing a
+			// second one.
+			expressiveCode: {
+				themes: [
+					greyTheme({
+						name: "ax-grey-light",
+						type: "light",
+						bg: "#fafafa",
+						// Measured against `#fafafa`, not eyeballed. The previous ramp
+						// put comments at `#a3a3a3` — 2.42:1, which fails WCAG AA
+						// (4.5:1) — and separated comments from punctuation by 0.89 of a
+						// contrast point, so the two were the same grey to the eye. That
+						// is why the blocks read as flat: not a font problem, and not
+						// hue, but too few *distinguishable* steps in one ramp.
+						//
+						// The order is unchanged — comments recede, literals sit mid-ramp,
+						// keywords go to the ink — but the steps are now far enough apart
+						// to tell apart at a glance, and nothing a reader has to read is
+						// below 4.5:1. Measured against `#fafafa`, from the top down:
+						// key 18.62, fg 12.10, value 6.12, faint 4.89, muted 3.22.
+						// Punctuation is the one step under the threshold, and deliberately
+						// so: braces and semicolons are decoration, and holding them to a
+						// text threshold is what flattens the other four.
+						fg: "#333333", //  12.10:1 — functions, variables
+						muted: "#8c8c8c", //  3.22:1 — punctuation; decoration, not read as text
+						faint: "#6e6e6e", //  4.89:1 — comments: recede, but stay legible
+						value: "#5f5f5f", //  6.12:1 — strings, numbers, constants
+						key: "#0d0d0d", // 18.62:1 — keywords, properties: the ink
+					}),
+					greyTheme({
+						name: "ax-grey-dark",
+						type: "dark",
+						bg: "#161616",
+						// The same five decisions against `#161616`: key 16.16,
+						// fg 12.21, value 8.34, faint 6.59, muted 5.24. Comments were at
+						// `#5e5e5e` — 2.79:1 — and failed in this scheme too, which is the
+						// half of the problem that a light-scheme-only check never sees.
+						fg: "#d4d4d4", // 12.21:1
+						muted: "#8a8a8a", // 5.24:1
+						faint: "#9c9c9c", // 6.59:1
+						value: "#b0b0b0", // 8.34:1
+						key: "#f2f2f2", // 16.16:1
+					}),
+				],
+				// Follow the site's own theme rather than the code block's, so a
+				// block never renders dark on a light page.
+				useStarlightDarkModeSwitch: true,
+			},
 			components: {
+				// The document head, so navigation swaps the document instead of
+				// reloading it. Renders the framework's own head first — the slot
+				// replaces rather than wraps, and dropping it would take the
+				// canonical link and the `llms.json` alternate with it.
+				Head: "./src/components/Head.astro",
+				// The theme control. The framework's own is a three-option native
+				// `<select>`, which cannot be styled — `appearance: none` is honoured
+				// inconsistently and some platforms draw the whole widget — and it
+				// spends header width on a word about the system rather than the page.
+				// This writes the same three things the framework's writes: the
+				// `data-theme` attribute, the `starlight-theme` preference, and
+				// `updatePickers` so the mobile menu's own control stays in step.
+				ThemeSelect: "./src/components/ThemeToggle.astro",
 				// An island is opt-in per page through `<TryIt />`, and this slot is
 				// what keeps an ordinary page free of the framework runtime. No global
 				// island is registered here, deliberately.
 				Footer: "./src/components/Footer.astro",
+				// The page head: berth's eyebrow, title and lede rather than a
+				// bare `<h1>`. The section label comes from the entry's path, so
+				// no page can forget it.
+				PageTitle: "./src/components/PageTitle.astro",
+				// The brand lockup: the OpenAX mark and word. Renders both colourways
+				// of the raster and the stylesheet picks by `data-theme`, because the
+				// two files are two different drawings — not inverses — and the
+				// framework's single-`src` `logo` option could only ever serve one.
+				SiteTitle: "./src/components/SiteTitle.astro",
 			},
 			head: [
+				// The touch icon. iOS ignores the favicon and fetches this on
+				// "add to home screen"; without it the shortcut gets a screenshot
+				// of the page. Built from the same raster as the favicon, at the
+				// 180px Apple asks for.
+				{
+					tag: "link",
+					attrs: {
+						rel: "apple-touch-icon",
+						href: "/apple-touch-icon.png",
+					},
+				},
 				// A machine-readable summary of the documentation, served as data.
 				// Offered rather than asserted as a standard: the convention exists as
 				// a proposal with a small number of adopters, and this project does not
