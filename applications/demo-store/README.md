@@ -8,7 +8,7 @@ arranged the way it is.
 pnpm --filter @ax-kit/demo-store dev     # http://localhost:3000
 pnpm --filter @ax-kit/demo-store build
 pnpm --filter @ax-kit/demo-store test            # the tool surface, fast layer
-pnpm --filter @ax-kit/demo-store test:browser    # the built output, real browser
+pnpm --filter @ax-kit/demo-store test:browser    # the built output, real browser, runs in CI
 ```
 
 ## What it demonstrates

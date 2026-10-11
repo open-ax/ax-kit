@@ -9,7 +9,7 @@ it, and installation is exactly the step that deters evaluation.
 pnpm --filter @ax-kit/docs-site dev            # http://localhost:4322
 pnpm --filter @ax-kit/docs-site build          # generate, build, gate
 pnpm --filter @ax-kit/docs-site test           # vocabulary, sources
-pnpm --filter @ax-kit/docs-site test:browser   # the built output, real browser
+pnpm --filter @ax-kit/docs-site test:browser    # built output, real browser, runs in CI
 ```
 
 `build` runs four things in order, and the last two can fail it:

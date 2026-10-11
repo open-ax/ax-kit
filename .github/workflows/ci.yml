@@ -198,6 +198,20 @@ jobs:
       - name: Build
         run: pnpm build
 
+      # The applications' browser suites, against the build output produced
+      # immediately above. These assert what the unit layers cannot see — a
+      # deployed response header, a status code, a structured-data blob, a
+      # hydrated island working in a real browser — and both applications describe
+      # themselves in terms these tests are the only evidence for.
+      #
+      # A step rather than a separate job, because the two reasons `conformance`
+      # is split out do not apply here: Chromium is already installed above, and
+      # this needs one engine rather than three, and seconds rather than minutes.
+      # `turbo.json` gives the task a `build` dependency, so it cannot run against
+      # a stale or absent build even when invoked on its own.
+      - name: Application browser suites
+        run: pnpm test:browser
+
       - name: Size gate (5 kB gzip)
         run: pnpm size
 
