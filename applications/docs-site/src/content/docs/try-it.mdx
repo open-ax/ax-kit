@@ -37,10 +37,11 @@ behaviour, not a limitation of the polyfill.
 
 **Both refusals above come from schema validation, not from a throwing
 handler.** The library checks the arguments against the declared `inputSchema`
-before `execute` runs. It reports the failure as the specification's generic
+before `execute` runs. This library reports the failure as
 `UnknownError`. So an agent sending `query: 42` and an agent sending no `query` at
 all both see `UnknownError` and cannot tell them apart. That is a limitation worth
-seeing rather than a conformance claim: the draft specifies one failure name.
+seeing rather than a conformance claim: this schema-refusal mapping is library
+behavior.
 
 A handler that throws produces the same `UnknownError`, so a readable message from
 your handler reaches your log and not the agent. If an agent must distinguish

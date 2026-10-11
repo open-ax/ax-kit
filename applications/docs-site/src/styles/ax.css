@@ -800,7 +800,7 @@ main {
 	border-radius: 4px;
 	padding: 0.0625rem 0.25rem;
 	font-size: 0.6875rem;
-	color: var(--ax-faint);
+	color: var(--ax-muted);
 }
 
 .header .right-group,
@@ -992,7 +992,7 @@ ax-theme-toggle {
 
 /* ── Table of contents ────────────────────────────────────────────────────
  *
- * A list of the page's own headings, in the faint grey, at the size where a
+ * A list of the page's own headings, in the muted grey, at the size where a
  * list of forty entries stays scannable.
  */
 
@@ -1073,7 +1073,7 @@ mobile-starlight-toc summary .toggle::before {
 }
 
 .right-sidebar-panel :is(a, a:hover) {
-	color: var(--ax-faint);
+	color: var(--ax-muted);
 	font-size: 0.75rem;
 	text-decoration: none;
 	line-height: 1.5;
@@ -1165,7 +1165,7 @@ mobile-starlight-toc summary .toggle::before {
 .sl-markdown-content .expressive-code .frame.is-terminal .header {
 	background: var(--ax-surface-sunk);
 	border-bottom: 1px solid var(--ax-rule);
-	/* 1.75rem is the shortest bar that still centres the three 6px dots on the
+	/* 2rem is the shortest bar that still centres the three 6px dots on the
 	 * pixel grid; at 0.5rem they sit on a half-pixel and read as smudged. */
 	padding: 0;
 }
@@ -2017,7 +2017,7 @@ mobile-starlight-toc summary .toggle::before {
 .ax-not-found .ax-not-found-code {
 	font-size: var(--sl-text-sm);
 	font-weight: 500;
-	color: var(--ax-faint);
+	color: var(--ax-muted);
 }
 
 .ax-not-found-links {

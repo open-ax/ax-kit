@@ -67,6 +67,29 @@ const MOON = `<svg class="ax-theme-toggle__icon ax-theme-toggle__icon--moon" vie
 		if (text) text.textContent = label(theme);
 	}
 
+	function restoreAfterSwap(): void {
+		let stored: string | null = null;
+		try {
+			stored = localStorage.getItem(STORAGE_KEY);
+		} catch {
+		}
+		const theme: Theme =
+			stored === "light" || stored === "dark"
+				? stored
+				: window.matchMedia("(prefers-color-scheme: light)").matches
+					? "light"
+					: "dark";
+		document.documentElement.dataset.theme = theme;
+		window.StarlightThemeProvider?.updatePickers(theme);
+		for (const button of document.querySelectorAll(
+			"ax-theme-toggle button",
+		)) {
+			if (button instanceof HTMLButtonElement) sync(button);
+		}
+	}
+
+	document.addEventListener("astro:after-swap", restoreAfterSwap);
+
 	if (!customElements.get("ax-theme-toggle")) {
 		customElements.define("ax-theme-toggle", AxThemeToggle);
 	}
@@ -80,6 +103,11 @@ const MOON = `<svg class="ax-theme-toggle__icon ax-theme-toggle__icon--moon" vie
 			} catch {
 			}
 			if (stored) return;
+			document.documentElement.dataset.theme = window.matchMedia(
+				"(prefers-color-scheme: light)",
+			).matches
+				? "light"
+				: "dark";
 			for (const button of document.querySelectorAll(
 				"ax-theme-toggle button",
 			)) {

@@ -470,9 +470,12 @@ export default function TryIt(): React.JSX.Element {
 
 			<h4>Invoke one</h4>
 			<p className="ax-try__muted">
-				The first two calls are well formed and succeed. The last two break
-				the declared <code>inputSchema</code> and are refused with{" "}
-				<code>UnknownError</code> before any tool code runs.
+				The first two calls are well formed and succeed. With this library
+				answering, the last two break the declared{" "}
+				<code>inputSchema</code> and are refused with{" "}
+				<code>UnknownError</code> before any tool code runs. A native{" "}
+				<code>document.modelContext</code> may accept them instead, because
+				the draft does not require schema validation before the callback.
 			</p>
 			<div className="ax-try__group">
 				<p className="ax-try__group-label">Calls that succeed</p>
@@ -501,7 +504,7 @@ export default function TryIt(): React.JSX.Element {
 			</div>
 			<div className="ax-try__group">
 				<p className="ax-try__group-label">
-					Calls that are refused with <code>UnknownError</code>
+					Calls this library refuses with <code>UnknownError</code>
 				</p>
 				<p className="ax-try__actions">
 					<button
