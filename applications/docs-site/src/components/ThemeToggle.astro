@@ -103,11 +103,13 @@ const MOON = `<svg class="ax-theme-toggle__icon ax-theme-toggle__icon--moon" vie
 			} catch {
 			}
 			if (stored) return;
-			document.documentElement.dataset.theme = window.matchMedia(
+			const theme: Theme = window.matchMedia(
 				"(prefers-color-scheme: light)",
 			).matches
 				? "light"
 				: "dark";
+			document.documentElement.dataset.theme = theme;
+			window.StarlightThemeProvider?.updatePickers(theme);
 			for (const button of document.querySelectorAll(
 				"ax-theme-toggle button",
 			)) {
