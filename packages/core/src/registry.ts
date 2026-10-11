@@ -2,10 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {
+	abortError,
+	dataError,
 	invalidState,
 	notAllowed,
+	notFound,
 	notSupported,
-	unknownError,
+	operationError,
 } from "./errors.js";
 import { fireToolActivated, fireToolCancel, fireToolChange } from "./events.js";
 import {
@@ -118,7 +121,10 @@ interface PendingExecution {
 	readonly targetDocument: Document;
 	readonly toolName: string;
 	readonly controller: AbortController;
-	readonly complete: (result: string | null) => void;
+	readonly complete: (
+		result: string | null,
+		error: DOMException | null,
+	) => void;
 }
 
 const pendingExecutions = new Map<number, PendingExecution>();
@@ -136,8 +142,8 @@ function cancelExecution(uuid: number, pending: PendingExecution): void {
 
 /**
  * Unloading-document cleanup: pending executions touching the destroyed
- * document settle per the draft — target gone completes false (the caller
- * rejects `UnknownError`), caller gone cancels, both gone just removes.
+ * document settle per the draft — target gone completes with `AbortError`
+ * (target document unloaded), caller gone cancels, both gone just removes.
  */
 export function handleDocumentUnload(doc: Document): void {
 	for (const [uuid, pending] of pendingExecutions) {
@@ -148,7 +154,7 @@ export function handleDocumentUnload(doc: Document): void {
 		const targetGone = pending.targetDocument === doc;
 		if (targetGone && !callerGone) {
 			pending.controller.abort();
-			pending.complete(null);
+			pending.complete(null, abortError("target document unloaded"));
 		} else if (callerGone && !targetGone) {
 			cancelExecution(uuid, pending);
 		} else {
@@ -520,17 +526,27 @@ export class ModelContextImpl extends EventTarget implements ModelContext {
 
 		let target: Document;
 		try {
-			const targetWindow = given.window as Window;
+			const targetWindow = given.window as Window | null | undefined;
+			if (typeof targetWindow !== "object" || targetWindow === null) {
+				throw new TypeError("bad tool target");
+			}
 			target = targetWindow.document;
-		} catch {
-			throw unknownError("bad tool target");
+		} catch (error) {
+			if (error instanceof TypeError) {
+				throw error;
+			}
+			// A genuine Window whose document is unreadable (cross-origin
+			// WindowProxy) is a valid dictionary that fails the exposure check
+			// below. Reject as not found so a fabricated handle cannot probe
+			// the target's origin, per the draft's anti-probing note.
+			throw notFound("tool not exposed");
 		}
 		if (typeof target !== "object" || target === null) {
-			throw unknownError("bad tool target");
+			throw new TypeError("bad tool target");
 		}
 
 		if (topDocument(caller) !== topDocument(target)) {
-			throw unknownError("foreign tool target");
+			throw invalidState("foreign tool target");
 		}
 
 		// Authority can change after registration: re-check the target's
@@ -539,25 +555,25 @@ export class ModelContextImpl extends EventTarget implements ModelContext {
 		try {
 			checkCallerGates(target);
 		} catch {
-			throw unknownError("target not eligible");
+			throw notFound("target not eligible");
 		}
 
 		const toolName =
 			given.name === undefined ? "undefined" : String(given.name);
 		const liveOrigin = effectiveOrigin(target);
 		if (liveOrigin !== expected.origin) {
-			throw unknownError("tool origin mismatch");
+			throw notFound("tool origin mismatch");
 		}
 
 		const targetState = states.get(target);
 		const record = targetState?.tools.get(toolName);
 		if (record === undefined) {
-			throw unknownError("unknown tool");
+			throw notFound("unknown tool");
 		}
 
 		const callerOrigin = effectiveOrigin(caller);
 		if (!isExposedTo(liveOrigin, record.exposedOrigins, callerOrigin)) {
-			throw unknownError("tool not exposed");
+			throw notFound("tool not exposed");
 		}
 
 		const uuid = nextExecutionId++;
@@ -575,7 +591,7 @@ export class ModelContextImpl extends EventTarget implements ModelContext {
 				targetDocument: target,
 				toolName,
 				controller,
-				complete: (result: string | null): void => {
+				complete: (result: string | null, error: DOMException | null): void => {
 					if (!pendingExecutions.has(uuid)) {
 						return;
 					}
@@ -586,7 +602,7 @@ export class ModelContextImpl extends EventTarget implements ModelContext {
 					if (result !== null) {
 						resolveCaller(result);
 					} else {
-						rejectCaller(unknownError("tool did not complete"));
+						rejectCaller(error ?? operationError("tool did not complete"));
 					}
 				},
 			};
@@ -606,7 +622,7 @@ export class ModelContextImpl extends EventTarget implements ModelContext {
 
 			void runToolCall(invocation, controller.signal, tracker.complete).catch(
 				() => {
-					tracker.complete(null);
+					tracker.complete(null, operationError("tool did not complete"));
 				},
 			);
 		});
@@ -622,14 +638,14 @@ interface ToolInvocation {
 async function runToolCall(
 	invocation: ToolInvocation,
 	localSignal: AbortSignal,
-	complete: (result: string | null) => void,
+	complete: (result: string | null, error: DOMException | null) => void,
 ): Promise<void> {
 	let parsed: unknown;
 	let current: ToolRecord;
 	try {
 		parsed = JSON.parse(invocation.arguments) as unknown;
 		if (typeof parsed !== "object" || parsed === null) {
-			throw new TypeError("bad arguments");
+			throw dataError("invalid input");
 		}
 		// Re-validate against the current definition so an
 		// unregister/re-register race cannot check new arguments against an old
@@ -638,12 +654,20 @@ async function runToolCall(
 			.get(invocation.target)
 			?.tools.get(invocation.name);
 		if (liveRecord === undefined) {
-			throw new TypeError("unknown tool");
+			throw notFound("tool not found");
 		}
 		current = liveRecord;
-		assertValidArguments(parsed, current.schemaJson);
-	} catch {
-		complete(null);
+		try {
+			assertValidArguments(parsed, current.schemaJson);
+		} catch {
+			throw dataError("invalid input");
+		}
+	} catch (error) {
+		if (error instanceof DOMException) {
+			complete(null, error);
+		} else {
+			complete(null, dataError("invalid input"));
+		}
 		return;
 	}
 	const live = states.get(invocation.target);
@@ -657,7 +681,7 @@ async function runToolCall(
 		warnDiagnostic(
 			`tool failed: ${error instanceof Error ? error.message : "unknown reason"}`,
 		);
-		complete(null);
+		complete(null, operationError("tool rejected"));
 		return;
 	}
 	let serialized: string | undefined;
@@ -668,10 +692,10 @@ async function runToolCall(
 		serialized = undefined;
 	}
 	if (serialized === undefined) {
-		complete(null);
+		complete(null, operationError("unserializable result"));
 		return;
 	}
-	complete(serialized);
+	complete(serialized, null);
 }
 
 export function unregisterRecord(doc: Document, name: string): boolean {

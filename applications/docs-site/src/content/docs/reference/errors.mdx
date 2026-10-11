@@ -10,7 +10,7 @@ Everything on this page describes **{SPEC_VERSION.draft}** (upstream
 <code>{SPEC_VERSION.commit}</code>).
 
 Every failure below is a rejection with a **specified name**, never a generic
-error. Five of the six are `DOMException`; `TypeError` is a JavaScript error and
+error. All but one are `DOMException`; `TypeError` is a JavaScript error and
 is the only one that is not. Checking for a name is therefore the correct way to
 branch:
 
@@ -32,16 +32,19 @@ try {
 | `SecurityError` | `DOMException` | An entry in `exposedTo` or `fromOrigins` is unparseable, untrustworthy, or an opaque origin. |
 | `NotAllowedError` | `DOMException` | The `tools` Permissions Policy feature is denied for this document. |
 | `NotSupportedError` | `DOMException` | The target document or tool origin cannot be used: an opaque origin, for instance. |
-| `UnknownError` | `DOMException` | The execution was cancelled, the target went away, or **the tool's callback threw.** |
+| `NotFoundError` | `DOMException` | The tool is not registered in the target document, the origin does not match, or it is not exposed to the caller. All three reject the same way so a cross-origin caller cannot probe for private tools. |
+| `DataError` | `DOMException` | The input arguments could not be parsed into a JavaScript object, or they fail the tool's schema. |
+| `OperationError` | `DOMException` | The tool's callback threw, or its result could not be serialized to a JSON string. |
+| `AbortError` | `DOMException` | The target document was unloaded before execution completed, or the caller's signal aborted the call. |
 | `TypeError` | `Error` | A WebIDL conversion failed: a primitive where an object was required, or a `title` that is not convertible to `USVString`. |
 
 ## The one that surprises people
 
-**A tool callback that throws rejects with `UnknownError`. Your message does
+**A tool callback that throws rejects with `OperationError`. Your message does
 not reach the caller.**
 
 That is the draft's behaviour rather than a choice here: the specification says a
-callback failure surfaces as `UnknownError`. So a page author who validates
+callback failure surfaces as `OperationError`. So a page author who validates
 arguments carefully and throws a readable error has improved their own logs and
 nothing else.
 
@@ -68,7 +71,7 @@ The two are indistinguishable to a script.
 
 ## Two lifetimes and where that shows up
 
-`InvalidStateError` and `UnknownError` both appear when a tool is removed while an
+`InvalidStateError` and `NotFoundError` both appear when a tool is removed while an
 agent holds a reference to it. The pair means different things:
 
 - **Registration signal aborted** → the tool is gone. A later `getTools()` will not

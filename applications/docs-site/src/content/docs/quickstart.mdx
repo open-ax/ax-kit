@@ -72,7 +72,7 @@ Three things the shape is telling you:
 - **`inputSchema` is enforced before your handler runs.** The draft describes
   what a well-formed call looks like but implements no checking against it, so
   this library checks: `executeTool` validates the arguments against
-  `inputSchema` first and rejects with `UnknownError` if they do not match. That
+  `inputSchema` first and rejects with `DataError` if they do not match. That
   covers the declared schema and nothing else. A handler still validates
   everything the schema cannot say - whether a SKU exists, whether a quantity is
   in stock - because those are your rules, not your schema's.

@@ -41,7 +41,7 @@ project's job, because a polyfill is the thing doing the validating. The
 declaration and the check are written from one table so they cannot drift apart.
 
 One consequence worth knowing: the draft specifies that a callback which throws
-rejects the caller with `UnknownError`, so the readable message a handler throws
+rejects the caller with `OperationError`, so the readable message a handler throws
 is *not* what an agent sees. See `buildTool` in `src/lib/register.ts`.
 
 **The polyfill installs without the tree becoming client-side.** `layout.tsx`,

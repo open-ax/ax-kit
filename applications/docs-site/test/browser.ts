@@ -188,7 +188,7 @@ describe("the built site", () => {
 		// every page precisely so no page can forget.
 		for (const path of ["/quickstart/", "/reference/errors/", "/try-it/"]) {
 			const html = await (await fetch(`${ORIGIN}${path}`)).text();
-			expect(html, `${path} does not name a draft`).toContain("2 October 2026");
+			expect(html, `${path} does not name a draft`).toContain("9 October 2026");
 		}
 	});
 });
@@ -260,12 +260,12 @@ describe("the live demonstration", () => {
 				page.locator(".ax-try__log li", {
 					hasText: "numeric query",
 				}),
-			).toContainText("UnknownError");
+			).toContainText("DataError");
 
 			await page.getByRole("button", { name: "search_products({})" }).click();
 			await expect(
 				page.locator(".ax-try__log li", { hasText: "no query" }),
-			).toContainText("UnknownError");
+			).toContainText("DataError");
 		} finally {
 			await browser.close();
 		}

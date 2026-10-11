@@ -298,7 +298,7 @@ describe("browser frames", () => {
 				configurable: true,
 			});
 			expect(errorName(await errorOf(mc.executeTool(tool, {})))).toBe(
-				"UnknownError",
+				"NotFoundError",
 			);
 		} finally {
 			child.defaultView?.frameElement?.remove();
@@ -337,7 +337,7 @@ describe("browser frames", () => {
 			}
 			const pending = mc.executeTool(tool, {});
 			child.defaultView?.frameElement?.remove();
-			expect(errorName(await errorOf(pending))).toBe("UnknownError");
+			expect(errorName(await errorOf(pending))).toBe("AbortError");
 			expect(aborted).toBe(true);
 		} finally {
 			child.defaultView?.frameElement?.remove();

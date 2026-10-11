@@ -24,6 +24,18 @@ export function notSupported(message: string): DOMException {
 	return new DOMException(message, "NotSupportedError");
 }
 
-export function unknownError(message: string): DOMException {
-	return new DOMException(message, "UnknownError");
+export function notFound(message: string): DOMException {
+	return new DOMException(message, "NotFoundError");
+}
+
+export function dataError(message: string): DOMException {
+	return new DOMException(message, "DataError");
+}
+
+export function operationError(message: string): DOMException {
+	return new DOMException(message, "OperationError");
+}
+
+export function abortError(message: string): DOMException {
+	return new DOMException(message, "AbortError");
 }

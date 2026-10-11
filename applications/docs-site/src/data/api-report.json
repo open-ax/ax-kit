@@ -177,7 +177,7 @@
 				{
 					"kind": "const",
 					"name": "SPEC_VERSION",
-					"signature": "export declare const SPEC_VERSION: { readonly draft: \"Draft Community Group Report, 2 October 2026\"; readonly commit: \"d61d0e6\"; }"
+					"signature": "export declare const SPEC_VERSION: { readonly draft: \"Draft Community Group Report, 9 October 2026\"; readonly commit: \"d0e4e0e\"; }"
 				},
 				{
 					"kind": "class",

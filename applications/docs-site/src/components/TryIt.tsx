@@ -384,10 +384,10 @@ export default function TryIt(): React.JSX.Element {
 			<p className="ax-try__muted">
 				With <em>this library</em> answering, both are refused. It checks the
 				arguments against the declared <code>inputSchema</code> before a tool's{" "}
-				<code>execute</code> runs. It reports the failure as the draft's generic{" "}
-				<code>UnknownError</code>, so an agent cannot tell a bad{" "}
-				<code>query</code> from a missing one. That is a limitation worth seeing
-				rather than a conformance claim.
+				<code>execute</code> runs. It reports the failure as{" "}
+				<code>DataError</code>, so an agent cannot tell a bad <code>query</code>{" "}
+				from a missing one. That is a limitation worth seeing rather than a
+				conformance claim.
 			</p>
 			<p className="ax-try__muted">
 				<b>
@@ -477,7 +477,7 @@ export default function TryIt(): React.JSX.Element {
 			<p className="ax-try__muted">
 				The first two calls are well formed and succeed. With this library
 				answering, the last two break the declared <code>inputSchema</code> and
-				are refused with <code>UnknownError</code> before any tool code runs. A
+				are refused with <code>DataError</code> before any tool code runs. A
 				native <code>document.modelContext</code> may accept them instead,
 				because the draft does not require schema validation before the
 				callback.
@@ -509,7 +509,7 @@ export default function TryIt(): React.JSX.Element {
 			</div>
 			<div className="ax-try__group">
 				<p className="ax-try__group-label">
-					Calls this library refuses with <code>UnknownError</code>
+					Calls this library refuses with <code>DataError</code>
 				</p>
 				<p className="ax-try__actions">
 					<button
