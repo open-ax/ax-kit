@@ -28,14 +28,14 @@ try {
 
 | Name | Type | Raised when |
 |---|---|---|
-| `InvalidStateError` | `DOMException` | The document has no browsing context, or the tool name is invalid, duplicated, or its description is missing or empty. |
+| `InvalidStateError` | `DOMException` | The document has no browsing context, the tool lives in another frame tree, or the tool name is invalid, duplicated, or its description is missing or empty. |
 | `SecurityError` | `DOMException` | An entry in `exposedTo` or `fromOrigins` is unparseable, untrustworthy, or an opaque origin. |
 | `NotAllowedError` | `DOMException` | The `tools` Permissions Policy feature is denied for this document. |
 | `NotSupportedError` | `DOMException` | The target document or tool origin cannot be used: an opaque origin, for instance. |
-| `NotFoundError` | `DOMException` | The tool is not registered in the target document, the origin does not match, or it is not exposed to the caller. All three reject the same way so a cross-origin caller cannot probe for private tools. |
+| `NotFoundError` | `DOMException` | The tool is not registered in the target document, the origin does not match, or it is not exposed to the caller. A target that fails its own gates at invocation time and a genuine window whose document is unreadable are reported the same way. All of these reject alike so a cross-origin caller cannot probe for private tools. |
 | `DataError` | `DOMException` | The input arguments could not be parsed into a JavaScript object, or they fail the tool's schema. |
 | `OperationError` | `DOMException` | The tool's callback threw, or its result could not be serialized to a JSON string. |
-| `AbortError` | `DOMException` | The target document was unloaded before execution completed, or the caller's signal aborted the call. |
+| `AbortError` | `DOMException` | The target document was unloaded before execution completed. Aborting the caller's own signal rejects with that signal's reason, which is an `AbortError` for a default `abort()` and a custom reason otherwise. |
 | `TypeError` | `Error` | A WebIDL conversion failed: a primitive where an object was required, or a `title` that is not convertible to `USVString`. |
 
 ## The one that surprises people
