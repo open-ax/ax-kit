@@ -88,6 +88,15 @@ See docs/releasing.md for the full procedure.
 No published package yet. Entries above describe the in-tree API; versioned
 releases will be cut with Changesets.
 
+### Changed
+
+- The applications' Playwright suites now run in CI. `test:browser` is a
+  Turbo task and a step in the `toolchain` job, so the assertions that only a
+  real browser and a real served response can make — the storefront's
+  `Permissions-Policy` header, the catalogue route's `501`, the structured
+  data, the documentation site's hydrated island and locally built search
+  index — are gates rather than claims. See `docs/adr/0009-application-browser-suites-are-gates.md`.
+
 ### Fixed
 
 - `@ax-kit/daemon`: the loopback pull seam is typed as the queued envelope

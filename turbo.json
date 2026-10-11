@@ -18,6 +18,9 @@
 		"test:conformance": {
 			"dependsOn": ["build"]
 		},
+		"test:browser": {
+			"dependsOn": ["build"]
+		},
 		"size": {
 			"dependsOn": ["build"]
 		},
