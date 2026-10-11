@@ -262,9 +262,7 @@ describe("the live demonstration", () => {
 				}),
 			).toContainText("UnknownError");
 
-			await page
-				.getByRole("button", { name: "search_products({})" })
-				.click();
+			await page.getByRole("button", { name: "search_products({})" }).click();
 			await expect(
 				page.locator(".ax-try__log li", { hasText: "no query" }),
 			).toContainText("UnknownError");

@@ -384,8 +384,8 @@ export default function TryIt(): React.JSX.Element {
 			<p className="ax-try__muted">
 				With <em>this library</em> answering, both are refused. It checks the
 				arguments against the declared <code>inputSchema</code> before a tool's{" "}
-				<code>execute</code> runs. It reports the failure as the draft's
-				generic <code>UnknownError</code>, so an agent cannot tell a bad{" "}
+				<code>execute</code> runs. It reports the failure as the draft's generic{" "}
+				<code>UnknownError</code>, so an agent cannot tell a bad{" "}
 				<code>query</code> from a missing one. That is a limitation worth seeing
 				rather than a conformance claim.
 			</p>
@@ -415,67 +415,72 @@ export default function TryIt(): React.JSX.Element {
 				// phone: four columns do not fit 360px, and without it the table
 				// either crushes its code column into wrapping mid-identifier
 				// or pushes the whole page sideways.
-				<div className="ax-try__scroll" tabIndex={0} role="region" aria-label="Registered tools">
-				<table className="ax-try__table">
-					<thead>
-						<tr>
-							<th scope="col">Name</th>
-							<th scope="col">Title</th>
-							<th scope="col">Consequential</th>
-							<th scope="col">Arguments</th>
-						</tr>
-					</thead>
-					<tbody>
-						{rows.map((row) => (
-							<tr key={row.name}>
-								<td>
-									<code>{row.name}</code>
-								</td>
-								<td>{row.title}</td>
-								<td>
-									{row.consequential ? (
-										<strong>yes</strong>
-									) : (
-										<span className="ax-try__muted">no</span>
-									)}
-								</td>
-								<td>
-									{row.hasSchema ? (
-										row.arguments === undefined ? (
-											<span className="ax-try__muted">
-												declared, but not summarisable here
-											</span>
-										) : (
-											<code>
-												{row.arguments.length === 0
-													? "none"
-													: row.arguments
-															.map(
-																(argument) =>
-																	`${argument.name}${argument.required ? "" : "?"}: ${argument.type}`,
-															)
-															.join(", ")}
-											</code>
-										)
-									) : (
-										<span className="ax-try__muted">takes none</span>
-									)}
-								</td>
+				<section
+					className="ax-try__scroll"
+					// biome-ignore lint/a11y/noNoninteractiveTabindex: the region scrolls, so it takes keyboard focus; without a tab stop a keyboard reader cannot reach the scrolled columns
+					tabIndex={0}
+					aria-label="Registered tools"
+				>
+					<table className="ax-try__table">
+						<thead>
+							<tr>
+								<th scope="col">Name</th>
+								<th scope="col">Title</th>
+								<th scope="col">Consequential</th>
+								<th scope="col">Arguments</th>
 							</tr>
-						))}
-					</tbody>
-				</table>
-				</div>
+						</thead>
+						<tbody>
+							{rows.map((row) => (
+								<tr key={row.name}>
+									<td>
+										<code>{row.name}</code>
+									</td>
+									<td>{row.title}</td>
+									<td>
+										{row.consequential ? (
+											<strong>yes</strong>
+										) : (
+											<span className="ax-try__muted">no</span>
+										)}
+									</td>
+									<td>
+										{row.hasSchema ? (
+											row.arguments === undefined ? (
+												<span className="ax-try__muted">
+													declared, but not summarisable here
+												</span>
+											) : (
+												<code>
+													{row.arguments.length === 0
+														? "none"
+														: row.arguments
+																.map(
+																	(argument) =>
+																		`${argument.name}${argument.required ? "" : "?"}: ${argument.type}`,
+																)
+																.join(", ")}
+												</code>
+											)
+										) : (
+											<span className="ax-try__muted">takes none</span>
+										)}
+									</td>
+								</tr>
+							))}
+						</tbody>
+					</table>
+				</section>
 			)}
 
 			<h4>Invoke one</h4>
 			<p className="ax-try__muted">
 				The first two calls are well formed and succeed. With this library
-				answering, the last two break the declared{" "}
-				<code>inputSchema</code> and are refused with{" "}
-				<code>UnknownError</code> before any tool code runs. A native{" "}
-				<code>document.modelContext</code> may accept them instead, because
-				the draft does not require schema validation before the callback.
+				answering, the last two break the declared <code>inputSchema</code> and
+				are refused with <code>UnknownError</code> before any tool code runs. A
+				native <code>document.modelContext</code> may accept them instead,
+				because the draft does not require schema validation before the
+				callback.
 			</p>
 			<div className="ax-try__group">
 				<p className="ax-try__group-label">Calls that succeed</p>
@@ -490,7 +495,7 @@ export default function TryIt(): React.JSX.Element {
 							)
 						}
 					>
-						{"search_products({ query: \"mug\" })"}
+						{'search_products({ query: "mug" })'}
 					</button>
 					<button
 						type="button"

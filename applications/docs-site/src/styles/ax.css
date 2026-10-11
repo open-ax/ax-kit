@@ -426,11 +426,11 @@ samp {
 	[data-has-sidebar][data-has-toc] .content-panel {
 		padding-inline-start: calc(
 			var(--sl-content-pad-x) +
-				max(0px, var(--sl-aside-width) - var(--sl-sidebar-width))
+			max(0px, var(--sl-aside-width) - var(--sl-sidebar-width))
 		);
 		padding-inline-end: calc(
 			var(--sl-content-pad-x) +
-				max(0px, var(--sl-sidebar-width) - var(--sl-aside-width))
+			max(0px, var(--sl-sidebar-width) - var(--sl-aside-width))
 		);
 	}
 }
@@ -1237,9 +1237,10 @@ mobile-starlight-toc summary .toggle::before {
  * is empty" because a plain block's `<figcaption>` has no `.title` child *at
  * all* — `:has(> .title:empty)` asks for a child that is not there, matches
  * nothing, and the empty 32px row stays on every block of ordinary code. */
-.sl-markdown-content .expressive-code .frame:not(.is-terminal) figcaption.header:not(
-		:has(> .title:not(:empty))
-	) {
+.sl-markdown-content
+	.expressive-code
+	.frame:not(.is-terminal)
+	figcaption.header:not(:has(> .title:not(:empty))) {
 	display: none;
 }
 
@@ -1283,9 +1284,10 @@ mobile-starlight-toc summary .toggle::before {
  * two frame kinds that *have* a row, so a plain block's control keeps the
  * framework's own position.
  */
-.sl-markdown-content .expressive-code .frame:has(
-	figcaption.header > .title:not(:empty)
-) .copy,
+.sl-markdown-content
+	.expressive-code
+	.frame:has(figcaption.header > .title:not(:empty))
+	.copy,
 .sl-markdown-content .expressive-code .frame.is-terminal .copy {
 	inset-block-start: 1rem;
 	inset-inline-end: 0.375rem;
