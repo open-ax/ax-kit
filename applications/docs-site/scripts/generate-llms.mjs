@@ -86,7 +86,9 @@ const pages = walk(CONTENT)
 	// Drafts are in the source tree and not in the built site, so listing one here
 	// would be listing a URL that 404s. Filtered rather than trusted, because a
 	// page that is drafted and linked before it ships is an ordinary thing to have.
-	.filter((page) => page.draft === "false")
+	// The 404 page itself is excluded for the same reason in reverse: the build
+	// emits it as `404.html`, not as a directory route, so no resolver reaches it.
+	.filter((page) => page.draft === "false" && page.slug !== "/404")
 	.sort((a, b) => a.slug.localeCompare(b.slug))
 	.map((page) => ({
 		title: page.title ?? page.slug,

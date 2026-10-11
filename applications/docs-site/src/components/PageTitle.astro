@@ -1,0 +1,21 @@
+---
+/**
+ * The page head: the title, then the description.
+ *
+ * Two lines, and no third. An eyebrow label above the title says which section
+ * you are in — but the sidebar already says that, three centimetres to the
+ * left, so a second copy of the same fact is noise rather than orientation. The
+ * description stays, because that is the one thing a title cannot carry: it is
+ * what the page is *for*.
+ *
+ * `id="_top"` is the framework's own anchor target (see Starlight's default
+ * `PageTitle`); the skip link and every same-page "back to top" point at it.
+ */
+
+const { entry } = Astro.locals.starlightRoute;
+---
+
+<header class="ax-page-head">
+	<h1 id="_top">{entry.data.title}</h1>
+	{entry.data.description && <p class="ax-lede">{entry.data.description}</p>}
+</header>

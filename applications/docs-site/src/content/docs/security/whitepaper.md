@@ -1,15 +1,15 @@
 ---
 draft: false
 title: "Security whitepaper"
-description: "Every claim traced to a public primary source, and every divergence from the current draft stated rather than omitted."
+description: "Every claim traced to a public primary source and every divergence from the current draft stated rather than omitted."
 ---
 
 This is written, not copied. Every citation below was opened at the point of
-writing, and each one is linked so you can check it rather than take it on trust.
+writing. Each one is linked so you can check it rather than take it on trust.
 
 The [threat model](/security/threat-model/) covers what the library can reach. This page
-covers the web platform mechanisms it relies on, and — the part most whitepapers
-skip — **where this implementation diverges from the current draft**.
+covers the web platform mechanisms it relies on. The part most whitepapers
+skip: **where this implementation diverges from the current draft**.
 
 ## The platform mechanisms it relies on
 
@@ -30,7 +30,7 @@ an unknown feature as well as a denied one, so the two are indistinguishable
 through that call alone. This implementation consults the feature list first and
 treats `false` as a denial only when the list actually names `tools`. Outside an
 origin trial, Chromium logs *"Origin trial controlled feature not enabled"* for
-the feature and then reports it as **absent rather than denied** — which is why
+the feature and then reports it as **absent rather than denied**, which is why
 the default is to assume allowed. Where the browser denies the feature itself, the
 surface is useless anyway, because the platform enforces it independently of any
 script.
@@ -73,7 +73,7 @@ A handler returning the JavaScript string `"Success"` therefore produces the
 nine-character string `"\"Success\""`. The upstream test suite asserts against the
 unencoded value, which **contradicts the draft's own text**; this implementation
 encodes, which follows the draft. The upstream test is listed as an
-`upstream-gap` in the expected-failure file, and the fix belongs in the proposal.
+`upstream-gap` in the expected-failure file. The fix belongs in the proposal.
 
 ## Divergences from the current draft
 
@@ -97,24 +97,24 @@ a way it can defend, is more useful to an adopter than one that hides it.
 - It does not touch native prototypes. `Object.prototype` and `Window.prototype`
   are unmodified.
 - It adds no globals except the `document.modelContext` property it is asked to
-  define, and the two event classes the package exports for pages that want them.
+  define and the two event classes the package exports for pages that want them.
 
 ## Supply chain
 
 Zero runtime dependencies in the polyfill package, asserted in CI as a build
-failure. `StandardSchemaV1` is consumed **structurally** — the interface is
-declared locally rather than installed — so no validation library reaches a
+failure. `StandardSchemaV1` is consumed **structurally**: the interface is
+declared locally rather than installed, so no validation library reaches a
 consumer's bundle through this package.
 
 The ESM entry is measured against a 5 kB gzip budget in the same CI run. The
-budget is a hard failure, not a README sentence, and raising it to make a build
+budget is a hard failure, not a README sentence. Raising it to make a build
 pass is not an accepted fix.
 
 ## Verifying these claims
 
 The conformance suite runs on every change as a required status check on all
 three engines. [Conformance](/reference/conformance/) states what is measured,
-what is excluded and why, and what is expected to fail with the reason for each.
+what is excluded, what is expected to fail and the reason for each.
 
 To verify the behavioural claims yourself, the [live demonstration](/try-it/)
 runs in your browser against the published entry points.

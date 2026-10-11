@@ -1,213 +1,616 @@
 /*
  * The site's visual language.
  *
- * This is the OpenAX organisation site's design language, applied to
- * documentation. It is a deliberate point of view rather than a theme:
+ * Minimal on purpose, and minimal means *decided*: one greyscale ramp, one type
+ * scale, one border colour, one radius, one font. Every rule below is a token
+ * or a consequence of a token, so the page cannot drift into a second look.
  *
- * - **Near-monochrome.** One accent-free greyscale ramp and no colour at all
- *   except in code and links. Documentation's job is to be read; a palette is a
- *   tax on that.
- * - **Light mode only.** The reference site is `color-scheme: light` with no dark
- *   scheme at all. Supporting two schemes is two things to keep right, and this
- *   site would rather be one thing done properly. The dark media query below
- *   exists only so the framework's own default does not fight this.
- * - **One font, self-hosted, variable weight.** No display face, no monospace
- *   novelty: the code font is a UI monospace, which is what a reader expects and
- *   what diffs and identifiers actually want.
- * - **A narrow measure.** 38rem of prose, left-aligned. The reference site's
- *   figure, and the width at which a line of English stops being comfortable.
- * - **One emphasis weight.** 600 for emphasis, nothing bolder. Hierarchy comes
- *   from size and colour, not from weight.
+ * - **White, black, grey.** Nothing on this site is coloured except syntax,
+ *   and the syntax is grey too. Berth's docs site keeps one amber dot for "this
+ *   needs you"; that idea is right, but this site has no accent to spend, so
+ *   state is carried by weight, italics and a glyph instead.
+ * - **Two lines of page head.** A title and a description. Berth puts an
+ *   eyebrow above the title naming the section; the sidebar says the same thing
+ *   three centimetres to the left, so here it is a second copy of a fact the
+ *   reader already has.
+ * - **No rules between blocks.** Sections are separated by space, not by
+ *   lines. A hairline under the page head or above an `h2` reads as structure
+ *   that has to be maintained, and every page then pays for it.
+ * - **Small details.** Hairlines at one weight, a 2px focus ring offset by 2px,
+ *   optical alignment of the header against the content column, inline code at
+ *   0.875em so it never outgrows its line, and a copy button that keeps the
+ *   code ground behind it so scrolled code never shows through.
  *
- * Everything here is an override of the framework's own tokens rather than a
- * restyle of its elements. That is deliberate: overriding tokens means a
- * framework upgrade cannot silently un-style the site, whereas restyling elements
- * means it can.
- */
-
-/* ── Palette ────────────────────────────────────────────────────────────────
- *
- * The ramp, in the reference site's order: background, rule, muted, body, text.
- * Only six greys, because a documentation site should not need more and a ramp
- * with twelve stops is twelve opportunities to pick the wrong one.
+ * The ramp is defined twice, once per scheme, and named by role — `--ax-ink`
+ * rather than `--gray-900` — because a name that says where it is used cannot
+ * be misapplied the way a number on a ramp can.
  */
 
 :root {
-	--sl-color-white: #111111;
-	--sl-color-gray-1: #fafafa;
-	--sl-color-gray-2: #f2f2f1;
-	--sl-color-gray-3: #e8e8e6;
-	--sl-color-gray-4: #d4d4d4;
-	--sl-color-gray-5: #b8b8b6;
-	--sl-color-gray-6: #737373;
-	--sl-color-black: #ffffff;
-
-	/* The accent is a grey. Every link, focus ring and active marker is drawn
-	 * with it, so nothing on the page is coloured except code. */
-	--sl-color-accent-low: #ededec;
-	--sl-color-accent-high: #111111;
-	--sl-color-accent: #3d3d3b;
-
-	/* Borders and surfaces, named for what they are rather than by number, so a
-	 * rule is `var(--rule)` at the point of use and the palette stays in one
-	 * place. */
-	--ax-bg: #fafafa;
-	--ax-surface: #ffffff;
-	--ax-rule: #e4e4e2;
-	--ax-rule-strong: #d4d4d4;
-	--ax-text: #111111;
-	--ax-body: #3d3d3b;
-	--ax-muted: #737373;
-
-	/* The reference site's focus ring: 2px, offset, in the text colour. Visible,
-	 * never a glow. */
-	--sl-focus-ring-color: #111111;
-	--sl-focus-ring-width: 2px;
-	--sl-focus-ring-offset: 3px;
-
 	color-scheme: light;
-}
 
-/* Only one scheme. The framework defaults to following the reader's preference,
- * and a site that ships one palette should say so rather than switching to
- * another at dusk. */
-@media (prefers-color-scheme: dark) {
-	:root {
-		--sl-color-white: #111111;
-		--sl-color-gray-1: #fafafa;
-		--sl-color-black: #ffffff;
-	}
+	/* The ramp. Six greys and three surfaces; a documentation page does not
+	 * need more, and each stop is one more chance to pick the wrong one. */
+	--ax-ink: #1c1c1c;
+	--ax-body: #454545;
+	--ax-muted: #737373;
+	--ax-faint: #a3a3a3;
+	--ax-rule: #e8e8e8;
+	--ax-rule-strong: #d6d6d6;
+	--ax-page: #ffffff;
+	--ax-surface: #fafafa;
+	--ax-surface-sunk: #f4f4f4;
+	--ax-overlay: rgb(28 28 28 / 0.04);
+
+	/* A selection that is visible without shouting. */
+	--ax-selection: rgb(28 28 28 / 0.1);
+
+	--ax-radius: 8px;
+	--ax-radius-sm: 5px;
+
+	/* Framework tokens, mapped onto the ramp above. The framework's grey scale
+	 * is numbered dark-to-light in light mode and light-to-dark in dark mode,
+	 * and its components read it that way — the search shortcut chip sits on
+	 * `gray-6` — so these are remapped in the framework's order rather than in
+	 * lightness order. */
+	--sl-color-white: var(--ax-ink);
+	--sl-color-black: var(--ax-page);
+	--sl-color-gray-1: #242424;
+	--sl-color-gray-2: #3d3d3d;
+	--sl-color-gray-3: #5f5f5f;
+	--sl-color-gray-4: #8f8f8f;
+	--sl-color-gray-5: #cccccc;
+	--sl-color-gray-6: #f1f1f1;
+	--sl-color-accent: var(--ax-body);
+	--sl-color-accent-high: var(--ax-ink);
+	--sl-color-accent-low: var(--ax-surface-sunk);
+	--sl-color-text: var(--ax-body);
+	--sl-color-text-accent: var(--ax-ink);
+	--sl-color-text-invert: #ffffff;
+	--sl-color-bg: var(--ax-page);
+	--sl-color-bg-nav: var(--ax-page);
+	--sl-color-bg-sidebar: var(--ax-page);
+	--sl-color-bg-inline-code: var(--ax-surface-sunk);
+	--sl-color-bg-accent: var(--ax-ink);
+	--sl-color-hairline-light: var(--ax-rule);
+	--sl-color-hairline: var(--ax-rule);
+	--sl-color-hairline-shade: var(--ax-rule);
+	--sl-color-backdrop-overlay: rgb(28 28 28 / 0.4);
+
+	--sl-focus-ring-color: var(--ax-ink);
+	--sl-focus-ring-width: 2px;
+	--sl-focus-ring-offset: 2px;
+
+	--sl-shadow-sm: 0 1px 2px rgb(28 28 28 / 0.04);
+	--sl-shadow-md: 0 2px 8px rgb(28 28 28 / 0.06);
+	--sl-shadow-lg: 0 12px 32px rgb(28 28 28 / 0.1);
 }
 
 :root[data-theme="dark"] {
-	--sl-color-white: #111111;
-	--sl-color-gray-1: #fafafa;
-	--sl-color-gray-2: #f2f2f1;
-	--sl-color-gray-3: #e8e8e6;
-	--sl-color-gray-4: #d4d4d4;
-	--sl-color-gray-5: #b8b8b6;
-	--sl-color-gray-6: #737373;
-	--sl-color-black: #ffffff;
-	--sl-color-accent-low: #ededec;
-	--sl-color-accent-high: #111111;
-	--sl-color-accent: #3d3d3b;
-	--sl-focus-ring-color: #111111;
+	color-scheme: dark;
+
+	--ax-ink: #ededed;
+	--ax-body: #b8b8b8;
+	--ax-muted: #8f8f8f;
+	--ax-faint: #6b6b6b;
+	--ax-rule: #2b2b2b;
+	--ax-rule-strong: #3d3d3d;
+	--ax-page: #131313;
+	--ax-surface: #191919;
+	--ax-surface-sunk: #202020;
+	--ax-overlay: rgb(255 255 255 / 0.05);
+
+	--ax-selection: rgb(255 255 255 / 0.12);
+
+	--sl-color-white: var(--ax-ink);
+	--sl-color-black: var(--ax-page);
+	--sl-color-gray-1: #ededed;
+	--sl-color-gray-2: #c7c7c7;
+	--sl-color-gray-3: #9c9c9c;
+	--sl-color-gray-4: #757575;
+	--sl-color-gray-5: #454545;
+	--sl-color-gray-6: #262626;
+	--sl-color-accent: var(--ax-body);
+	--sl-color-accent-high: var(--ax-ink);
+	--sl-color-accent-low: var(--ax-surface-sunk);
+	--sl-color-text: var(--ax-body);
+	--sl-color-text-accent: var(--ax-ink);
+	--sl-color-text-invert: #131313;
+	--sl-color-bg: var(--ax-page);
+	--sl-color-bg-nav: var(--ax-page);
+	--sl-color-bg-sidebar: var(--ax-page);
+	--sl-color-bg-inline-code: var(--ax-surface-sunk);
+	--sl-color-bg-accent: var(--ax-ink);
+	--sl-color-hairline-light: var(--ax-rule);
+	--sl-color-hairline: var(--ax-rule);
+	--sl-color-hairline-shade: var(--ax-rule);
+	--sl-color-backdrop-overlay: rgb(0 0 0 / 0.6);
+
+	--sl-focus-ring-color: var(--ax-ink);
+
+	--sl-shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
+	--sl-shadow-md: 0 2px 8px rgb(0 0 0 / 0.35);
+	--sl-shadow-lg: 0 12px 32px rgb(0 0 0 / 0.5);
 }
 
-/* ── Typography ──────────────────────────────────────────────────────────── */
+/* ── Type ────────────────────────────────────────────────────────────────
+ *
+ * One family for the page, one monospace for code. Hanken Grotesk and Geist
+ * Mono, self-hosted: a documentation page that fetches a font from a third
+ * party tells that third party who read it, and this site makes no
+ * third-party requests at all.
+ *
+ * The family names carry a `Variable` suffix — read out of the installed
+ * packages' own `index.css`, which declare `font-family: 'Hanken Grotesk
+ * Variable'`. Asking for the un-suffixed name matches no `@font-face` rule, so
+ * the browser falls through to `system-ui` and the font is downloaded on every
+ * page and never used.
+ */
 
 :root {
-	/*
-	 * The family name is `Hanken Grotesk Variable`, not `Hanken Grotesk` — read out
-	 * of the installed package's own `index.css`, which declares
-	 * `font-family: 'Hanken Grotesk Variable'`.
+	/* Hanken Grotesk for the page, Geist Mono for code.
 	 *
-	 * Asking for the un-suffixed name matches no `@font-face` rule, so the browser
-	 * fell straight through to `system-ui` and the self-hosted font was downloaded
-	 * on every page and never used. The whole point of self-hosting here is to stop
-	 * making third-party requests; paying for the download and rendering someone
-	 * else's font is worse than not self-hosting at all.
+	 * Hanken is the organisation's own face — openax.pages.dev sets it as its
+	 * `--font-sans` — so the documentation reads as the same family rather than
+	 * a second one. Both self-hosted: a documentation page that fetches a font
+	 * from a third party tells that third party who read it, and this site
+	 * makes no third-party requests at all.
 	 */
-	--sl-font: var(
-		--font-sans,
-		"Hanken Grotesk Variable",
-		"Hanken Grotesk",
-		system-ui,
-		-apple-system,
-		"Segoe UI",
-		Helvetica,
-		Arial,
-		sans-serif
-	);
+	--sl-font:
+		"Hanken Grotesk Variable", "Hanken Grotesk", ui-sans-serif, system-ui,
+		-apple-system, "Segoe UI", sans-serif;
 	--sl-font-mono:
-		ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas,
-		"Liberation Mono", monospace;
+		"Geist Mono Variable", "Geist Mono", ui-monospace, "SF Mono", Menlo,
+		monospace;
 
-	--sl-text-base: 0.9375rem;
-	--sl-text-sm: 0.8125rem;
+	--sl-heading-font: var(--sl-font);
+	--sl-heading-font-weight: 600;
+	/* Tracking tightens as the size grows: a 30px heading with normal tracking
+	 * reads as a template, and at 13px it reads as a label. */
+	--sl-heading-letter-spacing: -0.021em;
+
+	/* ── The type scale ─────────────────────────────────────────────────────
+	 *
+	 * Every step sits on the 4px grid and matches a step every popular system
+	 * uses: 12 / 14 / 16 / 18 / 20 / 24 / 30. Tailwind calls them `xs` through
+	 * `3xl`; Material calls 14 `body-medium` and 16 `body-large`; Apple sets
+	 * prose at 17 and captions at 11–12. Nothing here is a bespoke size, which
+	 * is what "standard" means: a reader who has read any documentation this
+	 * year has already read type at these sizes.
+	 *
+	 * Body text was 15px and UI text 13px — each exactly 1px off the standard
+	 * steps, close enough to look accidental and far enough to feel it. They
+	 * are 16 and 14 now.
+	 *
+	 * The two display sizes are `clamp()`, not fixed steps: fixed type is
+	 * either too loud on a phone or too quiet on a monitor, and the alternative
+	 * is a breakpoint that swaps one fixed size for another at an arbitrary
+	 * width. The middle term is in `vw` so the size tracks the viewport, and
+	 * the two ends pin it: 24px at 360px wide, 30px from 800px up. */
+	--sl-text-base: 1rem;
+	--sl-text-sm: 0.875rem;
 	--sl-text-xs: 0.75rem;
 
-	/* The reference site's 38rem, widened a little for a page with a sidebar and
-	 * a table of contents. Not much: the width at which a line of English stops
-	 * being comfortable is not a function of taste. */
+	/* 704px of prose — about 72 characters of English a line, which is as far
+	 * as a measure stays comfortable. */
 	--sl-content-width: 44rem;
 	--sl-line-height: 1.75;
+	--sl-line-height-headings: 1.25;
 
-	--sl-text-h1: 1.75rem;
-	--sl-text-h2: 1.3125rem;
-	--sl-text-h3: 1.0625rem;
-	--sl-text-h4: 0.9375rem;
+	--sl-text-h1: clamp(1.5rem, 1.25rem + 1.25vw, 1.875rem);
+	--sl-text-h2: 1.25rem;
+	--sl-text-h3: 1rem;
+	--sl-text-h4: 1rem;
 	--sl-text-h5: 0.875rem;
 
 	--sl-nav-height: 3.5rem;
-	--sl-sidebar-gap: 1.5rem;
-	--sl-aside-gap: 2rem;
-}
+	--sl-nav-pad-x: 1.5rem;
+	--sl-content-pad-x: 1.5rem;
+	--sl-sidebar-width: 15.5rem;
+	--sl-sidebar-pad-x: 1rem;
 
-:root {
-	--sl-heading-font: var(--sl-font);
-	--sl-heading-font-weight: 600;
-	/* Negative tracking, from the reference site's `.name`. Headings set tight
-	 * read as considered; the framework's default of normal tracking reads as a
-	 * template. */
-	--sl-heading-letter-spacing: -0.015em;
 	--sl-code-font: var(--sl-font-mono);
 	--sl-code-font-size: 0.8125em;
 	--sl-code-line-height: 1.7;
-	--sl-code-radius: 4px;
+	--sl-code-radius: var(--ax-radius-sm);
 	--sl-code-border: 1px solid var(--ax-rule);
 	--sl-code-bg: var(--ax-surface);
-	--sl-code-header-bg: #f4f4f2;
-	--sl-code-line-highlight-color: #f0f0ee;
+	--sl-code-header-bg: var(--ax-surface);
+	--sl-code-line-highlight-color: var(--ax-overlay);
+
+	/* ── The vertical rhythm ────────────────────────────────────────────────
+	 *
+	 * Two steps and no others. `--ax-flow` separates one block of prose from the
+	 * next; `--ax-flow-section` opens a new section under a heading.
+	 *
+	 * These are tokens rather than values written into rules because the rhythm
+	 * has to be *one* decision. Before this, every block type carried its own
+	 * margin — paragraphs a bottom margin, code blocks and tables a top margin,
+	 * headings both — and since adjoining margins collapse, the gap between two
+	 * blocks was decided by whichever type happened to come *second*. Paragraph
+	 * then code block sat 18px apart; code block then paragraph sat **zero**
+	 * apart, so every code block touched the sentence beneath it. No individual
+	 * rule was wrong. The set was. */
+	--ax-flow: 1.25rem;
+	--ax-flow-section: 2.5rem;
+
+	/* The space between the page's title and whatever fixed bar sits above it.
+	 *
+	 * The framework offsets the page body by exactly the height of the header
+	 * plus the mobile "On this page" bar and nothing more, so the `<h1>` begins on
+	 * the same pixel the bar ends and the two touch. */
+	--ax-page-head-gap: 1.5rem;
+
+	/* How far a jumped-to heading is held below the fixed header. Without it an
+	 * anchor link scrolls the heading *underneath* the header, which is where a
+	 * heading it just navigated to becomes invisible. */
+	--ax-anchor-offset: 5.5rem;
 }
 
-/* ── The page ────────────────────────────────────────────────────────────── */
+/* ── One responsive step ────────────────────────────────────────────────────
+ *
+ * Below the framework's own 50rem breakpoint the page is one column: no
+ * sidebar, no contents rail, the header collapsed to its essentials. Type and
+ * spacing step down at that same width, because the breakpoint is a fact about
+ * the layout and reusing it keeps "narrow" meaning one thing everywhere rather
+ * than one thing for the grid and another for the type.
+ *
+ * Everything stays on the 4px grid: 24→16, 40→32, 20→16. The `sl-content-pad-x`
+ * step is the Tailwind convention — `px-6` on desktop, `px-4` on a phone. */
+@media (max-width: 50rem) {
+	:root {
+		--sl-content-pad-x: 1rem;
+		--ax-flow: 1rem;
+		--ax-flow-section: 2rem;
+		--ax-page-head-gap: 1rem;
+	}
+}
+
+html {
+	scrollbar-gutter: stable;
+	-webkit-text-size-adjust: 100%;
+
+	/* In-page links glide instead of teleporting.
+	 *
+	 * The table of contents on the right is a list of ordinary fragment links, so
+	 * this one property is the whole behaviour — there is no scroll script to
+	 * write and no animation to keep in step with it. `scroll-padding-top` is
+	 * the half that is easy to forget: without it the browser scrolls the target
+	 * heading flush to the top of the viewport, where the fixed header covers it,
+	 * and the reader lands on a page with no visible heading. */
+	scroll-behavior: smooth;
+	scroll-padding-top: var(--ax-anchor-offset);
+}
 
 body {
-	background: var(--ax-bg);
-	color: var(--ax-text);
+	background: var(--ax-page);
+	color: var(--ax-body);
 	-webkit-font-smoothing: antialiased;
-	text-size-adjust: 100%;
+	text-rendering: optimizeLegibility;
 }
 
-/* Prose reads differently from interface text, and the reference site says so
- * with `text-wrap: pretty`: no single-word last line, and no hyphen. `balance`
- * is for headings, where a ragged two-line heading looks broken. */
-.sl-markdown-content p,
-.sl-markdown-content li {
+/* Ligatures off, so `=>` and `!=` read as typed rather than as arrows. */
+code,
+pre,
+kbd,
+samp {
+	font-family: var(--sl-font-mono);
+	font-variant-ligatures: none;
+	font-feature-settings:
+		"liga" 0,
+		"calt" 0;
+}
+
+::selection {
+	background: var(--ax-selection);
+}
+
+:focus-visible {
+	outline: 2px solid var(--sl-focus-ring-color);
+	outline-offset: 2px;
+	border-radius: 3px;
+}
+
+/* ── The three columns ──────────────────────────────────────────────────────
+ *
+ * The content column is centred in the viewport, and it takes a little arithmetic
+ * to say so because the framework's layout is deliberately not centred.
+ *
+ * The framework divides the desktop page into a fixed left sidebar, a flexible
+ * middle, and a right-hand contents pane — and it sizes that right pane to
+ * absorb *all* the slack:
+ *
+ *     right pane = max(sidebar, sidebar + (100% - content - sidebar) / 2)
+ *
+ * The right pane is therefore never as wide as the left one, and the content
+ * inside the middle column is then pushed to one side of it with
+ * `margin-inline: auto 0`. At 1440px the right pane works out at 368px against
+ * the left sidebar's 248px, so the prose column does not sit in the middle of
+ * the window — with a 344px gutter on one side and a 392px gutter on the other.
+ * It reads as a page nobody laid out on purpose, which is exactly what it is.
+ *
+ * ## Why the rails cannot simply be equal
+ *
+ * The obvious fix — make both outer panes the same width — is what centres the
+ * content, and it is not a choice so much as an identity. With a left rail of
+ * `L`, a right rail of `R` and the content centred in the pane between them,
+ * the content's centre lands at `L + (100% - L - R) / 2`, which equals the
+ * viewport's centre only when `L === R`. Any difference between the two rails
+ * shifts the column by half of it.
+ *
+ * That is worth knowing because the two rails want different widths: the left
+ * one holds labels like "Annotations" and "Conformance", and the right one holds
+ * a list of this page's own headings, which are short. Forcing the right rail to
+ * match the left makes the contents pane visibly too wide.
+ *
+ * So the rails are sized independently and the *padding* absorbs the difference.
+ * A pane whose padding is smaller on the side of the wider rail by exactly half
+ * the difference between the two puts its content box back on the viewport's
+ * centre line — which is the whole of what the three declarations below do.
+ */
+
+:root {
+	/*
+	 * The contents rail, sized to its contents rather than to the navigation rail
+	 * beside it — but only a little narrower than it.
+	 *
+	 * Narrower, because it holds one page's headings rather than the site's whole
+	 * navigation, and matching the sidebar left a column of empty space down its
+	 * right side. Not *much* narrower: at 13.5rem the longer headings wrapped to
+	 * two lines often enough that the list stopped reading as a list, and a
+	 * contents rail that breaks its own entries is worse than a slightly wide
+	 * one. 15rem is the third step of that same judgement — wider again, but
+	 * still short of the navigation rail, which is where "too wide" started.
+	 *
+	 * Safe to move in either direction without un-centring the column: the two
+	 * padding declarations below take whichever of the two rails is wider and
+	 * give the difference back on that side, so the content stays on the
+	 * window's centre line for any pair of values.
+	 */
+	--sl-aside-width: 15rem;
+}
+
+@media (min-width: 72rem) {
+	[data-has-sidebar][data-has-toc] .right-sidebar-container {
+		width: var(--sl-aside-width);
+	}
+
+	/*
+	 * The contents panel is `position: fixed` with `width: 100%`, and for a fixed
+	 * element `100%` resolves against the *viewport*, not against its container.
+	 * So the panel was a full-window-wide box parked at the container's left edge,
+	 * overhanging the page by 17px and putting the table of contents' hit area
+	 * outside the layout.
+	 *
+	 * Nothing looked broken, which is why it survived: the headings and links
+	 * inside are left-aligned and the box clips itself, so the overhang is
+	 * invisible until you click where the page is not. Giving it the container's
+	 * width puts it back where a fixed panel belongs.
+	 */
+	[data-has-sidebar][data-has-toc] .right-sidebar {
+		width: var(--sl-aside-width);
+	}
+
+	/*
+	 * `100% - var(--sl-aside-width)`, and *not* `- var(--sl-sidebar-width)`
+	 * as well.
+	 *
+	 * This row begins where the navigation rail ends — the two are siblings, not
+	 * nested — so its own `100%` has already had the sidebar subtracted. An
+	 * earlier version subtracted it a second time and the content pane came out
+	 * 248px too narrow, which pushed the contents pane left and left a column of
+	 * dead space the width of the navigation rail down the right-hand edge of
+	 * every page. The gap looked like a margin the layout had failed to close,
+	 * which is exactly what it was.
+	 */
+	[data-has-sidebar][data-has-toc] .main-pane {
+		width: calc(100% - var(--sl-aside-width));
+		/* `auto` on both sides, against the framework's `auto 0`. */
+		--sl-content-margin-inline: auto;
+	}
+
+	/*
+	 * The correction, and it is the only arithmetic in this file.
+	 *
+	 * The two rails want different widths — the navigation rail holds labels
+	 * like "Annotations", the contents rail holds one page's headings — and a
+	 * column centred between two unequal rails is not centred on the window. It
+	 * sits off by half the difference, which is 16px here and was very visible.
+	 *
+	 * So the difference is taken back out of the padding: the side facing the
+	 * *wider* rail is given it back as extra padding, which moves the content
+	 * box back onto the window's centre line. Each side is clamped independently
+	 * with `max(0px, …)` so that whichever rail is narrower cannot be given a
+	 * negative padding and throw the column the other way.
+	 */
+	[data-has-sidebar][data-has-toc] .content-panel {
+		padding-inline-start: calc(
+			var(--sl-content-pad-x) +
+				max(0px, var(--sl-aside-width) - var(--sl-sidebar-width))
+		);
+		padding-inline-end: calc(
+			var(--sl-content-pad-x) +
+				max(0px, var(--sl-sidebar-width) - var(--sl-aside-width))
+		);
+	}
+}
+
+/*
+ * A page with no table of contents has only one outer pane, and the middle
+ * column is then already centred by the framework — the rule above is scoped to
+ * the both-panes case precisely so this one is left alone.
+ */
+
+/* ── Prose ─────────────────────────────────────────────────────────────────
+ *
+ * `pretty` for running text, so no line ends in a single word; `balance` for
+ * headings, where a ragged second line reads as a mistake.
+ */
+
+.sl-markdown-content {
+	line-height: var(--sl-line-height);
+}
+
+.sl-markdown-content :is(p, li) {
 	color: var(--ax-body);
 	text-wrap: pretty;
 }
 
 .sl-markdown-content :is(h1, h2, h3, h4, h5, h6) {
-	color: var(--ax-text);
+	color: var(--ax-ink);
+	font-weight: 600;
 	text-wrap: balance;
+	margin: 0;
+}
+
+.sl-markdown-content h2:not(:where(.not-content *)) {
+	font-size: var(--sl-text-h2);
+	letter-spacing: -0.014em;
+	margin-top: 2.75rem;
+	margin-bottom: 0.875rem;
+}
+
+.sl-markdown-content h3:not(:where(.not-content *)) {
+	font-size: var(--sl-text-h3);
+	letter-spacing: -0.008em;
+	margin-top: 2rem;
+	margin-bottom: 0.625rem;
+}
+
+.sl-markdown-content h4:not(:where(.not-content *)) {
+	font-size: var(--sl-text-h4);
+	margin-top: 1.75rem;
+	margin-bottom: 0.5rem;
+}
+
+.sl-markdown-content :is(p, ul, ol):not(:where(.not-content *)) {
+	margin-top: 0;
+	margin-bottom: 1.125rem;
+}
+
+.sl-markdown-content :is(ul, ol):not(:where(.not-content *)) {
+	padding-inline-start: 1.25rem;
+}
+
+.sl-markdown-content li:not(:where(.not-content *)) {
+	margin-top: 0.375rem;
+	margin-bottom: 0.375rem;
+	padding-inline-start: 0.125rem;
+}
+
+.sl-markdown-content li::marker {
+	color: var(--ax-faint);
+}
+
+.sl-markdown-content strong:not(:where(.not-content *)) {
+	color: var(--ax-ink);
+	font-weight: 600;
+}
+
+.sl-markdown-content hr:not(:where(.not-content *)) {
+	border: 0;
+	border-top: 1px solid var(--ax-rule);
+	margin: 2.5rem 0;
+}
+
+/* ── Vertical rhythm ────────────────────────────────────────────────────────
+ *
+ * One rule, and it is the fix for the spacing on every page at once.
+ *
+ * Adjoining vertical margins collapse, so the gap between two blocks has always
+ * been `max(bottom of the first, top of the second)` — which means the *second*
+ * element's type decided the gap, and different types disagreed. Measured down
+ * the quickstart page before this rule:
+ *
+ * | after              | before        |
+ * |--------------------|---------------|
+ * | paragraph          | 18px          |
+ * | paragraph → code   | 18px          |
+ * | **code → paragraph** | **0px**     |
+ * | code → code        | 16px          |
+ * | heading → code     | 46px          |
+ * | code → heading     | 30px          |
+ *
+ * A code block carries a top margin and no bottom margin, a paragraph the
+ * reverse. So every code block sat flush against the sentence under it — the
+ * frame's border and the text below it touching — while a heading followed by a
+ * code block got 46px and a code block followed by a heading got 30px, for the
+ * same pair of adjacent blocks in the opposite order.
+ *
+ * The rule below removes the disagreement: every top-level block gets a top
+ * margin from the same token and no bottom margin at all. The gap is then a
+ * property of the rhythm rather than of which two types happened to meet, and
+ * it is the same whether the code block comes before or after the paragraph.
+ *
+ * `:first-child` rather than `:first-of-type`, because the first child is
+ * whatever the page author wrote first — a paragraph, a heading, a table — and
+ * each type needs the exemption equally.
+ */
+
+/*
+ * The `:not(.not-content *)` guard is what gives this rule enough weight.
+ *
+ * Without it the selector is `(0,1,0)` and loses to the paragraph rule above,
+ * which is `(0,1,1)` — so paragraphs kept `margin-top: 0` while code blocks
+ * took the new margin, and the gap between a code block and the paragraph under
+ * it stayed at zero. The guard also has the same job it has everywhere else in
+ * this file: blocks nested inside an aside or a card are laid out by whatever
+ * contains them, not by the page's flow.
+ */
+.sl-markdown-content > *:not(.not-content *) {
+	margin-top: var(--ax-flow);
+	margin-bottom: 0;
+}
+
+.sl-markdown-content > :first-child {
+	margin-top: 0;
+}
+
+/*
+ * Headings open a section rather than continue one, so they take the larger
+ * step. They arrive wrapped in the framework's own `.sl-heading-wrapper`, and it
+ * is the wrapper that carries the margin — the heading inside it keeps a small
+ * bottom margin so that the gap *below* a heading is the ordinary flow gap.
+ */
+.sl-markdown-content > .sl-heading-wrapper:not(.not-content *) {
+	margin-top: var(--ax-flow-section);
+}
+
+/* A heading immediately after a heading is two headings of one section, not
+ * two sections, and takes the ordinary step. */
+.sl-markdown-content > .sl-heading-wrapper + .sl-heading-wrapper {
+	margin-top: var(--ax-flow);
+}
+
+/*
+ * A `<hr>` is already ruled on both sides by the rule above; the flow margin
+ * would double it.
+ */
+.sl-markdown-content > hr {
+	margin-top: calc(var(--ax-flow-section) * 1.5);
 }
 
 /* ── Links ─────────────────────────────────────────────────────────────────
  *
- * The reference site underlines prose links in the text colour with a rule
- * beneath, thickening to the text colour on hover. That is quieter than a
- * coloured link and reads as deliberate, so it is what prose links do here.
+ * Prose links underline in the ink at 30%, firming to the ink on hover.
+ * Interface links — sidebar, header, footer, pagination — do not: underlining
+ * them would draw a line down every column on the page.
  */
 
 .sl-markdown-content a:not(:where(.not-content *)) {
-	color: var(--ax-text);
+	color: var(--ax-ink);
 	text-decoration: underline;
-	text-decoration-color: var(--ax-rule-strong);
+	text-decoration-color: color-mix(in srgb, var(--ax-ink) 30%, transparent);
 	text-decoration-thickness: 1px;
-	text-underline-offset: 4px;
+	text-underline-offset: 3px;
 	transition: text-decoration-color 120ms ease-out;
 }
 
 .sl-markdown-content a:not(:where(.not-content *)):hover {
-	text-decoration-color: var(--ax-text);
+	text-decoration-color: var(--ax-ink);
 }
 
-/* Interface links — the sidebar, the header, the footer, pagination — are not
- * prose and are not underlined. Colour is enough, and underlining them would
- * draw lines down the whole page. */
-.site-header :is(a, a:hover),
+.page :is(.header a, .header a:hover),
 .sidebar-content a,
 .pagination-links a,
 .sl-markdown-content :is(h2, h3) a {
@@ -220,222 +623,902 @@ body {
 	}
 }
 
-/* ── Header ──────────────────────────────────────────────────────────────── */
-
-.site-header {
-	background: var(--ax-bg);
-	border-bottom: 1px solid var(--ax-rule);
-}
-
-.site-header__inner {
-	max-width: 68rem;
-}
-
-/* ── Sidebar and table of contents ──────────────────────────────────────────
+/* ── Page head ───────────────────────────────────────────────────────────
  *
- * Colours set directly rather than through the framework's grey ramp.
+ * Two lines. The title at 30px, then the description at 17px in the muted
+ * grey — which is the one piece of information a title cannot carry.
  *
- * The ramp's numbering is not a lightness ordering — in the framework's own
- * light theme `gray-6` is *darker* than `gray-5` — so remapping it to this
- * palette produced a sidebar of near-invisible links on a near-white page. Named
- * colours at the point of use cannot be misread that way, and there are three
- * places here rather than a twelve-stop ramp to get right.
+ * The padding is not decoration. The framework offsets the page body by the
+ * height of the header plus — below its desktop breakpoint — the mobile "On
+ * this page" bar, and by nothing more. The `<h1>` therefore began on the very
+ * pixel that bar ended, and every page title on a phone sat flush against the
+ * rule above it. Measured, the gap was 0px.
  */
 
-.sidebar-content {
-	color: var(--ax-body);
-	font-size: var(--sl-text-sm);
+.ax-page-head {
+	padding-top: var(--ax-page-head-gap);
+	margin-bottom: 2.25rem;
 }
 
-.sidebar-content :is(a, a:hover) {
-	color: var(--ax-body);
-	text-decoration: none;
+.ax-page-head h1 {
+	font-size: var(--sl-text-h1);
+	line-height: 1.2;
+	font-weight: 600;
+	letter-spacing: -0.026em;
+	color: var(--ax-ink);
+	margin: 0;
 }
 
-.sidebar-content a:hover {
-	color: var(--ax-text);
+.ax-lede {
+	margin: 0.625rem 0 0;
+	/* Fluid with the title: 16px on a phone, 18px from 800px up. A fixed lede
+	 * beside a fluid title is either larger than a small title or smaller than
+	 * a large one; this keeps the step between them constant. */
+	font-size: clamp(1rem, 0.9375rem + 0.3125vw, 1.125rem);
+	line-height: 1.6;
+	color: var(--ax-muted);
+	text-wrap: pretty;
+	/*
+	 * No max-width. The lede is set at a larger size than the body, so a `ch`
+	 * cap wide enough for the body is far too narrow here and leaves the
+	 * description ending in a ragged stub while the paragraphs beneath it run
+	 * the full column. Constraining it to the column's own width keeps the
+	 * left edge — the thing the eye actually tracks — aligned.
+	 */
 }
 
 /*
- * The current page. The framework marks it with a filled pill in its accent,
- * which here is a near-black grey and reads as a selection the user made rather
- * than a location they are at. A light surface plus a dark label says the same
- * thing without the shouting.
+ * The head and the body are two framework panels. The rule between them is
+ * removed and the gap collapsed so the title reads as the first thing in the
+ * article rather than as a title card above a rule.
  */
-.sidebar-content [aria-current="page"],
-.sidebar-content a[aria-current="page"] {
-	color: var(--ax-text);
-	font-weight: 500;
-	background: var(--ax-surface);
-	box-shadow: inset 2px 0 0 var(--ax-text);
-	border-radius: 2px;
+.content-panel {
+	padding: 0 var(--sl-content-pad-x);
 }
 
-.sidebar-content strong {
-	color: var(--ax-text);
-	font-weight: 600;
+.content-panel + .content-panel {
+	border-top: 0;
 }
 
-/* The group label, which is the lightest thing on the page by default and is
- * what made the navigation read as disabled rather than quiet. */
-.sidebar-content :is(strong, .top-level > summary > span) {
-	color: var(--ax-text);
+.content-panel > .sl-container > * {
+	margin-top: 0;
 }
 
-.right-sidebar-panel,
-.right-sidebar-panel :is(a, a:hover) {
-	color: var(--ax-muted);
-	background: transparent;
+.content-panel > .sl-container > * + * {
+	margin-top: var(--sl-content-gap-y);
+}
+
+main {
+	padding-top: 2rem;
+}
+
+/* ── Header ─────────────────────────────────────────────────────────────────
+ *
+ * One hairline across the full width, and content inside it aligned to the
+ * same grid as the page below: the lockup, the search field, and the trailing
+ * controls all sit on the column edges rather than floating at arbitrary
+ * offsets inside a wider bar.
+ */
+
+.page > .header {
+	background: color-mix(in srgb, var(--ax-page) 85%, transparent);
+	-webkit-backdrop-filter: saturate(1.5) blur(14px);
+	backdrop-filter: saturate(1.5) blur(14px);
+	border-bottom: 1px solid var(--ax-rule);
+}
+
+.header .title-wrapper {
+	padding: 0;
+	margin: 0;
+}
+
+.site-title {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.625rem;
+	color: var(--ax-ink);
+	/* 16px at weight 700, tracked like the organisation's own wordmark
+	 * (openax.pages.dev sets its name at 600/−0.02em; at this smaller size the
+	 * extra weight keeps it from going grey next to the mark). The previous
+	 * 15px/600 sat a step below every other size on the page and read as small
+	 * beside a 22px-wide mark — the imbalance the "smaller logo or bigger word"
+	 * complaint was pointing at. */
+	font-size: 1rem;
+	font-weight: 700;
+	letter-spacing: -0.02em;
 	text-decoration: none;
+	white-space: nowrap;
+	line-height: 1;
+}
+
+/*
+ * The mark is a raster now, not a drawn path — see `SiteTitle.astro` for why,
+ * and for the measurement that settled it. The box is sized here rather than
+ * left to the image so the word beside it does not move when the file decodes.
+ *
+ * `height: auto` with an explicit `width` keeps the 480:330 proportion, which a
+ * fixed height would flatten. 20px wide against a 16px word: the glyph is
+ * landscape, so matching the word's width would double its visual weight —
+ * logotype convention is a mark slightly narrower than the word is tall.
+ */
+.site-title__mark {
+	width: 1.25rem;
+	height: auto;
+	flex: none;
+	display: block;
+}
+
+.site-title__mark--dark {
+	display: none;
+}
+
+/*
+ * Swapped on the attribute the theme provider writes — the same one every other
+ * rule in this file keys off, so the mark, the prose and the code blocks all
+ * change scheme from one `data-theme` value and cannot disagree about which
+ * scheme is on screen.
+ */
+:root[data-theme="dark"] .site-title__mark--light {
+	display: none;
+}
+
+:root[data-theme="dark"] .site-title__mark--dark {
+	display: block;
+}
+
+.site-title__word {
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+/* Search: a quiet field, not a box with a shadow. */
+.header button[data-open-modal] {
+	height: 2rem;
+	gap: 0.5rem;
+	padding-inline: 0.625rem 0.5rem;
+	font-size: var(--sl-text-sm);
+	font-weight: 400;
+	color: var(--ax-muted);
+	background: var(--ax-surface);
+	border: 1px solid var(--ax-rule);
+	border-radius: var(--ax-radius-sm);
+	box-shadow: none;
+	transition:
+		border-color 120ms ease-out,
+		background-color 120ms ease-out;
+}
+
+.header button[data-open-modal]:hover {
+	background: var(--ax-surface-sunk);
+	border-color: var(--ax-rule-strong);
+	color: var(--ax-body);
+}
+
+.header button[data-open-modal] > kbd {
+	background: transparent;
+	border: 1px solid var(--ax-rule);
+	border-radius: 4px;
+	padding: 0.0625rem 0.25rem;
+	font-size: 0.6875rem;
+	color: var(--ax-muted);
+}
+
+.header .right-group,
+.header .social-icons {
+	gap: 0.75rem;
+}
+
+.header .social-icons::after {
+	display: none;
+}
+
+.header .social-icons a,
+.header .social-icons a:visited,
+.header .social-icons svg {
+	color: var(--ax-muted);
+	fill: currentColor;
+	transition: color 120ms ease-out;
+}
+
+.header .social-icons a:hover {
+	color: var(--ax-ink);
 }
 
 /*
  * The theme control.
  *
- * A site that ships one colour scheme has nothing to toggle, so the control is
- * removed rather than styled — a switch that cannot change anything is worse than
- * no switch, because it invites the reader to look for a dark mode that is not
- * there.
+ * A button, sized and coloured like the search field beside it so the header
+ * reads as one row of controls rather than two kinds of control — which is what
+ * the old native `<select>` looked like next to it, and part of why it read as
+ * bolted on rather than placed.
  *
- * The element is `<starlight-theme-select>`, a custom element wrapping a
- * `<label>` and a `<select>`. Two earlier attempts used `.theme-toggle` and
- * `[data-component="ThemeToggle"]`, neither of which this framework version
- * emits, so the control stayed on the page rendering its own options in near-
- * white on near-white: visible as unreadable text rather than absent. The name
- * below was read out of the built HTML rather than guessed.
+ * ## Why the selectors name the custom element rather than a class
+ *
+ * `ax-theme-toggle` is a type selector matching the custom element, and
+ * `ax-theme-toggle button` is the button inside it. An earlier version put the
+ * same class on the button and then wrote `.ax-theme-toggle button` — a button
+ * *inside* a button, which matches nothing at all. Every rule below parsed, and
+ * every one of them was inert: the control rendered unstyled at its default
+ * size with both glyphs showing at once, because a rule that matches nothing
+ * fails silently and looks identical to a rule that was never written.
+ *
+ * So the wrapper is named by its element and the button has its own class, and
+ * no selector in this block can be satisfied by the wrong nesting.
  */
-starlight-theme-select {
+ax-theme-toggle {
+	display: inline-flex;
+}
+
+/*
+ * No border, no background, at rest or on hover.
+ *
+ * The control is a glyph, and a glyph in a rounded rectangle reads as a chip
+ * sitting in the header rather than as part of it. So the only thing that
+ * changes when a pointer arrives is the colour of the mark — and the hit area
+ * stays 2rem square regardless, because that is the difference between an
+ * easy target and a fussy one, and it is invisible either way.
+ *
+ * The focus ring *is* kept. It is the only indication a keyboard user gets that
+ * the control is where focus went, and dropping it would trade a preference
+ * about how the control looks for the ability to use it.
+ */
+.ax-theme-toggle__button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 2rem;
+	height: 2rem;
+	padding: 0;
+	cursor: pointer;
+	border: 0;
+	border-radius: var(--ax-radius-sm);
+	background: none;
+	color: var(--ax-muted);
+	transition: color 120ms ease-out;
+}
+
+.ax-theme-toggle__button:hover {
+	color: var(--ax-ink);
+}
+
+/* Show the glyph for the scheme you would switch *to*. A moon on a dark page is
+ * the "go to light" affordance, which is what a reader expects, and the
+ * opposite of showing the scheme currently on screen. */
+.ax-theme-toggle__icon {
+	display: block;
+}
+
+.ax-theme-toggle__button[data-theme="dark"] .ax-theme-toggle__icon--sun,
+.ax-theme-toggle__button[data-theme="light"] .ax-theme-toggle__icon--moon {
 	display: none;
 }
 
-.site-header :is(a, a:hover) {
+@media (prefers-reduced-motion: reduce) {
+	.header button[data-open-modal],
+	.ax-theme-toggle__button,
+	.header .social-icons a {
+		transition: none;
+	}
+}
+
+/*
+ * The group label is the framework's own markup — a `<summary>` holding a
+ * `<span class="large">` inside a `<span class="group-label">`. Both spans
+ * carry the framework's heading size, so both are set here; leaving either one
+ * out is what makes a section label render as a bold heading with a small word
+ * floating inside it.
+ */
+
+/* ── Sidebar ──────────────────────────────────────────────────────────────
+ *
+ * The current page is ink at medium weight on a sunken fill. Berth marks it
+ * with an accent pill and ax-kit previously with a stripe down one side; a
+ * fill says "you are here" without either, and survives at any width.
+ *
+ * Section labels are 11px at medium weight in the faint grey — a label, not a
+ * heading. Set bold they out-shout every link beneath them.
+ */
+
+.sidebar-content {
+	font-size: var(--sl-text-sm);
 	color: var(--ax-body);
+	background: var(--ax-page);
 }
 
-.site-header .site-title {
-	color: var(--ax-text);
-	font-weight: 600;
-	letter-spacing: -0.01em;
-}
-
-.site-header :is(.search, .search-input) :is(input, button) {
-	color: var(--ax-body);
-	border-color: var(--ax-rule);
-}
-
-.site-header :is(.search, .search-input) input::placeholder {
+.sidebar-content :is(a, a:hover) {
 	color: var(--ax-muted);
+	text-decoration: none;
+	transition: color 120ms ease-out;
 }
 
-/*
- * Search results.
- *
- * The search dialog is Pagefind's own widget, and it takes its text colour from
- * `--pagefind-ui-text`, which the framework sets to `--sl-color-gray-2`. This
- * palette redefines that token as `#f2f2f1` — near-white — so result excerpts and
- * the highlighted `<mark>` terms were rendered at roughly the same value as the
- * white surface behind them. Titles stayed legible only because the framework
- * styles those separately.
- *
- * Overriding the two tokens is enough: the dialog's surface is left alone, and
- * Pagefind's own layout is untouched.
- */
-#starlight__search .pagefind-ui {
-	--pagefind-ui-text: var(--ax-body);
+.sidebar-content a:hover {
+	color: var(--ax-ink);
 }
 
-#starlight__search .pagefind-ui mark {
-	color: var(--ax-text);
-	background: var(--ax-surface);
-}
-
-/*
- * The header's trailing controls. The repository link is built as
- * `.social-icons > a > span.sr-only + svg`, and the icon inherits its colour
- * from `currentColor` on the anchor — so the anchor's colour is what has to
- * change. Two earlier attempts missed it: one selected `.social-links`, which is
- * not the class the framework emits, and one set `.site-header a`, which the
- * anchor's own rule outranks. Read out of the built HTML this time.
- */
-.site-header .social-icons a,
-.site-header .social-icons a:visited,
-.site-header .social-icons svg {
-	color: var(--ax-body);
-	fill: currentColor;
-}
-
-.site-header .social-icons a:hover {
-	color: var(--ax-text);
-}
-
-/* The header's own rule, because the framework's default is tuned for a
- * coloured accent and a grey one does not read against it. */
-.site-header {
-	border-bottom: 1px solid var(--ax-rule);
-}
-
-/* The header's own rule, because the framework's default is tuned for a
- * coloured accent and a grey one does not read against it. */
-.site-header {
-	border-bottom: 1px solid var(--ax-rule);
-}
-
-/* The rule under the page heading. The framework draws it in its accent, which
- * here is a grey, and a grey rule under a grey heading reads as a mistake. */
-.page-header {
-	border-bottom: 1px solid var(--ax-rule);
-}
-
-/* ── Cards, asides and callouts ────────────────────────────────────────────
- *
- * The reference site has one border colour and uses it for everything. A card
- * with a shadow and a callout with a coloured left border is three visual
- * languages where one is enough.
- */
-
-.sl-markdown-content :is(.card, .card + .card > .card-title) {
-	border: 1px solid var(--ax-rule);
-	border-radius: 6px;
-	background: var(--ax-surface);
+.sidebar-content a[aria-current="page"],
+.sidebar-content a[aria-current="page"]:hover {
+	color: var(--ax-ink);
+	font-weight: 500;
+	background: var(--ax-surface-sunk);
+	border-radius: var(--ax-radius-sm);
 	box-shadow: none;
 }
 
-.sl-markdown-content .aside {
-	border-left: 2px solid var(--ax-rule-strong);
+.sidebar-content ul {
+	--sl-sidebar-item-padding-inline: 0.5rem;
+}
+
+.sidebar-content ul ul li {
+	border-inline-start: 0;
+	padding-inline-start: var(--sl-sidebar-item-padding-inline);
+}
+
+/* Group labels: small, quiet, sentence case, never tracked. */
+.sidebar-content .large,
+.sidebar-content .group-label .large,
+.sidebar-content .group-label,
+.sidebar-content summary {
+	color: var(--ax-muted);
+	font-size: 0.6875rem;
+	font-weight: 500;
+	letter-spacing: 0.02em;
+	text-transform: none;
+}
+
+.sidebar-content summary {
+	padding: 0.5rem var(--sl-sidebar-item-padding-inline) 0.375rem;
+	line-height: 1.4;
+}
+
+.sidebar-content .top-level > li + li {
+	margin-top: 1rem;
+}
+
+.sidebar-content a {
+	padding: 0.3125rem var(--sl-sidebar-item-padding-inline);
+	line-height: 1.45;
+	border-radius: var(--ax-radius-sm);
+}
+
+.sidebar-content .caret {
+	color: var(--ax-faint);
+}
+
+.sidebar-content strong {
+	color: var(--ax-ink);
+	font-weight: 500;
+	font-size: var(--sl-text-sm);
+}
+
+/* ── Table of contents ────────────────────────────────────────────────────
+ *
+ * A list of the page's own headings, in the muted grey, at the size where a
+ * list of forty entries stays scannable.
+ */
+
+.right-sidebar-panel {
+	padding-top: 1.75rem;
+}
+
+/*
+ * The contents rail is narrower than the prose column, but the framework's own
+ * `.sl-container` inside it is sized from the page's content token rather than
+ * from the rail — so it rendered 33px wider than the space it sits in and
+ * overhung the right edge of the page by that much. Capped here rather than by
+ * overriding the token, because the token is correct for the column it was
+ * written for and only wrong in here.
+ */
+.right-sidebar-panel .sl-container {
+	max-width: 100%;
+}
+
+.right-sidebar-panel h2 {
+	display: flex;
+	align-items: center;
+	gap: 0.375rem;
+	color: var(--ax-muted);
+	font-size: 0.6875rem;
+	font-weight: 500;
+	letter-spacing: 0.02em;
+	text-transform: none;
+	margin-bottom: 0.75rem;
+}
+
+/* ── The mobile "On this page" bar ─────────────────────────────────────────
+ *
+ * The collapsed bar reads "On this page › Overview": a label *about* the list
+ * followed by the list's current entry. The label is the redundant half — the
+ * bar sits directly under the header on every page, and nothing else on it
+ * could be a list of this page's headings. So the bar carries only the current
+ * entry, and the pill that opens it carries only marks: the list glyph and the
+ * caret.
+ *
+ * The text is collapsed with `font-size: 0`, not removed. It stays in the
+ * accessibility tree, so the summary keeps its spoken name, and both marks
+ * survive because neither is font-sized: the caret is a fixed 16px SVG and the
+ * glyph is a 12px mask. Anything `em`-sized in that pill would collapse with
+ * the text, which is the thing to check if anything is ever added to it.
+ */
+mobile-starlight-toc summary .toggle {
+	font-size: 0;
+	gap: 0.5rem;
+	padding-inline: 0.5rem;
+}
+
+/* A list mark before the label, on desktop and in the mobile dropdown alike.
+ *
+ * The label on its own is eleven pixels of grey that reads as leftover chrome
+ * rather than as the start of a list — which is what it is. The glyph says
+ * "this is a list of what follows" before a word is read, the way the three
+ * dots on a terminal bar say "this is runnable" before the code is read.
+ *
+ * Drawn as a mask for the usual reason: it takes `background-color` and needs
+ * no asset, and it follows the theme with nothing to swap. `flex: none`, so a
+ * long label wraps against the text rather than crushing the mark.
+ */
+.right-sidebar-panel h2::before,
+mobile-starlight-toc summary .toggle::before {
+	content: "";
+	flex: none;
+	align-self: center;
+	width: 0.75rem;
+	height: 0.75rem;
+	background-color: var(--ax-faint);
+	-webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='M9 6h12M9 12h12M9 18h12'/%3E%3Ccircle cx='4' cy='6' r='1.4' fill='%23000' stroke='none'/%3E%3Ccircle cx='4' cy='12' r='1.4' fill='%23000' stroke='none'/%3E%3Ccircle cx='4' cy='18' r='1.4' fill='%23000' stroke='none'/%3E%3C/svg%3E");
+	mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='M9 6h12M9 12h12M9 18h12'/%3E%3Ccircle cx='4' cy='6' r='1.4' fill='%23000' stroke='none'/%3E%3Ccircle cx='4' cy='12' r='1.4' fill='%23000' stroke='none'/%3E%3Ccircle cx='4' cy='18' r='1.4' fill='%23000' stroke='none'/%3E%3C/svg%3E");
+	-webkit-mask-repeat: no-repeat;
+	mask-repeat: no-repeat;
+	-webkit-mask-size: contain;
+	mask-size: contain;
+}
+
+.right-sidebar-panel :is(a, a:hover) {
+	color: var(--ax-muted);
+	font-size: 0.75rem;
+	text-decoration: none;
+	line-height: 1.5;
+	transition: color 120ms ease-out;
+}
+
+/*
+ * The list hangs under the label's text, not under its glyph.
+ *
+ * The heading is a flex row — 12px mark, 6px gap, then the words — and the list
+ * below it starts at the row's own left edge, which puts every entry directly
+ * under the mark. Entries aligned to a decoration read as a mistake; aligned
+ * to the "O" of "On this page" they read as belonging to it. So the root list
+ * takes exactly the mark plus the gap as its start padding: 1.125rem.
+ *
+ * Scoped to the root `ul`, so nested levels keep their own relative indent on
+ * top of it rather than doubling it. And scoped to the desktop panel — the
+ * mobile dropdown keeps full-width rows, which is what a touch target wants.
+ */
+.right-sidebar-panel starlight-toc > nav > ul {
+	padding-inline-start: 1.125rem;
+}
+
+.right-sidebar-panel a:hover {
+	color: var(--ax-ink);
+}
+
+/* The heading currently in view, marked by weight rather than by a rail. */
+.right-sidebar-panel a[aria-current="location"],
+.right-sidebar-panel a[aria-current="true"] {
+	color: var(--ax-ink);
+	font-weight: 500;
+}
+
+.right-sidebar-panel code {
+	font-size: 0.92em;
+	padding: 0;
+	border: 0;
+	background: none;
+}
+
+/* ── Inline code ──────────────────────────────────────────────────────────
+ *
+ * A chip on the sunken fill and no border. The border was here to make the
+ * chip legible against a white page, and on a light fill it is one more line
+ * on every sentence that mentions an API.
+ */
+
+.sl-markdown-content code:not(:where(.not-content *)) {
+	background: var(--ax-surface-sunk);
+	border: 0;
+	padding: 0.1em 0.3em;
+	border-radius: var(--ax-radius-sm);
+	font-size: 0.875em;
+	color: var(--ax-ink);
+	overflow-wrap: anywhere;
+}
+
+.sl-markdown-content :is(h1, h2, h3, h4) code:not(:where(.not-content *)) {
+	background: none;
+	font-size: 0.94em;
+}
+
+/* ── Code blocks ──────────────────────────────────────────────────────────
+ *
+ * One ground, one hairline, one radius. The terminal bar keeps its three dots
+ * because they are the only thing on the page that tells a reader whether to
+ * paste a line into a shell or read it as library code — but the bar is now
+ * the same ground as the code with a hairline under it, not a darker strip.
+ */
+
+.sl-markdown-content .expressive-code,
+.sl-markdown-content figure {
+	border: 1px solid var(--ax-rule);
+	border-radius: var(--ax-radius);
+	background: var(--ax-surface);
+	box-shadow: none;
+	overflow: hidden;
+}
+
+.sl-markdown-content .expressive-code .frame {
+	--code-background: var(--ax-surface);
+	border: 0;
+	border-radius: var(--ax-radius);
+	box-shadow: none;
+	background: var(--ax-surface);
+}
+
+.sl-markdown-content .expressive-code .frame.is-terminal .header {
+	background: var(--ax-surface-sunk);
+	border-bottom: 1px solid var(--ax-rule);
+	/* 2rem is the shortest bar that still centres the three 6px dots on the
+	 * pixel grid; at 0.5rem they sit on a half-pixel and read as smudged. */
+	padding: 0;
+}
+
+.sl-markdown-content .expressive-code .frame.is-terminal .header::before {
+	box-shadow: inset 99rem 99rem var(--ax-faint);
+	opacity: 0.7;
+}
+
+.sl-markdown-content .expressive-code pre,
+.sl-markdown-content .expressive-code code {
 	background: transparent;
-	border-radius: 0;
-	padding: 0.25rem 0 0.25rem 1rem;
+	border: 0;
+	box-shadow: none;
+	font-size: 0.8125rem;
+	font-weight: 500;
+	line-height: 1.7;
+}
+
+/* The copy button keeps the code ground behind it, so code scrolled under it
+ * never shows through. */
+.sl-markdown-content .expressive-code .copy code {
+	background: var(--ax-surface);
+}
+
+/* ── The label row ──────────────────────────────────────────────────────────
+ *
+ * A code block's caption: the three dots of a terminal, or a filename.
+ *
+ * ## Why the height is fixed rather than left to padding
+ *
+ * Because the copy control is centred inside this row, and the row has to be a
+ * number of pixels for "centred" to mean anything. Padding gives a height that
+ * depends on the line-height of whatever the row happens to contain, which is
+ * how the two label kinds ended up 35px and 40px tall for the same content.
+ * One height, both kinds, and the control sits at exactly half of it.
+ *
+ * ## Why the filename was set at 14.4px
+ *
+ * It was not set there; it was *inherited* — the row took the page's prose size,
+ * so a filename was set larger than the code it was labelling and in full ink
+ * rather than the muted grey. A label that shouts over its own content is
+ * backwards. It is a caption: small, quiet, and one step down.
+ *
+ * ## Why the empty row is removed rather than padded
+ *
+ * Every frame carries a `<figcaption>`, and on a plain block it is empty. Left
+ * alone it is a 35px strip of nothing above the code, which is the "no top gap"
+ * of the copy control's complaint one level up: the button had a caption row's
+ * worth of space reserved above it and then sat on the first line of code. With
+ * the empty row gone, a plain block starts at its code and the control, on a
+ * pointer device, sits beside the first line where the extra padding on that
+ * line was already reserved for it.
+ */
+.sl-markdown-content .expressive-code .frame figcaption.header {
+	display: flex;
+	align-items: center;
+	height: 2rem;
+	padding: 0 0.75rem;
+	margin: 0;
+	background: var(--ax-surface-sunk);
+	border-bottom: 1px solid var(--ax-rule);
+	position: relative;
+}
+
+/* No dots, no filename, no row.
+ *
+ * Written as "hide unless the title has text" rather than "hide when the title
+ * is empty" because a plain block's `<figcaption>` has no `.title` child *at
+ * all* — `:has(> .title:empty)` asks for a child that is not there, matches
+ * nothing, and the empty 32px row stays on every block of ordinary code. */
+.sl-markdown-content .expressive-code .frame:not(.is-terminal) figcaption.header:not(
+		:has(> .title:not(:empty))
+	) {
+	display: none;
+}
+
+.sl-markdown-content .expressive-code figcaption .title {
+	/* A filename is a code artifact, so it is set in the code face — 12px
+	 * Geist Mono at the same 500 weight as the block beneath it — rather than
+	 * in the UI face. In Hanken at 11px it read as chrome around the code; in
+	 * mono it reads as the name of what follows. No tracking: letterspaced
+	 * mono reads as a ransom note rather than a path. */
+	font-family: var(--sl-font-mono);
+	font-size: 0.75rem;
+	font-weight: 500;
+	letter-spacing: 0;
+	color: var(--ax-muted);
+}
+
+/* A document glyph before the filename, drawn as a mask like every other
+ * glyph on this site. Scoped to non-empty titles so terminal bars — whose
+ * title is empty and whose mark is the three dots — are left alone. */
+.sl-markdown-content .expressive-code figcaption .title:not(:empty)::before {
+	content: "";
+	display: inline-block;
+	width: 0.75rem;
+	height: 0.75rem;
+	margin-right: 0.375rem;
+	vertical-align: -0.125rem;
+	background-color: var(--ax-faint);
+	-webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 3h7l4 4v12a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z'/%3E%3Cpath d='M13 3v4h4'/%3E%3C/svg%3E");
+	mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 3h7l4 4v12a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z'/%3E%3Cpath d='M13 3v4h4'/%3E%3C/svg%3E");
+	-webkit-mask-repeat: no-repeat;
+	mask-repeat: no-repeat;
+	-webkit-mask-size: contain;
+	mask-size: contain;
+}
+
+/*
+ * The copy control, centred in the label row when there is one.
+ *
+ * `1rem` is half of the `2rem` above, and the `translateY` puts the middle of
+ * the button on that line whatever its own height ends up being. Scoped to the
+ * two frame kinds that *have* a row, so a plain block's control keeps the
+ * framework's own position.
+ */
+.sl-markdown-content .expressive-code .frame:has(
+	figcaption.header > .title:not(:empty)
+) .copy,
+.sl-markdown-content .expressive-code .frame.is-terminal .copy {
+	inset-block-start: 1rem;
+	inset-inline-end: 0.375rem;
+	transform: translateY(-50%);
+}
+
+/* ── Copy control ──────────────────────────────────────────────────────────
+ *
+ * A glyph, not a chip.
+ *
+ * ## No box
+ *
+ * The framework builds the button out of three layers: a `<div>` that fills it
+ * with a background on hover, a `::before` that draws a border round it, and
+ * the `::after` that carries the icon as a mask. Together they read as a small
+ * square panel sitting in the corner of every block — the same "bolted on"
+ * look the old theme `<select>` had in the header, and it was fixed the same
+ * way: the fill and the border are gone, and all that is left is the mark. The
+ * hit area stays a full square regardless, because that is the difference
+ * between an easy target and a fussy one, and it is invisible either way.
+ *
+ * ## Smaller, and placed on purpose
+ *
+ * The framework ships it at 2.5rem square — 40px — dropping to 2rem on a device
+ * with a pointer. On a 13px code block that is a billboard. It is 2rem where
+ * there is no hover to reveal it and 1.5rem where there is, with the glyph
+ * inset in proportion: the icon is drawn by masking whatever fills the space
+ * left after the `::after` margin, so the margin *is* the glyph's size and the
+ * two move together.
+ *
+ * Plain blocks get an even 10px of air on the top and the right. Blocks with a
+ * label row get the control centred in that row instead — see the label-row
+ * section above — so the two cases never share a position and cannot drift.
+ *
+ * ## A check, not a green label
+ *
+ * The framework confirms a copy with a green tooltip that slides in beside the
+ * button. It is the only green on this site, it covers the first line of the
+ * block while it is up, and it says the same thing twice — once as a colour and
+ * once as the word "Copied!".
+ *
+ * So the glyph changes instead: the clipboard becomes a tick, in this site's own
+ * ink. `.feedback` is the only signal the framework gives that a copy happened,
+ * and it is what the selector keys off. The mask paints with `background-color`,
+ * not `color` — setting `color` on a mask paints nothing, which is exactly what
+ * an earlier version did, and the tick silently kept the old colour.
+ *
+ * The tooltip is hidden *visually*, not removed. It carries `aria-live`, so it
+ * is how a screen reader learns the copy worked; `display: none` would take that
+ * with it and leave the confirmation sighted-only. It is clipped to a pixel
+ * instead — still announced, no longer seen.
+ */
+.sl-markdown-content .expressive-code .copy {
+	gap: 0;
+	inset-block-start: 0.625rem;
+	inset-inline-end: 0.625rem;
+}
+
+.sl-markdown-content .expressive-code .copy button {
+	width: 2rem;
+	height: 2rem;
+	background: none;
+}
+
+/* The fill layer and the border. Decorative, and the decoration is the box. */
+.sl-markdown-content .expressive-code .copy button div,
+.sl-markdown-content .expressive-code .copy button::before {
+	display: none;
+}
+
+.sl-markdown-content .expressive-code .copy button::after {
+	margin: 0.5rem;
+	background-color: var(--ax-muted);
+}
+
+.sl-markdown-content .expressive-code .copy button:hover::after {
+	background-color: var(--ax-ink);
+}
+
+/*
+ * Keyboard users get the same affordance as pointer users. The button is in the
+ * tab order, and without this a keyboard focus lands on a control whose only
+ * visible state is the global focus ring — with no indication that *this* glyph
+ * is the one about to fire.
+ */
+.sl-markdown-content .expressive-code .copy button:focus-visible::after {
+	background-color: var(--ax-ink);
+}
+
+@media (hover: hover) {
+	.sl-markdown-content .expressive-code .copy button {
+		width: 1.5rem;
+		height: 1.5rem;
+	}
+
+	.sl-markdown-content .expressive-code .copy button::after {
+		/* 6px on a 24px button: a 12px glyph beside 13px code. */
+		margin: 0.375rem;
+	}
+}
+
+/* Kept in the accessibility tree, out of the layout. */
+.sl-markdown-content .expressive-code .copy .feedback {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+	border: 0;
+}
+
+/* The tick. A mask, so it takes the background colour and needs no second
+ * asset — the same reason the theme control's glyphs are drawn rather than
+ * loaded. */
+.sl-markdown-content .expressive-code .copy:has(.feedback.show) button::after {
+	-webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6L9 17l-5-5'/%3E%3C/svg%3E");
+	mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6L9 17l-5-5'/%3E%3C/svg%3E");
+	-webkit-mask-repeat: no-repeat;
+	mask-repeat: no-repeat;
+	-webkit-mask-size: contain;
+	mask-size: contain;
+	background-color: var(--ax-ink);
+	opacity: 1;
+}
+
+/*
+ * On a phone, code wraps instead of scrolling.
+ *
+ * A block that scrolls sideways on a phone is a block whose right-hand side —
+ * and its copy button — the reader cannot reach without a horizontal drag,
+ * and a horizontally-scrolling code block inside a vertically-scrolling page
+ * is worse than useless. Below 40rem every block wraps; above it, longer
+ * blocks still scroll inside their own frame, which is the right trade on a
+ * screen with a pointer.
+ */
+@media (max-width: 40rem) {
+	.sl-markdown-content .expressive-code pre {
+		white-space: pre-wrap;
+		overflow-wrap: anywhere;
+	}
+
+	/* A wrapped line hangs indented rather than restarting under the line
+	 * number or the block's own left padding. */
+	.sl-markdown-content .expressive-code .ec-line {
+		padding-left: calc(var(--ec-pad-inline-start, 0) + 2ch);
+		text-indent: -2ch;
+	}
+}
+
+/* ── Asides ───────────────────────────────────────────────────────────────
+ *
+ * One outline all round and a glyph. The framework colours each variant and
+ * stripes the near edge; there is no accent on this site to spend, so every
+ * variant renders the same neutral way and says what it is with its icon and
+ * title.
+ */
+
+.sl-markdown-content .starlight-aside {
+	display: flex;
+	gap: 0.75rem;
+	margin: 1.5rem 0;
+	padding: 0.875rem 1rem;
+	border: 1px solid var(--ax-rule);
+	border-radius: var(--ax-radius);
+	background: var(--ax-surface);
+	font-size: 0.875rem;
+	line-height: 1.65;
+	color: var(--ax-body);
+}
+
+.sl-markdown-content
+	:is(
+		.starlight-aside--note,
+		.starlight-aside--tip,
+		.starlight-aside--caution,
+		.starlight-aside--danger
+	) {
+	--sl-color-asides-text-accent: var(--ax-muted);
+	--sl-color-asides-border: var(--ax-rule);
+	background-color: var(--ax-surface);
+}
+
+.sl-markdown-content .starlight-aside__title {
+	color: var(--ax-ink);
+	font-size: 0.8125rem;
+	font-weight: 600;
+	gap: 0.4375rem;
+}
+
+.sl-markdown-content .starlight-aside__icon {
+	color: var(--ax-faint);
 }
 
 .sl-markdown-content .starlight-aside__content {
 	color: var(--ax-body);
 }
 
+.sl-markdown-content
+	.starlight-aside__content
+	code:not(:where(.not-content *)) {
+	background: var(--ax-page);
+}
+
 /* ── Tables ────────────────────────────────────────────────────────────────
  *
- * The API reference is mostly tables, so they get treated properly: a rule under
- * the header, a rule between rows, no vertical lines, and no zebra striping. A
- * zebra-striped table is noise in a document where the rows are already
- * separated by whitespace.
+ * The reference is mostly tables, so they carry the page: a quiet header in
+ * the muted grey with no fill behind it, hairline rows, and no zebra. Zebra is
+ * noise in a document whose rows are already separated by whitespace.
  */
 
 .sl-markdown-content table {
-	border-collapse: collapse;
+	border-collapse: separate;
+	border-spacing: 0;
 	width: 100%;
 	font-size: var(--sl-text-sm);
+	line-height: 1.6;
 }
 
 .sl-markdown-content :is(th, td) {
 	border: 0;
 	border-bottom: 1px solid var(--ax-rule);
-	/* Right padding on every column except the last. Removing it everywhere
-	 * makes two-column tables run their headers together — "Entry point" and
-	 * "Names" read as one word, which is what it looked like before this was
-	 * fixed by giving every cell but the last its own gutter. */
-	padding: 0.5rem 1.25rem 0.5rem 0;
+	padding: 0.625rem 0.875rem;
 	text-align: left;
 	vertical-align: top;
 	color: var(--ax-body);
+	background: transparent;
+}
+
+.sl-markdown-content :is(th, td):first-child {
+	padding-left: 0;
 }
 
 .sl-markdown-content :is(th, td):last-child {
@@ -443,147 +1526,248 @@ starlight-theme-select {
 }
 
 .sl-markdown-content th {
-	color: var(--ax-text);
-	font-weight: 600;
+	color: var(--ax-muted);
+	font-size: 0.75rem;
+	font-weight: 500;
+	letter-spacing: 0.01em;
 	border-bottom-color: var(--ax-rule-strong);
 	white-space: nowrap;
 }
 
-/* ── Code ────────────────────────────────────────────────────────────────── */
-
-/*
- * Inline code.
- *
- * The framework renders it inside a `<code>` nested in a `<span>`, so a
- * `:not(pre) > code` selector never matched and the weak default stood —
- * pale grey text in a pale grey box, which on the API reference means most of the
- * content. Selected by element with an explicit `:not(pre)` ancestor chain
- * instead, which reaches the node the framework actually emits.
- */
-.sl-markdown-content code {
-	background: var(--ax-surface);
-	border: 1px solid var(--ax-rule-strong);
-	padding: 0.0625rem 0.3rem;
-	border-radius: 3px;
-	font-size: 0.8125em;
-	color: var(--ax-text);
-	white-space: nowrap;
+.sl-markdown-content tr:last-child :is(th, td) {
+	border-bottom: 0;
 }
 
-.sl-markdown-content pre code {
-	background: transparent;
-	border: 0;
+/* A name in the first column reads as the identifier it is, not as a chip. */
+.sl-markdown-content td:first-child {
+	color: var(--ax-ink);
+}
+
+.sl-markdown-content td code:not(:where(.not-content *)) {
+	background: none;
 	padding: 0;
-	border-radius: 0;
-	color: inherit;
-	white-space: pre;
+	font-size: 0.94em;
+	overflow-wrap: normal;
+	word-break: normal;
 }
 
-.sl-markdown-content pre {
-	background: var(--ax-surface);
+.sl-markdown-content th code:not(:where(.not-content *)) {
+	background: none;
+	padding: 0;
+	font-size: 0.94em;
+}
+
+/* On a phone a two-column table becomes a list: the name above its
+ * description, full width, rather than two cramped columns. Wider tables keep
+ * their columns and scroll inside their own frame. */
+@media (max-width: 40rem) {
+	.sl-markdown-content table:not(:has(th:nth-child(3))) thead {
+		display: none;
+	}
+	.sl-markdown-content table:not(:has(th:nth-child(3))),
+	.sl-markdown-content table:not(:has(th:nth-child(3))) tbody,
+	.sl-markdown-content table:not(:has(th:nth-child(3))) tr,
+	.sl-markdown-content table:not(:has(th:nth-child(3))) td {
+		display: block;
+		width: 100%;
+	}
+	.sl-markdown-content table:not(:has(th:nth-child(3))) tr + tr {
+		border-top: 1px solid var(--ax-rule);
+	}
+	.sl-markdown-content table:not(:has(th:nth-child(3))) td {
+		border: 0;
+		padding: 0;
+	}
+	.sl-markdown-content table:not(:has(th:nth-child(3))) td:first-child {
+		padding-top: 0.75rem;
+		padding-bottom: 0.125rem;
+		font-weight: 500;
+	}
+	.sl-markdown-content table:not(:has(th:nth-child(3))) td:last-child {
+		padding-bottom: 0.75rem;
+	}
+	.sl-markdown-content table:has(th:nth-child(3)) {
+		min-width: 560px;
+	}
+}
+
+/* ── Cards ─────────────────────────────────────────────────────────────────
+ *
+ * An outline that firms on hover. The framework tints each card by its
+ * position in the grid — four fills where one is enough.
+ */
+
+.sl-markdown-content :is(.card, .sl-link-card, .sl-link-button) {
 	border: 1px solid var(--ax-rule);
+	border-radius: var(--ax-radius);
+	background: var(--ax-page);
 	box-shadow: none;
+	transition:
+		border-color 120ms ease-out,
+		background-color 120ms ease-out;
+}
+
+.sl-markdown-content
+	:is(.card:hover, .sl-link-card:hover, .sl-link-button:hover) {
+	background: var(--ax-surface);
+	border-color: var(--ax-rule-strong);
+}
+
+.sl-markdown-content .card {
+	--sl-card-border: var(--ax-rule);
+	--sl-card-bg: var(--ax-surface-sunk);
+	padding: 1rem;
+}
+
+.sl-markdown-content .card .title,
+.sl-markdown-content .sl-link-card .title {
+	color: var(--ax-ink);
+	font-size: 0.875rem;
+	font-weight: 600;
+}
+
+/* ── Pagination ────────────────────────────────────────────────────────── */
+
+.pagination-links a {
+	background: var(--ax-page);
+	box-shadow: none;
+	border-radius: var(--ax-radius);
+	transition:
+		border-color 120ms ease-out,
+		background-color 120ms ease-out;
+}
+
+.pagination-links a:hover {
+	background: var(--ax-surface);
+	border-color: var(--ax-rule-strong);
+}
+
+.pagination-links .link-title {
+	color: var(--ax-ink);
+	font-size: 0.875rem;
+}
+
+/* ── Search ────────────────────────────────────────────────────────────────
+ *
+ * The dialog is Pagefind's own widget and takes its text colour from a token.
+ * Left alone it renders result excerpts near-white on a white surface; the
+ * three tokens below are enough, and Pagefind's layout is untouched.
+ */
+
+#starlight__search {
+	--pagefind-ui-text: var(--ax-body);
+	--pagefind-ui-background: var(--ax-page);
+	--pagefind-ui-border: var(--ax-rule);
+	--pagefind-ui-primary: var(--ax-ink);
+	--pagefind-ui-tag: var(--ax-surface-sunk);
+}
+
+#starlight__search .pagefind-ui mark {
+	color: var(--ax-ink);
+	background: var(--ax-surface-sunk);
+	font-weight: 600;
 }
 
 /*
- * Terminal chrome.
+ * The search field sets its own text at 16px.
  *
- * Shells are labelled with a bar carrying three dots, which is worth keeping:
- * it is the only thing on the page that tells a reader whether to paste the line
- * into a shell or read it as library code. What is worth changing is the colour.
- * The bar takes its background from the framework's grey ramp, and this palette's
- * ramp lands it on a mid-dark grey — a dark strip across a near-white page, with
- * dots a shade darker still, which reads as a rendering fault rather than as
- * chrome.
- *
- * A light bar with mid-grey dots says the same thing in the same register as
- * everything else here.
+ * Below 16px, focusing a field makes Safari zoom the whole page to the field —
+ * a behaviour no stylesheet can intercept after the fact, so the size is set
+ * here rather than worked around anywhere else. 16px is also the base step, so
+ * this costs nothing visually.
  */
-.sl-markdown-content .expressive-code .frame.is-terminal .header {
-	background: #f4f4f2;
+#starlight__search .pagefind-ui__search-input {
+	font-size: 1rem;
 }
 
-.sl-markdown-content .expressive-code .frame.is-terminal .header::before {
-	box-shadow: inset 99rem 99rem var(--ax-muted);
-}
-
-/* ── Landing page ────────────────────────────────────────────────────────────
+/* ── Landing page ──────────────────────────────────────────────────────────
  *
- * No hero, no splash template. The reference site leads with a name and a
- * paragraph, and a documentation site that does the same reads as though a
- * person wrote it.
+ * No hero, no splash template. The frontmatter `title` is the page's `<h1>`
+ * and is rendered by the framework, so this block deliberately has none: an
+ * earlier version added a second one and the page read "ax-kit" twice.
  */
 
 .ax-front {
-	max-width: 44rem;
-	padding: 0.5rem 0 2rem;
+	max-width: var(--sl-content-width);
+	padding-bottom: 3rem;
 }
 
-/*
- * The page heading comes from the frontmatter `title` and the framework
- * renders it. This block deliberately has **no** `h1` — an earlier version had
- * one and the page showed "ax-kit" twice, once from the framework and once from
- * here. The first thing on the page is already the heading.
- */
-
 .ax-front__sub {
-	color: var(--ax-muted);
-	font-size: 0.9375rem;
-	margin: 0 0 2.5rem;
+	color: var(--ax-ink);
+	font-size: 1.125rem;
+	line-height: 1.55;
+	text-wrap: balance;
+	margin: 0 0 1.5rem;
+	max-width: 46ch;
+}
+
+.ax-front__sub p {
+	margin: 0;
 }
 
 .ax-front h2 {
-	font-size: 0.8125rem;
+	font-size: 1rem;
 	font-weight: 600;
-	letter-spacing: 0.04em;
-	text-transform: uppercase;
-	color: var(--ax-muted);
-	margin: 2.5rem 0 0.75rem;
+	letter-spacing: -0.008em;
+	color: var(--ax-ink);
+	text-transform: none;
+	/* Half the prose section gap: on the landing page these headings sit inside
+	 * a short page of lists, not inside a long article, and the full 2.75rem
+	 * leaves a band of nothing above every one of them. */
+	margin: 2rem 0 0.875rem;
 }
 
 .ax-front p {
 	color: var(--ax-body);
 	line-height: 1.75;
 	text-wrap: pretty;
-	margin: 0 0 1rem;
-	max-width: 42rem;
+	margin: 0 0 1.125rem;
+	max-width: 64ch;
 }
 
 .ax-front__actions {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 0.625rem;
-	margin: 2rem 0 0;
+	gap: 0.5rem;
+	margin: 1.75rem 0 0;
 }
 
 .ax-front .ax-front__actions a,
 .ax-front .ax-front__actions a:hover {
-	display: inline-block;
-	padding: 0.4375rem 0.875rem;
-	border: 1px solid var(--ax-text);
-	border-radius: 6px;
+	display: inline-flex;
+	align-items: center;
+	height: 2.25rem;
+	padding: 0 0.875rem;
+	border: 1px solid var(--ax-ink);
+	border-radius: var(--ax-radius-sm);
+	background: var(--ax-ink);
 	font-size: var(--sl-text-sm);
 	font-weight: 500;
-	color: var(--ax-text);
+	color: var(--ax-page);
 	text-decoration: none;
 	transition:
 		background-color 120ms ease-out,
+		border-color 120ms ease-out,
 		color 120ms ease-out;
 }
 
 .ax-front .ax-front__actions a:hover {
-	background: var(--ax-text);
-	color: var(--ax-bg);
+	background: var(--ax-body);
+	border-color: var(--ax-body);
 }
 
+/* The secondary action is an outline, so the pair reads primary-then-
+ * alternative without either shouting. */
 .ax-front .ax-front__actions a[aria-variant="minimal"] {
+	background: transparent;
 	border-color: var(--ax-rule-strong);
-	color: var(--ax-muted);
+	color: var(--ax-body);
 }
 
 .ax-front .ax-front__actions a[aria-variant="minimal"]:hover {
 	background: var(--ax-surface);
-	color: var(--ax-text);
+	border-color: var(--ax-faint);
+	color: var(--ax-ink);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -599,10 +1783,26 @@ starlight-theme-select {
 }
 
 .ax-front__list li {
-	padding: 0.5rem 0;
+	padding: 0.75rem 0;
 	border-bottom: 1px solid var(--ax-rule);
 	color: var(--ax-body);
 	font-size: var(--sl-text-sm);
+	line-height: 1.65;
+}
+
+/*
+ * The list items carry a paragraph, and the prose rule gives every paragraph a
+ * 1.125rem bottom margin. In a list whose own rhythm is set by padding and a
+ * hairline, that margin is invisible vertical space between the text and the
+ * rule below it — which is why the rows read as twice as tall as their
+ * content.
+ */
+.ax-front__list li p {
+	margin: 0;
+}
+
+.ax-front__list li:first-child {
+	padding-top: 0;
 }
 
 .ax-front__list li:last-child {
@@ -610,20 +1810,28 @@ starlight-theme-select {
 }
 
 .ax-front__list strong {
-	color: var(--ax-text);
+	color: var(--ax-ink);
 	font-weight: 600;
 }
 
-/* ── The live demonstration ────────────────────────────────────────────────────
+.ax-front__list a {
+	text-decoration: none;
+}
+
+.ax-front__list a:hover strong {
+	text-decoration: underline;
+	text-underline-offset: 3px;
+}
+
+/* ── The live demonstration ─────────────────────────────────────────────────
  *
- * One border, one radius, one type size — the same vocabulary as the reference
- * site's rules. An island that looked designed differently from the page around
- * it would read as a widget bolted on.
+ * One border, one radius, one type size — the page's own vocabulary. An island
+ * designed differently from its surroundings reads as a widget bolted on.
  */
 
 .ax-try {
-	border: 1px solid var(--ax-rule-strong);
-	border-radius: 8px;
+	border: 1px solid var(--ax-rule);
+	border-radius: var(--ax-radius);
 	padding: 1.25rem;
 	margin: 1.5rem 0;
 	background: var(--ax-surface);
@@ -634,58 +1842,122 @@ starlight-theme-select {
 }
 
 .ax-try h4 {
-	font-size: 0.75rem;
-	font-weight: 600;
-	letter-spacing: 0.04em;
-	text-transform: uppercase;
+	font-size: 0.6875rem;
+	font-weight: 500;
+	letter-spacing: 0.02em;
+	text-transform: none;
 	color: var(--ax-muted);
-	margin: 1.5rem 0 0.625rem;
+	margin: 1.75rem 0 0.75rem;
 }
 
 .ax-try__table {
-	border-collapse: collapse;
+	border-collapse: separate;
+	border-spacing: 0;
 	width: 100%;
 	font-size: var(--sl-text-sm);
 	margin: 0;
 }
 
-.ax-try__table th,
-.ax-try__table td {
+/*
+ * The table's scroll frame. Four columns do not fit a 360px phone, and without
+ * this the table either crushes its code column into wrapping mid-identifier
+ * or pushes the whole page sideways — the two failure modes of a wide table in
+ * a narrow column.
+ *
+ * `tabindex="0"` with a `region` role is what makes the scroll reachable by
+ * keyboard: an overflow container is not in the tab order by default, so a
+ * keyboard-only reader could see the first columns and never reach the rest.
+ * The focus ring is the site's standard one, not a browser default.
+ *
+ * Below 40rem the table takes a floor of 560px — the same floor the prose
+ * reference tables take — so it scrolls inside its own frame instead of
+ * reflowing. Above it the table is fluid, and the frame is inert.
+ */
+.ax-try__scroll {
+	overflow-x: auto;
+	overscroll-behavior-x: contain;
+	border-radius: var(--ax-radius-sm);
+}
+
+.ax-try__scroll:focus-visible {
+	outline: 2px solid var(--sl-focus-ring-color);
+	outline-offset: 2px;
+}
+
+@media (max-width: 40rem) {
+	.ax-try__scroll > .ax-try__table {
+		min-width: 560px;
+	}
+}
+
+/*
+ * The invoke groups. Two outcomes, stated before the buttons rather than left
+ * for the reader to infer from what happens after clicking: "Calls that
+ * succeed" and "Calls that are refused". The label is the same 11px muted
+ * voice as the section labels above it, one step down from the `h4`.
+ */
+.ax-try__group {
+	margin: 1.25rem 0 0;
+}
+
+.ax-try__group-label {
+	font-size: 0.6875rem;
+	font-weight: 500;
+	letter-spacing: 0.02em;
+	color: var(--ax-muted);
+	margin: 0 0 0.5rem;
+}
+
+.ax-try__group-label code {
+	font-size: 0.92em;
+}
+
+.ax-try__table :is(th, td) {
+	border: 0;
 	border-bottom: 1px solid var(--ax-rule);
-	padding: 0.4375rem 0.625rem 0.4375rem 0;
+	padding: 0.5rem 0.75rem 0.5rem 0;
 	text-align: left;
+	vertical-align: top;
 	color: var(--ax-body);
 }
 
 .ax-try__table th {
-	color: var(--ax-text);
-	font-weight: 600;
-	white-space: nowrap;
+	color: var(--ax-muted);
+	font-size: 0.75rem;
+	font-weight: 500;
 	border-bottom-color: var(--ax-rule-strong);
+	white-space: nowrap;
 }
 
 .ax-try__actions {
 	display: flex;
 	flex-wrap: wrap;
+	align-items: center;
 	gap: 0.5rem;
+	margin: 0;
 }
 
 .ax-try__actions button {
-	font: inherit;
-	font-size: var(--sl-text-sm);
-	padding: 0.375rem 0.6875rem;
+	/* `margin: 0`, stated rather than assumed. A 16px top margin was appearing
+	 * on every button but the first in each row, from no rule in this file or
+	 * the framework's that names it — and an unowned margin is exactly the kind
+	 * of drift that reappears the next time anyone touches this block. */
+	margin: 0;
+	font-family: var(--sl-font-mono);
+	font-size: 0.8125rem;
+	font-weight: 500;
+	height: 2rem;
+	padding: 0 0.6875rem;
 	cursor: pointer;
 	border: 1px solid var(--ax-rule-strong);
-	border-radius: 6px;
-	background: var(--ax-surface);
-	color: var(--ax-text);
-	transition:
-		border-color 120ms ease-out,
-		background-color 120ms ease-out;
+	border-radius: var(--ax-radius-sm);
+	background: var(--ax-page);
+	color: var(--ax-ink);
+	transition: border-color 120ms ease-out;
 }
 
 .ax-try__actions button:hover {
-	border-color: var(--ax-text);
+	border-color: var(--ax-faint);
 }
 
 .ax-try__log {
@@ -696,7 +1968,7 @@ starlight-theme-select {
 }
 
 .ax-try__label {
-	color: var(--ax-text);
+	color: var(--ax-ink);
 	font-weight: 600;
 }
 
@@ -708,8 +1980,8 @@ starlight-theme-select {
 	font-size: var(--sl-text-sm);
 	color: var(--ax-body);
 	border-top: 1px solid var(--ax-rule);
-	padding-top: 0.875rem;
-	margin: 1.5rem 0 0;
+	padding-top: 1rem;
+	margin: 1.75rem 0 0;
 }
 
 .ax-try--unavailable {
@@ -720,5 +1992,84 @@ starlight-theme-select {
 @media (prefers-reduced-motion: reduce) {
 	.ax-try__actions button {
 		transition: none;
+	}
+}
+
+/* ── 404 ───────────────────────────────────────────────────────────────────
+ *
+ * A code, a sentence, and the three places worth going. Rendered as a normal
+ * content page, so the sidebar and search still work on it.
+ */
+
+.ax-not-found {
+	display: grid;
+	justify-items: start;
+	gap: 0.75rem;
+	max-width: 44ch;
+	padding: 3rem 0 4rem;
+}
+
+.ax-not-found p {
+	color: var(--ax-body);
+	margin: 0;
+}
+
+.ax-not-found .ax-not-found-code {
+	font-size: var(--sl-text-sm);
+	font-weight: 500;
+	color: var(--ax-muted);
+}
+
+.ax-not-found-links {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	margin-top: 0.75rem;
+}
+
+.ax-not-found-links a {
+	display: inline-flex;
+	align-items: center;
+	height: 2.25rem;
+	padding: 0 0.875rem;
+	border: 1px solid var(--ax-rule-strong);
+	border-radius: var(--ax-radius-sm);
+	font-size: var(--sl-text-sm);
+	font-weight: 500;
+	color: var(--ax-body);
+	text-decoration: none;
+	transition:
+		border-color 120ms ease-out,
+		background-color 120ms ease-out,
+		color 120ms ease-out;
+}
+
+.ax-not-found-links a:first-child {
+	background: var(--ax-ink);
+	border-color: var(--ax-ink);
+	color: var(--ax-page);
+}
+
+.ax-not-found-links a:hover {
+	border-color: var(--ax-faint);
+	color: var(--ax-ink);
+}
+
+.ax-not-found-links a:first-child:hover {
+	background: var(--ax-body);
+	border-color: var(--ax-body);
+	color: var(--ax-page);
+}
+
+/* ── Motion ──────────────────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		transition-duration: 0.01ms;
+		animation-duration: 0.01ms;
+		animation-iteration-count: 1;
+		scroll-behavior: auto;
 	}
 }

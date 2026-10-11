@@ -378,14 +378,14 @@ export default function TryIt(): React.JSX.Element {
 		<div className="ax-try">
 			<p>
 				Everything below is running in your browser against the published entry
-				points. Register, enumerate, invoke, and watch what two malformed calls
+				points. Register, enumerate, invoke and watch what two malformed calls
 				do.
 			</p>
 			<p className="ax-try__muted">
 				With <em>this library</em> answering, both are refused. It checks the
 				arguments against the declared <code>inputSchema</code> before a tool's{" "}
-				<code>execute</code> runs, and reports the failure as the draft's
-				generic <code>UnknownError</code> — so an agent cannot tell a bad{" "}
+				<code>execute</code> runs. It reports the failure as the draft's
+				generic <code>UnknownError</code>, so an agent cannot tell a bad{" "}
 				<code>query</code> from a missing one. That is a limitation worth seeing
 				rather than a conformance claim.
 			</p>
@@ -393,10 +393,10 @@ export default function TryIt(): React.JSX.Element {
 				<b>
 					If your browser ships its own <code>document.modelContext</code>
 				</b>
-				, it is that surface which answers here, not this library —{" "}
+				, it is that surface which answers here, not this library:{" "}
 				<code>installModelContext</code> preserves an existing implementation
 				rather than replacing it. The draft does not require a native surface to
-				check <code>inputSchema</code>, and this demonstration's handlers do not
+				check <code>inputSchema</code>. This demonstration's handlers do not
 				throw, so on such a browser both calls may succeed. That would be the
 				native surface behaving as specified, not a fault here.
 			</p>
@@ -411,6 +411,11 @@ export default function TryIt(): React.JSX.Element {
 					<p>Registering…</p>
 				)
 			) : (
+				// The scroll wrapper below is what keeps this table usable on a
+				// phone: four columns do not fit 360px, and without it the table
+				// either crushes its code column into wrapping mid-identifier
+				// or pushes the whole page sideways.
+				<div className="ax-try__scroll" tabIndex={0} role="region" aria-label="Registered tools">
 				<table className="ax-try__table">
 					<thead>
 						<tr>
@@ -453,58 +458,77 @@ export default function TryIt(): React.JSX.Element {
 											</code>
 										)
 									) : (
-										<span className="ax-try__muted">no — takes none</span>
+										<span className="ax-try__muted">takes none</span>
 									)}
 								</td>
 							</tr>
 						))}
 					</tbody>
 				</table>
+				</div>
 			)}
 
 			<h4>Invoke one</h4>
-			<p className="ax-try__actions">
-				<button
-					type="button"
-					onClick={() =>
-						void invoke(
-							"search_products",
-							{ query: "mug" },
-							"search — well formed",
-						)
-					}
-				>
-					search_products, well formed
-				</button>
-				<button
-					type="button"
-					onClick={() =>
-						void invoke(
-							"search_products",
-							{ query: 42 },
-							"search — query is a number",
-						)
-					}
-				>
-					search_products, query is a number
-				</button>
-				<button
-					type="button"
-					onClick={() =>
-						void invoke("search_products", {}, "search — no query at all")
-					}
-				>
-					search_products, no query
-				</button>
-				<button
-					type="button"
-					onClick={() =>
-						void invoke("proceed_to_checkout", undefined, "checkout")
-					}
-				>
-					proceed_to_checkout
-				</button>
+			<p className="ax-try__muted">
+				The first two calls are well formed and succeed. With this library
+				answering, the last two break the declared{" "}
+				<code>inputSchema</code> and are refused with{" "}
+				<code>UnknownError</code> before any tool code runs. A native{" "}
+				<code>document.modelContext</code> may accept them instead, because
+				the draft does not require schema validation before the callback.
 			</p>
+			<div className="ax-try__group">
+				<p className="ax-try__group-label">Calls that succeed</p>
+				<p className="ax-try__actions">
+					<button
+						type="button"
+						onClick={() =>
+							void invoke(
+								"search_products",
+								{ query: "mug" },
+								"search with query mug",
+							)
+						}
+					>
+						{"search_products({ query: \"mug\" })"}
+					</button>
+					<button
+						type="button"
+						onClick={() =>
+							void invoke("proceed_to_checkout", undefined, "checkout")
+						}
+					>
+						proceed_to_checkout()
+					</button>
+				</p>
+			</div>
+			<div className="ax-try__group">
+				<p className="ax-try__group-label">
+					Calls this library refuses with <code>UnknownError</code>
+				</p>
+				<p className="ax-try__actions">
+					<button
+						type="button"
+						onClick={() =>
+							void invoke(
+								"search_products",
+								{ query: 42 },
+								"search with numeric query",
+							)
+						}
+					>
+						{"search_products({ query: 42 })"}
+					</button>
+					<button
+						type="button"
+						onClick={() =>
+							void invoke("search_products", {}, "search with no query")
+						}
+					>
+						{"search_products({})"}
+					</button>
+				</p>
+			</div>
 
 			<h4>What came back</h4>
 			{log.length === 0 ? (
@@ -549,7 +573,7 @@ export default function TryIt(): React.JSX.Element {
 			<p className="ax-try__note">
 				<strong>One tool is consequential and four are not.</strong>{" "}
 				<code>proceed_to_checkout</code> spends money and cannot be undone. The
-				two cart mutations are reversible, cost nothing, and a user who clicked{" "}
+				two cart mutations are reversible and cost nothing. A user who clicked{" "}
 				<em>add to cart</em> has already confirmed it. Over-annotating trains
 				agents and users to dismiss confirmations, which is the failure mode the
 				annotation exists to prevent.

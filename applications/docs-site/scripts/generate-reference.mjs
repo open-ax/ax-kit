@@ -200,7 +200,7 @@ function packageSection(entry) {
 			lines.push(
 				"These are re-exported from another module, so this package's own",
 				"declarations do not state whether each is a value or a type. They are",
-				"listed rather than guessed at, and grouped here rather than with the types.",
+				"listed rather than guessed at and grouped here rather than with the types.",
 				"",
 			);
 		}
@@ -222,10 +222,18 @@ const front = [
 	"draft: false",
 	"title: API reference",
 	"description: Every exported name, grouped by entry point, generated from the published type declarations.",
+	// The page carries 46 `###` headings — one per exported name — and without
+	// this the table of contents lists every one of them: 57 entries, a list
+	// nobody scans. Capped at `##`, the contents rail shows the ten entry-point
+	// sections and the names stay where they belong, in the page body under
+	// their own headings. A per-page cap rather than a site-wide one, because
+	// the guide pages have no `###` at all and need no cap.
+	"tableOfContents:",
+	"  maxHeadingLevel: 2",
 	"---",
 	"",
 	"This page is **generated** from the published type declarations of every package in this",
-	"repository. It is not hand-maintained, and a change to a public signature that does not",
+	"repository. It is not hand-maintained. A change to a public signature that does not",
 	"reach this page fails the build. See",
 	"[`scripts/verify-reference.mjs`](https://github.com/open-ax/ax-kit/blob/main/applications/docs-site/scripts/verify-reference.mjs).",
 	"",
@@ -236,23 +244,23 @@ const front = [
 	"",
 	"The specification itself is [linked, not copied](https://webmachinelearning.github.io/webmcp/).",
 	"A Community Group draft that has been re-dated four times in eight days will make any text",
-	"copied here wrong within days, and a second source of truth that is wrong is worse than no",
+	"copied here wrong within days. A second source of truth that is wrong is worse than no",
 	"second source of truth.",
 	"",
 	"## Reading this page",
 	"",
 	"- **The default entry point is the specification's surface.** Every name on `.` traces to a",
 	"  dated draft of the proposal.",
-	"- **Other subpaths are this project's own**, documented as such, and unreachable from the",
+	"- **Other subpaths are this project's own**, documented as such and unreachable from the",
 	"  default import.",
 	"- **No parameter types appear here.** They are in the `.d.ts` files, which is what a",
 	"  consumer's compiler reads; a table paraphrasing them would be a worse copy.",
 	"- **Verification is never defined by the default entry point.** Call",
 	"  `installModelContext(document)` yourself. A package that installs on import as a side",
-	"  effect cannot be tree-shaken, and a polyfill that runs when a bundler happens to",
+	"  effect cannot be tree-shaken. A polyfill that runs when a bundler happens to",
 	"  evaluate a module is a debugging session.",
 	"- **`@ax-kit/core/auto` is the deliberate exception.** It is this project's own entry",
-	"  point, not the specification's, and it installs on import for frameworks that have no",
+	"  point, not the specification's. It installs on import for frameworks that have no",
 	"  client entry hook to run an explicit call from. The default entry point never does.",
 	"",
 ];
