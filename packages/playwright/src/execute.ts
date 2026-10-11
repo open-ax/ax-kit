@@ -126,13 +126,13 @@ export async function executeTool<T = unknown>(
 						(tool) => typeof tool.name === "string" && tool.name === wanted,
 					);
 					if (match === undefined) {
-						throw new DOMException(`unknown tool ${wanted}`, "UnknownError");
+						throw new DOMException(`unknown tool ${wanted}`, "NotFoundError");
 					}
 					return surface.executeTool(match, payload.input);
 				})
 				.then((text) => {
 					if (typeof text !== "string") {
-						throw new DOMException("bad tool result", "UnknownError");
+						throw new DOMException("bad tool result", "OperationError");
 					}
 					return text;
 				});

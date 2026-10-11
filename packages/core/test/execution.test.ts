@@ -171,17 +171,17 @@ describe("executeTool resolution", () => {
 			errorName(
 				await errorOf(mc.executeTool(await listedBy(mc, "exec_throws"), {})),
 			),
-		).toBe("UnknownError");
+		).toBe("OperationError");
 		expect(
 			errorName(
 				await errorOf(mc.executeTool(await listedBy(mc, "exec_bigint"), {})),
 			),
-		).toBe("UnknownError");
+		).toBe("OperationError");
 	});
 });
 
 describe("executeTool routing", () => {
-	it("rejects missing tools with UnknownError", async () => {
+	it("rejects missing tools with NotFoundError", async () => {
 		const mc = context();
 		const ghost: RegisteredTool = {
 			name: "exec_ghost",
@@ -191,11 +191,11 @@ describe("executeTool routing", () => {
 			origin: document.location.origin,
 		};
 		expect(errorName(await errorOf(mc.executeTool(ghost, {})))).toBe(
-			"UnknownError",
+			"NotFoundError",
 		);
 	});
 
-	it("rejects origin mismatches with UnknownError", async () => {
+	it("rejects origin mismatches with NotFoundError", async () => {
 		const mc = context();
 		await mc.registerTool({
 			name: "exec_mismatch",
@@ -208,11 +208,11 @@ describe("executeTool routing", () => {
 			origin: "https://example.com",
 		};
 		expect(errorName(await errorOf(mc.executeTool(tampered, {})))).toBe(
-			"UnknownError",
+			"NotFoundError",
 		);
 	});
 
-	it("rejects cross-hierarchy targets with UnknownError", async () => {
+	it("rejects cross-hierarchy targets with InvalidStateError", async () => {
 		const mc = context();
 		const detached = document.implementation.createHTMLDocument("detached");
 		const tool = await listedBy(mc, "exec_mismatch");
@@ -224,7 +224,7 @@ describe("executeTool routing", () => {
 			window: foreignWindow,
 		};
 		expect(errorName(await errorOf(mc.executeTool(foreign, {})))).toBe(
-			"UnknownError",
+			"InvalidStateError",
 		);
 	});
 
@@ -234,6 +234,24 @@ describe("executeTool routing", () => {
 		const opaque: RegisteredTool = { ...tool, origin: "null" };
 		expect(errorName(await errorOf(mc.executeTool(opaque, {})))).toBe(
 			"NotSupportedError",
+		);
+	});
+
+	it("rejects unreadable cross-origin targets with NotFoundError", async () => {
+		const mc = context();
+		const tool = await listedBy(mc, "exec_mismatch");
+		// A cross-origin WindowProxy whose document access throws, as the
+		// platform does. The dictionary is valid, so the rejection is the
+		// exposure outcome, not a conversion failure.
+		const remoteWindow = {} as unknown as Window;
+		Object.defineProperty(remoteWindow, "document", {
+			get(): Document {
+				throw new DOMException("blocked", "SecurityError");
+			},
+		});
+		const remote: RegisteredTool = { ...tool, window: remoteWindow };
+		expect(errorName(await errorOf(mc.executeTool(remote, {})))).toBe(
+			"NotFoundError",
 		);
 	});
 });
@@ -260,7 +278,7 @@ describe("executeTool schema race", () => {
 			execute: async (inputObject) => inputObject,
 		});
 		expect(errorName(await errorOf(mc.executeTool(stale, { a: "x" })))).toBe(
-			"UnknownError",
+			"DataError",
 		);
 		const fresh = await listedBy(mc, "exec_race");
 		expect(await mc.executeTool(fresh, { a: 1 })).toBe(

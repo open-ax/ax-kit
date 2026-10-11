@@ -277,7 +277,7 @@ describe("what an agent observes on the built page", () => {
 				result.annotations.filter((entry) => entry.consequentialHint === true),
 			).toEqual([expect.objectContaining({ name: "proceed_to_checkout" })]);
 			expect(result.searchResult).toContain("Enamel Mug");
-			expect(result.refusedResult).toBe("UnknownError");
+			expect(result.refusedResult).toBe("DataError");
 		} finally {
 			await browser.close();
 		}

@@ -40,11 +40,11 @@ it.
 
 - Arguments an agent sends are `unknown` to the library. They are checked before
   any handler sees them: `executeTool` validates them against the declared
-  `inputSchema` and rejects with `UnknownError` on a violation. The specification
+  `inputSchema` and rejects with `DataError` on a violation. The specification
   declares `inputSchema` but implements no checking against it, so that step is
   this library's. It is a *structural* check - types, required members, enums -
   and the handler still owns every semantic rule the schema cannot express.
-- A handler that throws rejects the caller with `UnknownError`, so a readable
+- A handler that throws rejects the caller with `OperationError`, so a readable
   message from a handler reaches the log and not the agent.
 - The result is whatever the page's handler returns, JSON-serialized.
 - Cancellation is cooperative: aborting the execution signal tells the page's

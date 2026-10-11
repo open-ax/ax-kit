@@ -264,7 +264,7 @@ describe("schema rejection is ours, not the platform's", () => {
 	// Two layers of assertion, because the draft puts them in different places.
 	//
 	// What an agent observes through `executeTool` is a rejection — and the
-	// draft specifies that a callback which throws rejects with `UnknownError`,
+	// draft specifies that a callback which throws rejects with `OperationError`,
 	// so the handler's own message does not reach the caller. Asserting the
 	// message here would be asserting something the specification says cannot
 	// happen.
@@ -290,10 +290,10 @@ describe("schema rejection is ours, not the platform's", () => {
 		) => Promise<unknown>;
 	}
 
-	it("rejects a search whose query is not a string, with UnknownError", async () => {
+	it("rejects a search whose query is not a string, with DataError", async () => {
 		const error = await refusal("search_products", { query: 42 });
 		expect(error).toBeInstanceOf(DOMException);
-		expect((error as DOMException).name).toBe("UnknownError");
+		expect((error as DOMException).name).toBe("DataError");
 	});
 
 	it("names the offending argument in the page author's own diagnostic", async () => {
@@ -314,7 +314,7 @@ describe("schema rejection is ours, not the platform's", () => {
 			sku: "AX-MUG-001",
 			quantity: 1.5,
 		});
-		expect((error as DOMException).name).toBe("UnknownError");
+		expect((error as DOMException).name).toBe("DataError");
 		await expect(
 			handler("add_to_cart")({ sku: "AX-MUG-001", quantity: 1.5 }),
 		).rejects.toThrow(/"quantity" must be an integer/);
@@ -327,7 +327,7 @@ describe("schema rejection is ours, not the platform's", () => {
 			query: "mug",
 			maxPrice: null,
 		});
-		expect((error as DOMException).name).toBe("UnknownError");
+		expect((error as DOMException).name).toBe("DataError");
 		await expect(
 			handler("search_products")({ query: "mug", maxPrice: null }),
 		).rejects.toThrow(/"maxPrice" must be an integer when present, got null/);

@@ -19,7 +19,7 @@
 	"agent_tool_surface": {
 		"$comment": "What this storefront actually offers an agent, which is the one capability here that is real. The tools are enumerated by the page at runtime rather than hard-coded in this file, because a copy of a list is a second source of truth for something the page already knows.",
 		"mechanism": "webmcp",
-		"draft": "Draft Community Group Report, 2 October 2026",
+		"draft": "Draft Community Group Report, 9 October 2026",
 		"enumeration": "document.modelContext.getTools()",
 		"note": "A tool surface describes this page to an agent that is already present. It is not an agent acting on the shop's behalf over a payment rail, and it is not a substitute for any of the protocols above."
 	}

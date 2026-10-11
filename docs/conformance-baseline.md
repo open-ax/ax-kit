@@ -4,8 +4,8 @@ Conformance here means one thing: zero unexpected failures against the pinned
 draft named below. It never means blanket green, because the reference browser
 itself does not pass the whole official suite.
 
-Pinned draft: WebMCP Draft Community Group Report, 2 October 2026
-(upstream `d61d0e6`), exported as `SPEC_VERSION` from `@ax-kit/core`.
+Pinned draft: WebMCP Draft Community Group Report, 9 October 2026
+(upstream `d0e4e0e`), exported as `SPEC_VERSION` from `@ax-kit/core`.
 
 ## Layers
 
@@ -50,9 +50,16 @@ Pinned draft: WebMCP Draft Community Group Report, 2 October 2026
   Same-document tools are unaffected (exposure is skipped for the owner).
   Decided 2026-09-28 from review.
 - Execution re-checks the target document's gates; a target that lost
-  eligibility rejects with `UnknownError`. Target-only unload aborts the
-  callback signal while the caller still observes `UnknownError`. Decided
-  2026-09-28 from review.
+  eligibility rejects with `NotFoundError`. Target-only unload aborts the
+  callback signal while the caller observes `AbortError`. Decided
+  2026-09-28 from review, re-mapped 2026-10-11 to the 9 October draft's
+  execution-error taxonomy (upstream #339).
+- Execution failures use the draft's platform-defined taxonomy: unknown or
+  unexposed tools reject with `NotFoundError` (origin mismatch included, to
+  prevent probing), foreign traversables with `InvalidStateError`, bad input
+  with `DataError`, callback rejection and unserializable results with
+  `OperationError`, and target unload with `AbortError`. Verified 2026-10-11
+  against upstream `index.bs` at `d0e4e0e`.
 
 ## Official layer (WPT `/webmcp`)
 
@@ -63,9 +70,16 @@ and prose.
 Pinned revision: **`fe52996d4465f23617bce91927bdd58e6ce8f541`**, recorded in
 `WPT_SHA` in `packages/playwright/src/wpt.ts`. That WPT commit is
 *"[WebMCP] Remove origin-keyed agent cluster requirement"*, committed
-2026-09-30 — the same change, on the same day, as `SPEC_VERSION.commit`
-`d61d0e6` in the proposal repository. The two halves of the suite move
-together, so a run at this revision tests the draft this package claims.
+2026-09-30 — the same change, on the same day, as the previous
+`SPEC_VERSION.commit` `d61d0e6` in the proposal repository.
+
+The suite has not yet caught up to the 9 October draft: no WPT commit names
+the execution-error taxonomy (#339) or the declarative removal (#338), and
+`master` still asserts `UnknownError` where the draft now requires
+`NotFoundError`, `DataError`, `OperationError`, and `AbortError`. The pin
+stays until a suite revision carries the same change; until then, the lag is
+recorded as `upstream-gap` entries in the expected-failure lists, not as a
+reason to hold the implementation to a superseded draft.
 
 How to obtain it, so it is not rediscovered:
 
@@ -115,9 +129,9 @@ against the built bundle:
 
 | Engine | Build | Units run | Files passing | Subtests passing | Expected failures |
 |---|---|---|---|---|---|
-| Chromium | 153.0.8010.12 | 48 | 22 | 64 | 78 |
-| Firefox | 155.0 | 48 | 22 | 64 | 78 |
-| WebKit | 26.6 | 48 | 22 | 64 | 78 |
+| Chromium | 153.0.8010.12 | 48 | 19 | 59 | 83 |
+| Firefox | 155.0 | 48 | 19 | 59 | 83 |
+| WebKit | 26.6 | 48 | 19 | 59 | 83 |
 
 72 files are runnable at this revision. 24 are excluded with a written reason
 and 48 are run. The three lists are separate and each carries its own engine and
@@ -162,7 +176,14 @@ ModelContext modelContext; }`. An ordinary attribute is an accessor on
 non-configurable data property on the document instance, which the
 interface-definition harness reports as a missing prototype member.
 
-One entry is an **upstream gap** rather than ours. `imperative/object-arguments`
+Five entries are **upstream gaps** of a second kind. The pinned suite predates
+the 9 October draft's execution-error taxonomy, so five subtests assert
+`UnknownError` where the draft now requires `NotFoundError`,
+`InvalidStateError`, or `OperationError`. The implementation follows the draft;
+those entries (`suite-still-asserts-unknown-error`) belong in the proposal's
+suite until it carries the same change.
+
+One more entry is an **upstream gap** of a third kind. `imperative/object-arguments`
 asserts that a tool returning the JavaScript string `"Success"` makes
 `executeTool` resolve to `"Success"`. The draft's algorithm says "Let
 serializedResult be the result of serializing a JavaScript value to a JSON
@@ -236,9 +257,10 @@ by the thing it is meant to check is not evidence.
 ### Files not run
 
 23 declarative files and `imperative/non-secure.html`, each with a written reason
-in the list. The declarative reason is the draft's own: section 4.3 reads, in
-full, "This section is entirely a TODO." There is no normative text to implement
-against and nothing for a run to measure. The other is environmental: every
+in the list. The declarative reason is the draft's own: the 9 October 2026
+re-date removed the declarative section entirely (upstream #338), moving it to
+a separate explainer, so there is no normative text to implement against and
+nothing for a run to measure. The other is environmental: every
 origin the runner serves is a loopback address, which the platform classifies as
 potentially trustworthy, so a non-secure context is not reachable without a
 resolver override the runner does not implement.
@@ -252,7 +274,10 @@ claim that there is nothing to measure.
 When the draft re-dates, `SPEC_VERSION` moves with it in the same commit as any
 behaviour change, `WPT_SHA` moves to the suite revision that carries the same
 change, the expected-failure lists are re-derived on every engine, and the
-release note names the new draft. The scheduled drift job
+release note names the new draft. When no suite revision carries the change yet
+— as with the 9 October 2026 error taxonomy, which the suite still predates —
+`WPT_SHA` stays and the lag is recorded as `upstream-gap` entries until the
+suite catches up. The scheduled drift job
 (`.github/workflows/spec-drift.yml`) opens an issue when the published document
 changes; the baseline hash lives in `.github/spec-drift.sha256`. If the draft
 looks wrong, that is an upstream issue, never a rename in the source.
@@ -272,5 +297,6 @@ an issue; the code was corrected on 2026-10-04, and the issue stayed open withou
 a written answer until 2026-10-07. The gate makes the half-finished case — code
 updated to a new draft, baseline not re-derived — a red build instead of a
 silently stale claim. See
-[`adr/0006-conformance-is-a-gate.md`](./adr/0006-conformance-is-a-gate.md) and
-[`adr/0007-spec-drift-2026-10-07.md`](./adr/0007-spec-drift-2026-10-07.md).
+[`adr/0006-conformance-is-a-gate.md`](./adr/0006-conformance-is-a-gate.md),
+[`adr/0007-spec-drift-2026-10-07.md`](./adr/0007-spec-drift-2026-10-07.md), and
+[`adr/0008-spec-drift-2026-10-11.md`](./adr/0008-spec-drift-2026-10-11.md).

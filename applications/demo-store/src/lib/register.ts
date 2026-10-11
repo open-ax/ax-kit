@@ -268,9 +268,9 @@ export async function registerStorefrontTools(
  * document.
  *
  * Worth knowing when reading it: the draft specifies that a callback which
- * throws rejects the caller with `UnknownError`, so the message a handler throws
+ * throws rejects the caller with `OperationError`, so the message a handler throws
  * is **not** what an agent sees. `BadArguments` produces a readable refusal in a
- * console, and an agent sees `UnknownError`. That is the specification's
+ * console, and an agent sees `OperationError`. That is the specification's
  * behaviour rather than this example's choice, and a page author who needs a
  * distinguishable refusal for a caller has to validate before invoking.
  */

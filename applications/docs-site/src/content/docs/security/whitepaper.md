@@ -85,8 +85,8 @@ a way it can defend, is more useful to an adopter than one that hides it.
 | Tools do not cross document boundaries | Narrowing | Each document's registry is its own. Largest known gap; causes most expected failures. |
 | `ModelContext`, `ToolActivatedEvent`, `ToolCancelEvent` are not global constructors | Narrowing | The behaviour the event tests assert is implemented; the named interface objects are not exposed. |
 | `modelContext` is an own property, not a `Document.prototype` accessor | Narrowing | An own property is not reachable from a document the bundle never ran against. |
-| `SecurityError` on non-origin-keyed agent cluster | **Removed** | Upstream PR #330 removed the requirement on 2026-09-30; this implementation follows the 2 October 2026 draft. |
-| Arguments are checked against `inputSchema` before the handler runs | Narrowing | The draft declares `inputSchema` and implements no checking against it. This library validates first and rejects with `UnknownError`, so an agent cannot reach a handler with arguments the schema forbids. |
+| `SecurityError` on non-origin-keyed agent cluster | **Removed** | Upstream PR #330 removed the requirement on 2026-09-30; this implementation follows the 9 October 2026 draft. |
+| Arguments are checked against `inputSchema` before the handler runs | Narrowing | The draft declares `inputSchema` and implements no checking against it. This library validates first and rejects with `DataError`, so an agent cannot reach a handler with arguments the schema forbids. |
 
 ## What the library does not do
 

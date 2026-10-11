@@ -18,12 +18,16 @@ import { join } from "node:path";
  * unpinned suite changes underneath a run and turns green red for reasons that
  * have nothing to do with this implementation.
  *
- * This revision is the one that matches our pinned draft. `SPEC_VERSION.commit`
- * is `d61d0e6` in webmachinelearning/webmcp, "Remove origin-keyed agent cluster
+ * This revision matched the previous pinned draft. `SPEC_VERSION.commit` was
+ * `d61d0e6` in webmachinelearning/webmcp, "Remove origin-keyed agent cluster
  * requirement (#330)", merged 2026-09-30. The corresponding WPT commit is
  * `fe52996`, "[WebMCP] Remove origin-keyed agent cluster requirement", committed
- * the same day. They are the same change in the two halves of the suite, so a
- * run at this revision tests the draft we claim to implement.
+ * the same day. They were the same change in the two halves of the suite.
+ *
+ * The suite has not yet caught up to the current pin (`d0e4e0e`, 9 October
+ * 2026): no WPT commit names the execution-error taxonomy (#339) or the
+ * declarative removal (#338). The pin stays until a suite revision carries the
+ * same change; until then the lag is recorded as `upstream-gap` entries.
  */
 export const WPT_SHA = "fe52996d4465f23617bce91927bdd58e6ce8f541";
 

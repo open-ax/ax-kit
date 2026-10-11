@@ -3,7 +3,7 @@
 A correct, tiny, dependency-free `document.modelContext` implementation for
 pages that offer agents a typed capability surface.
 
-Pinned draft: WebMCP Draft Community Group Report, 2 October 2026, from
+Pinned draft: WebMCP Draft Community Group Report, 9 October 2026, from
 the W3C Web Machine Learning Community Group. The pin is exported as
 `SPEC_VERSION` from this package and repeated in every release note, so no
 review happens against an unnamed draft. The draft is not a W3C Standard and
@@ -55,7 +55,8 @@ if (tool !== undefined) {
 
 `registerTool`, `getTools`, and `executeTool` are async and reject with the
 draft's error names (`InvalidStateError`, `SecurityError`, `NotAllowedError`,
-`NotSupportedError`, `UnknownError`, `TypeError`). Removal is via the
+`NotSupportedError`, `NotFoundError`, `DataError`, `OperationError`,
+`AbortError`, `TypeError`). Removal is via the
 registration signal: aborting it unregisters the tool without settling
 in-flight calls. One signal per concern: the registration signal controls
 availability, the execution signal cancels one call.
@@ -68,8 +69,9 @@ Notes on scope:
   bundlers can tree-shake them honestly. The one exception is
   [`@ax-kit/core/auto`](#auto-installing), which installs on import and says so
   in its `sideEffects` field.
-- Imperative tools only. The draft's declarative section is a TODO, so there
-  is nothing to conform to yet.
+- Imperative tools only. The draft removed its declarative section in the
+  9 October 2026 re-date (upstream #338), moving it to an explainer, so
+  there is nothing to conform to yet.
 - The context property is defined non-writable and non-configurable as
   hardening against naive shadowing, not as a browser-enforced boundary.
 - The `untrustedContentHint` annotation is stored and surfaced on listing;
