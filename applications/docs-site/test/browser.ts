@@ -232,18 +232,30 @@ describe("the built site", () => {
 			await page.locator("[data-open-modal]").first().click();
 			const searchInput = page.locator("input.pagefind-ui__search-input");
 			await expect(searchInput).toBeVisible();
+			// The component's own summary line ("8 results for polyfill"). Chosen
+			// because it is what the reader sees and because it is only written once
+			// a query has an answer.
+			const searchSummary = page.locator(".pagefind-ui__message");
 			await searchInput.fill("polyfill");
 			await searchInput.press("Enter");
 
-			// Waited on the index responding, not on a timer. Without this the
-			// request list could be read before the search ran and the test would
-			// pass on an empty list — which is the failure mode this whole approach
-			// exists to avoid.
-			await expect
-				.poll(() => requested.some((url) => url.includes("/pagefind/")), {
-					timeout: 15_000,
-				})
-				.toBe(true);
+			// Waited on the search *completing*, not on the index being requested.
+			// Opening the modal already fetches five `/pagefind/` assets, so a poll
+			// on those is already true before a query is submitted — it would let the
+			// list be read before the search that matters had run, and the test would
+			// pass while reporting only the opening traffic. A results summary is
+			// written by the component once the query has an answer, so it cannot be
+			// true early.
+			//
+			// The window observed is page load through the search completing. A
+			// request issued after the results render falls outside it. That limit is
+			// deliberate and stated here because an unstated limit in a test this
+			// strong reads as a stronger test than it is: the claim under test is
+			// where a *query* goes, and by the time results are rendered the query
+			// has already been sent.
+			await expect(searchSummary).toContainText(/\d+ results? for/i, {
+				timeout: 15_000,
+			});
 
 			expect(
 				requested.length,
