@@ -26,7 +26,7 @@
  * resolves.
  */
 
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import { createServer } from "node:http";
 import { extname, join, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -182,110 +182,104 @@ describe("the built site", () => {
 		expect(html).toMatch(/component-url="\/_astro\/TryIt/);
 	});
 
-	test("builds its search index locally, so a query leaves the reader's machine", async () => {
-		// The property is about *where a query goes*, and only the code that sends
-		// it can say. So this reads the served JavaScript rather than the build
-		// configuration: an indexer configured at build time and a hosted search
-		// service configured at build time are the same line of configuration, and
-		// only the emitted bytes distinguish them.
+	test("runs search locally, so a query never leaves the reader's machine", async () => {
+		// The property is about where a query actually goes, so this observes the
+		// requests the browser makes rather than reading the code that might make
+		// them. An earlier version of this test scanned the emitted JavaScript for
+		// off-origin destinations, and that approach was abandoned for a reason
+		// worth recording: it cannot be made sound. A URL held in a variable and
+		// passed to `fetch` later defeats any proximity rule, and widening the rule
+		// to cover it starts treating documentation links as requests. Deciding what
+		// is a request by reading bytes is reimplementing the browser badly.
 		//
-		// Two assertions, because they fail for different reasons. The index must be
-		// served by this origin — that is what "built locally" means concretely. And
-		// no served script may name an off-origin host — that is what catches a
-		// hosted backend wired in behind the same UI.
+		// So the search is driven for real and every request it produces is
+		// recorded. A destination is then judged by the platform's own URL parser,
+		// on the host it reports, which is the host the request would actually
+		// reach. Nothing here has to guess.
 		//
-		// Every script in the build output is inspected, not the `<script>` tags of
-		// one page. A chunk is only reachable from the page that references it, and
-		// the chunk that would carry a search backend may be a dynamically imported
-		// one on a page this test never loads. Reading the files the build emitted
-		// is what makes "no query leaves the machine" a property of the site rather
-		// than of one route.
-		//
-		// The patterns are deliberately narrow rather than a blanket "no external
-		// URLs": the framework runtime, the client library and the search index all
-		// ship namespace URIs, error-documentation links and author profile URLs that
-		// are never requested. A test that failed on those would be a test people
-		// learned to skip. So a host is only a failure where it is a *destination*:
-		// named at a call site, or passed to a known hosted-search client.
+		// The index is also checked to be served from this origin, because that is
+		// what "built locally" means concretely: the query is answered from bytes
+		// this deployment serves.
 		const pagefindEntry = await fetch(`${ORIGIN}/pagefind/pagefind.js`);
 		expect(
 			pagefindEntry.status,
 			"the search index is not served from this origin",
 		).toBe(200);
 
-		const scripts = readdirSync(DIST, { recursive: true })
-			.map((entry) => join(DIST, String(entry)))
-			.filter((path) => path.endsWith(".js"));
-		expect(
-			scripts.length,
-			"no JavaScript was emitted, so there is nothing to inspect",
-		).toBeGreaterThan(0);
+		const browser = await chromium.launch();
+		try {
+			const page = await browser.newPage();
+			/** Every request the page and its workers issue. */
+			const requested: string[] = [];
+			page.on("request", (request) => {
+				requested.push(request.url());
+			});
+			// Worker-initiated requests do not surface as page requests, and the
+			// search index is loaded from one. Recording them is the difference
+			// between observing the search and observing only the page that hosts
+			// it.
+			await page.route("**/*", async (route) => {
+				requested.push(route.request().url());
+				await route.continue();
+			});
 
-		const REMOTE_HOST =
-			/(?:algolia|algoliasearch|searchapi|search\.console|typesense|elastic\.|elasticsearch)/i;
-		/**
-		 * Every absolute URL passed to a request API, resolved to a hostname.
-		 *
-		 * Deliberately *not* one regex deciding what is off-origin. Three earlier
-		 * drafts did that, and each was wrong in a way the next had to fix:
-		 * `xhr.open("GET", url)` hides the URL behind a method argument;
-		 * `https://localhost.example.test` passes a prefix test; and
-		 * `https://localhost:443@search.example.test` passes it too, because the
-		 * part that looks like a host is userinfo. A pattern that tries to be
-		 * clever about hostnames has to get the whole grammar right, and this one
-		 * does not need to — the platform already parses URLs correctly, so the
-		 * test asks it rather than reimplementing it.
-		 *
-		 * The patterns below only *locate* candidate URLs. The decision is made on
-		 * `new URL(candidate).hostname`, which is the parse the browser performs,
-		 * so a destination this misses is one the browser would also have reached
-		 * off-origin.
-		 */
-		const REQUEST_API =
-			/(?:fetch|open|sendBeacon|importScripts|XMLHttpRequest)/g;
-		const ABSOLUTE_URL = /https?:\/\/[^\s"'`)<>\\]+/g;
-		const LOOPBACK = new Set(["localhost", "127.0.0.1", "[::1]"]);
+			await page.goto(`${ORIGIN}/`, { waitUntil: "load" });
 
-		for (const path of scripts) {
-			const body = readFileSync(path, "utf8");
-			const name = path
-				.slice(DIST.length + 1)
-				.split(sep)
-				.join("/");
+			// The search is behind a modal trigger, so it has to be opened before it
+			// can be typed into. Asserted visible rather than assumed, so a build
+			// that silently drops the search UI fails here instead of reporting an
+			// empty request list as a pass.
+			await page.locator("[data-open-modal]").first().click();
+			const searchInput = page.locator("input.pagefind-ui__search-input");
+			await expect(searchInput).toBeVisible();
+			await searchInput.fill("polyfill");
+			await searchInput.press("Enter");
+
+			// Waited on the index responding, not on a timer. Without this the
+			// request list could be read before the search ran and the test would
+			// pass on an empty list — which is the failure mode this whole approach
+			// exists to avoid.
+			await expect
+				.poll(() => requested.some((url) => url.includes("/pagefind/")), {
+					timeout: 15_000,
+				})
+				.toBe(true);
+
 			expect(
-				body,
-				`${name} names a hosted search service; a reader's query would leave their machine`,
-			).not.toMatch(REMOTE_HOST);
+				requested.length,
+				"no requests were recorded, so the search did not run",
+			).toBeGreaterThan(0);
 
-			for (const match of body.matchAll(ABSOLUTE_URL)) {
-				const candidate = match[0];
-				const start = match.index ?? 0;
-				// Only a URL sitting next to a request API is a destination. A
-				// namespace URI or a documentation link elsewhere in the bundle is a
-				// string, not a request, and treating it as one would make this test
-				// fail on the build it exists to protect.
-				const preceding = body.slice(Math.max(0, start - 300), start);
-				if (!REQUEST_API.test(preceding)) {
-					REQUEST_API.lastIndex = 0;
-					continue;
-				}
-				REQUEST_API.lastIndex = 0;
-				let hostname: string;
-				try {
-					hostname = new URL(candidate).hostname.toLowerCase();
-				} catch {
-					// Not a parseable absolute URL, so not one this test can reason
-					// about. Reported rather than skipped, because a URL-shaped string
-					// that no parser accepts is worth seeing.
-					expect.fail(
-						`${name} passes an unparseable URL to a request API: ${candidate}`,
-					);
-				}
-				expect(
-					LOOPBACK.has(hostname),
-					`${name} sends a request to the off-origin host ${hostname} (${candidate})`,
-				).toBe(true);
-			}
+			// Judged on the parsed host, not on the string, so userinfo
+			// (`https://localhost:443@elsewhere.test`) and prefix tricks
+			// (`https://localhost.example.test`) are classified as what they are.
+			const offOrigin = requested
+				.map((url) => {
+					try {
+						return { url, hostname: new URL(url).hostname.toLowerCase() };
+					} catch {
+						return { url, hostname: "" };
+					}
+				})
+				.filter(
+					({ hostname }) =>
+						hostname !== "" &&
+						hostname !== "localhost" &&
+						hostname !== "127.0.0.1" &&
+						hostname !== "[::1]",
+				)
+				// The site's own origin is what every first-party asset comes from;
+				// it is the site under test, not a destination outside it.
+				.filter(({ url }) => new URL(url).origin !== ORIGIN);
+
+			expect(
+				offOrigin,
+				`a reader's session reached ${offOrigin
+					.map(({ url }) => url)
+					.join(", ")}; a query would leave their machine`,
+			).toEqual([]);
+		} finally {
+			await browser.close();
 		}
 	});
 
