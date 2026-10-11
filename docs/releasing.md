@@ -261,9 +261,9 @@ it reads as coverage. Two checks were audited for this:
 ## What the tool will not do for you
 
 - **It does not check that the release is safe to make.** The release workflow
-  does this for you: it runs typecheck, lint, test, the size gate, both packaging
-  checks and the manifest check before it publishes. When publishing by hand,
-  run the same set first.
+  does this for you: it runs typecheck, lint, test, both browser suites, the size
+  gate, both packaging checks and the manifest check before it publishes. When
+  publishing by hand, run the same set first.
   `pnpm size` — the core size gate is a hard failure and must never be raised to
   make a build pass.
 - **It does not refuse to publish an unversioned cohort.** `changeset publish`

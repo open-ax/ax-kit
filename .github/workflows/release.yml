@@ -90,13 +90,13 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
-      # `pnpm test` runs the Chromium Playwright project, and the browser binary is
-      # a separate installation from the npm dependencies: a runner that has
-      # completed `pnpm install` has the test runner and not the browser. Without
+      # `pnpm test` runs the Chromium Playwright project, and the conformance
+      # suite needs all three engines: a runner that has completed
+      # `pnpm install` has the test runners and not the browsers. Without
       # this the Verify step fails for a reason that has nothing to do with the
       # tree, which is how a release ends blocked by a missing download.
-      - name: Install Playwright Chromium
-        run: pnpm exec playwright install --with-deps chromium
+      - name: Install Playwright engines
+        run: pnpm exec playwright install --with-deps chromium firefox webkit
 
       # The gates run here, before anything is published, and this is
       # deliberate. The `ci` workflow runs them on the pull request, but branch
@@ -109,6 +109,8 @@ jobs:
           pnpm typecheck
           pnpm lint
           pnpm test
+          pnpm test:conformance
+          pnpm test:browser
           pnpm size
           pnpm publint
           pnpm attw
