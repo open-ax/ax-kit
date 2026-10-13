@@ -47,7 +47,7 @@
 		"attw": "attw --pack . --profile node16"
 	},
 	"dependencies": {
-		"playwright": "1.63.0"
+		"playwright": "1.64.0"
 	},
 	"devDependencies": {
 		"@types/node": "^24.19.0",
