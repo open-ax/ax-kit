@@ -299,7 +299,7 @@
 				{
 					"kind": "interface",
 					"name": "BridgeRoutes",
-					"signature": "interface BridgeRoutes { waitForEnvelope(holdMs: number): Promise<Envelope | null>; deliver(body: unknown): void; clientAttached(): boolean; }"
+					"signature": "interface BridgeRoutes { waitForEnvelope(holdMs: number, signal?: AbortSignal): Promise<Envelope | null>; deliver(body: unknown): void; clientAttached(): boolean; }"
 				},
 				{
 					"kind": "function",
@@ -484,7 +484,7 @@
 				{
 					"kind": "class",
 					"name": "PageBridge",
-					"signature": "export declare class PageBridge { private readonly deadlineMs; private nextId; private readonly queue; private readonly settled; private waiting; private attached; constructor(deadlineMs?: number); clientAttached(): boolean; take(): Envelope | null; waitForEnvelope(holdMs?: number): Promise<Envelope | null>; private dispatch; deliver(body: unknown): void; private enqueue; listTools(tabId: number): Promise<ReadonlyArray<Record<string, unknown>>>; activeTab(): Promise<{ tabId: number; origin: string; }>; callTool(name: string, args: Record<string, unknown>, tabId: number, callerOrigin: string): Promise<unknown>; }"
+					"signature": "export declare class PageBridge { private readonly deadlineMs; private nextId; private readonly queue; private readonly settled; private waiting; private attached; constructor(deadlineMs?: number); clientAttached(): boolean; take(): Envelope | null; waitForEnvelope(holdMs?: number, signal?: AbortSignal): Promise<Envelope | null>; private dispatch; deliver(body: unknown): void; private enqueue; listTools(tabId: number): Promise<ReadonlyArray<Record<string, unknown>>>; activeTab(): Promise<{ tabId: number; origin: string; }>; callTool(name: string, args: Record<string, unknown>, tabId: number, callerOrigin: string): Promise<unknown>; }"
 				},
 				{
 					"kind": "class",
