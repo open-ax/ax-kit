@@ -34,6 +34,24 @@ updates:
     # NOTE: groups.patterns matches dependency names, not filenames, so there
     # is deliberately no filename-based group here.
     groups:
+      # `playwright` and `@playwright/test` must resolve to the same version.
+      # Grouping by `dependency-type` below splits them — `playwright` is a
+      # production dependency and `@playwright/test` is a development one — and
+      # each half is broken on its own: `pnpm exec playwright install` resolves
+      # from the root `playwright` pin, so a tree with the two halves split
+      # installs one browser revision and then tests against another.
+      #
+      # Matching on name rather than on dependency type keeps the pair together
+      # whatever type it is declared as. The bump still has to be merged by hand,
+      # because `expected-failures.json` is derived against the exact Chromium
+      # build these ship and the runner refuses a run on any other. That refusal
+      # is the intended outcome: one coherent pull request with one real blocker,
+      # rather than two pull requests that each fail for a reason that reads like
+      # a Playwright bug.
+      playwright:
+        patterns:
+          - "playwright"
+          - "@playwright/test"
       runtime:
         dependency-type: production
       dev-tooling:
