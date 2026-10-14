@@ -1019,7 +1019,20 @@ async function dispatchRelay(
 	name: unknown,
 	args: Record<string, unknown>,
 ): Promise<unknown> {
-	if (typeof name !== "string" || !(name in RELAY_HANDLERS)) {
+	// `Object.hasOwn`, not `in`.
+	//
+	// `in` walks the prototype chain, so `"toString" in RELAY_HANDLERS` and
+	// `"constructor" in RELAY_HANDLERS` are both true. The lookup then returns
+	// `Object.prototype.toString` or `Object`, a real function that is not a
+	// handler — and it runs, producing a value, which is exactly what the
+	// comment above this map claims cannot happen. That value crosses `/result`
+	// into `readToolOutcome`, where a string is by construction a completed
+	// tool result: work that never ran, reported as work that did.
+	//
+	// The handler name arrives from another process, so the guard that decides
+	// which functions are reachable has to be about the map, not about
+	// everything the map inherits.
+	if (typeof name !== "string" || !Object.hasOwn(RELAY_HANDLERS, name)) {
 		throw new TypeError("unknown handler");
 	}
 	const fn = RELAY_HANDLERS[name as RelayHandlerName] as (

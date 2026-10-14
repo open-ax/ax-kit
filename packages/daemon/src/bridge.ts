@@ -18,7 +18,7 @@
  * two invocations can be in flight at once without either settling the other.
  */
 
-import type { IncomingMessage, ServerResponse } from "node:http";
+import type { IncomingMessage } from "node:http";
 import type { JsonRpcResponse } from "./protocol.js";
 
 export interface BridgeRequest {
@@ -419,18 +419,6 @@ export class PageBridge {
 	}
 
 	/**
-	 * Tools the page in `tabId` currently exposes.
-	 *
-	 * Separate from the tab-choosing provider because a caller that already
-	 * knows which tab it means should not have to be told to ask.
-	 */
-	async listToolsIn(
-		tabId: number,
-	): Promise<ReadonlyArray<Record<string, unknown>>> {
-		return await this.listTools(tabId);
-	}
-
-	/**
 	 * Invoke one tool. A refusal arrives as a `BridgeRefusal`, not a throw of
 	 * text.
 	 *
@@ -551,21 +539,4 @@ export async function readBody(
 		chunks.push(buffer);
 	}
 	return Buffer.concat(chunks).toString("utf8");
-}
-
-/** Reply with JSON, so the client's parser always sees one shape. */
-export function sendJson(
-	response: ServerResponse,
-	status: number,
-	body: unknown,
-): void {
-	const text: unknown = JSON.stringify(body);
-	response.writeHead(status, {
-		"content-type": "application/json",
-		"content-length": Buffer.byteLength(
-			typeof text === "string" ? text : "null",
-			"utf8",
-		),
-	});
-	response.end(typeof text === "string" ? text : "null");
 }

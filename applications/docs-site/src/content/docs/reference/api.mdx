@@ -155,7 +155,7 @@ Only `.` carries the specification's surface. The other 2 entry points are this 
 
 ## @ax-kit/daemon
 
-43 exported names across 1 entry point.
+70 exported names across 1 entry point.
 
 No runtime dependencies.
 
@@ -163,70 +163,102 @@ No runtime dependencies.
 
 | Entry point | Names | Reached by |
 |---|---|---|
-| `.` | 43 | `import { assertLoopbackBind } from "@ax-kit/daemon"` |
+| `.` | 70 | `import { approvalRequiredResult } from "@ax-kit/daemon"` |
 
-### functions (24)
+### functions (42)
 
 | Name | Entry point |
 |---|---|
+| `approvalRequiredResult` | `.` |
 | `assertLoopbackBind` | `.` |
 | `checkBearer` | `.` |
+| `checkRelayOrigin` | `.` |
 | `checkUpgradeOrigin` | `.` |
+| `completedResult` | `.` |
 | `completeResult` | `.` |
 | `createBearer` | `.` |
 | `createDaemonInfo` | `.` |
 | `createDiscoveryFile` | `.` |
 | `createNativeHostManifest` | `.` |
+| `decodeMessage` | `.` |
+| `defaultManifestDir` | `.` |
 | `discoveryResult` | `.` |
 | `dispatchRequest` | `.` |
+| `emptyBridgeProvider` | `.` |
+| `encodeMessage` | `.` |
+| `handleMcpRequest` | `.` |
+| `hostManifestPath` | `.` |
+| `installFailure` | `.` |
+| `installNativeHost` | `.` |
 | `isDeprecatedMethod` | `.` |
 | `isLoopbackHost` | `.` |
+| `launcherFor` | `.` |
 | `logToStderr` | `.` |
 | `parseDiscoveryFile` | `.` |
 | `parseFrame` | `.` |
+| `readCallerOrigin` | `.` |
 | `readDiscoveryFile` | `.` |
 | `readEnvelope` | `.` |
 | `readResponse` | `.` |
+| `readToolOutcome` | `.` |
+| `refusedResult` | `.` |
+| `registryCommand` | `.` |
 | `resolveDiscoveryDir` | `.` |
+| `runBroker` | `.` |
 | `serializeDiscoveryFile` | `.` |
 | `serializeFrame` | `.` |
+| `serveDiscovery` | `.` |
 | `splitFrames` | `.` |
 | `startTransport` | `.` |
 | `writeNativeHostManifest` | `.` |
 
-### values (5)
+### values (8)
 
 | Name | Entry point |
 |---|---|
 | `BRIDGE_ERRORS` | `.` |
 | `DISCOVERY_FILE_NAME` | `.` |
+| `HOST_NAME` | `.` |
 | `MAX_FRAME_BYTES` | `.` |
+| `MCP_PATH` | `.` |
 | `PROTOCOL_VERSION` | `.` |
 | `SUPPORTED_VERSIONS` | `.` |
+| `WINDOWS_REGISTRY_KEY` | `.` |
 
-### classes (3)
+### classes (4)
 
 | Name | Entry point |
 |---|---|
 | `BridgeClient` | `.` |
 | `BridgeRefusal` | `.` |
 | `PageBridge` | `.` |
+| `PageBridgeProvider` | `.` |
 
-### interfaces (11)
+### interfaces (15)
 
 | Name | Entry point |
 |---|---|
+| `BridgeProvider` | `.` |
 | `BridgeRequest` | `.` |
 | `BridgeRoutes` | `.` |
 | `DaemonInfo` | `.` |
 | `DiscoveryFile` | `.` |
 | `Envelope` | `.` |
+| `InstallOptions` | `.` |
+| `InstallResult` | `.` |
 | `JsonRpcRequest` | `.` |
 | `JsonRpcResponse` | `.` |
+| `Launcher` | `.` |
 | `NativeHostManifest` | `.` |
 | `RequestMeta` | `.` |
 | `Transport` | `.` |
 | `TransportOptions` | `.` |
+
+### type (1)
+
+| Name | Entry point |
+|---|---|
+| `ToolOutcome` | `.` |
 
 ## @ax-kit/extension
 

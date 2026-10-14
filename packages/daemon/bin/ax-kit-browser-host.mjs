@@ -26,3 +26,18 @@ try {
 	// has no channel to explain itself on, so the exit status is the message.
 	process.exit(1);
 }
+
+// Exited explicitly, and the reason is that nothing else will.
+//
+// `process.stdin` on a pipe is a ref'd handle: removing the `data` listener
+// after the single reply does not unref it, and Chrome does not close the write
+// end. Measured, by holding the pipe open the way Chrome does: the process was
+// still alive and holding the port eight seconds later. So the natural end of
+// `runBroker` is not the end of this process, and every `connectNative` would
+// leak one Node process for the life of the browser session.
+//
+// This is safe because the native port is a rendezvous, not a channel. The
+// reply carries the daemon's address and bearer, and the extension then talks
+// to the daemon directly over loopback. Nothing is left to read on this pipe,
+// which is why the extension does not reconnect when this port closes.
+process.exit(0);

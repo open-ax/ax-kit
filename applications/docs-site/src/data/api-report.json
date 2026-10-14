@@ -263,6 +263,11 @@
 				"members": [
 				{
 					"kind": "function",
+					"name": "approvalRequiredResult",
+					"signature": "export declare function approvalRequiredResult(outcome: Extract<ToolOutcome, { kind: \"approval-required\"; }"
+				},
+				{
+					"kind": "function",
 					"name": "assertLoopbackBind",
 					"signature": "export declare function assertLoopbackBind(host: unknown): string"
 				},
@@ -277,6 +282,11 @@
 					"signature": "export declare class BridgeClient { private readonly post; private readonly pull; constructor(post: (body: unknown) => Promise<unknown>, pull: () => Promise<unknown>); serve(handler: (request: BridgeRequest) => Promise<unknown>): Promise<void>; }"
 				},
 				{
+					"kind": "interface",
+					"name": "BridgeProvider",
+					"signature": "interface BridgeProvider { listTools(): Promise<ReadonlyArray<Record<string, unknown>>>; callTool(name: string, args: Record<string, unknown>): Promise<ToolOutcome>; }"
+				},
+				{
 					"kind": "class",
 					"name": "BridgeRefusal",
 					"signature": "export declare class BridgeRefusal extends Error { readonly code: number; constructor(code: number, message: string); }"
@@ -289,7 +299,7 @@
 				{
 					"kind": "interface",
 					"name": "BridgeRoutes",
-					"signature": "interface BridgeRoutes { take(): Envelope | null; deliver(body: unknown): void; }"
+					"signature": "interface BridgeRoutes { waitForEnvelope(holdMs: number): Promise<Envelope | null>; deliver(body: unknown): void; clientAttached(): boolean; }"
 				},
 				{
 					"kind": "function",
@@ -298,8 +308,18 @@
 				},
 				{
 					"kind": "function",
+					"name": "checkRelayOrigin",
+					"signature": "export declare function checkRelayOrigin(origin: unknown): void"
+				},
+				{
+					"kind": "function",
 					"name": "checkUpgradeOrigin",
 					"signature": "export declare function checkUpgradeOrigin(origin: unknown): void"
+				},
+				{
+					"kind": "function",
+					"name": "completedResult",
+					"signature": "export declare function completedResult(result: unknown): Record<string, unknown>"
 				},
 				{
 					"kind": "function",
@@ -332,6 +352,16 @@
 					"signature": "interface DaemonInfo { readonly name: string; readonly version: string; }"
 				},
 				{
+					"kind": "function",
+					"name": "decodeMessage",
+					"signature": "export declare function decodeMessage(buffer: Buffer): { readonly message: unknown; readonly rest: Buffer; }"
+				},
+				{
+					"kind": "function",
+					"name": "defaultManifestDir",
+					"signature": "export declare function defaultManifestDir(env: NodeJS.ProcessEnv, home: string, platform?: string): string"
+				},
+				{
 					"kind": "const",
 					"name": "DISCOVERY_FILE_NAME",
 					"signature": "export declare const DISCOVERY_FILE_NAME: \"relay.json\""
@@ -349,12 +379,57 @@
 				{
 					"kind": "function",
 					"name": "dispatchRequest",
-					"signature": "export declare function dispatchRequest(request: unknown, tools: ReadonlyArray<Record<string, unknown>>, info: DaemonInfo): JsonRpcResponse"
+					"signature": "export declare function dispatchRequest(request: unknown, provider: BridgeProvider, info: DaemonInfo): Promise<JsonRpcResponse>"
+				},
+				{
+					"kind": "function",
+					"name": "emptyBridgeProvider",
+					"signature": "export declare function emptyBridgeProvider(): BridgeProvider"
+				},
+				{
+					"kind": "function",
+					"name": "encodeMessage",
+					"signature": "export declare function encodeMessage(value: unknown): Buffer"
 				},
 				{
 					"kind": "interface",
 					"name": "Envelope",
 					"signature": "interface Envelope { readonly id: number; readonly request: BridgeRequest; }"
+				},
+				{
+					"kind": "function",
+					"name": "handleMcpRequest",
+					"signature": "export declare function handleMcpRequest(request: IncomingMessage, response: ServerResponse, provider: BridgeProvider, info: DaemonInfo): Promise<boolean>"
+				},
+				{
+					"kind": "const",
+					"name": "HOST_NAME",
+					"signature": "export declare const HOST_NAME: \"com.openax.axkit\""
+				},
+				{
+					"kind": "function",
+					"name": "hostManifestPath",
+					"signature": "export declare function hostManifestPath(directory: string, _platform?: string): string"
+				},
+				{
+					"kind": "function",
+					"name": "installFailure",
+					"signature": "export declare function installFailure(platform?: string): string"
+				},
+				{
+					"kind": "function",
+					"name": "installNativeHost",
+					"signature": "export declare function installNativeHost(options: InstallOptions): InstallResult"
+				},
+				{
+					"kind": "interface",
+					"name": "InstallOptions",
+					"signature": "interface InstallOptions { readonly directory: string; readonly brokerScript: string; readonly extensionId: string; readonly platform?: string; }"
+				},
+				{
+					"kind": "interface",
+					"name": "InstallResult",
+					"signature": "interface InstallResult { readonly manifestPath: string; readonly launcher: Launcher; readonly registryKey: string | null; }"
 				},
 				{
 					"kind": "function",
@@ -377,6 +452,16 @@
 					"signature": "interface JsonRpcResponse { readonly jsonrpc: \"2.0\"; readonly id: string | number | null; readonly result?: unknown; readonly error?: { readonly code: number; readonly message: string; }; }"
 				},
 				{
+					"kind": "interface",
+					"name": "Launcher",
+					"signature": "interface Launcher { readonly path: string; readonly written: string | null; }"
+				},
+				{
+					"kind": "function",
+					"name": "launcherFor",
+					"signature": "export declare function launcherFor(brokerScript: string, platform?: string): Launcher"
+				},
+				{
 					"kind": "function",
 					"name": "logToStderr",
 					"signature": "export declare function logToStderr(write: (text: string) => void, message: string): void"
@@ -387,6 +472,11 @@
 					"signature": "export declare const MAX_FRAME_BYTES: number"
 				},
 				{
+					"kind": "const",
+					"name": "MCP_PATH",
+					"signature": "export declare const MCP_PATH: \"/mcp\""
+				},
+				{
 					"kind": "interface",
 					"name": "NativeHostManifest",
 					"signature": "interface NativeHostManifest { readonly name: string; readonly description: string; readonly path: string; readonly type: \"stdio\"; readonly allowed_origins: ReadonlyArray<string>; }"
@@ -394,7 +484,12 @@
 				{
 					"kind": "class",
 					"name": "PageBridge",
-					"signature": "export declare class PageBridge { private readonly deadlineMs; private nextId; private readonly queue; private readonly settled; constructor(deadlineMs?: number); take(): Envelope | null; deliver(body: unknown): void; private enqueue; listTools(tabId: number): Promise<ReadonlyArray<Record<string, unknown>>>; callTool(name: string, args: Record<string, unknown>, tabId: number, callerOrigin: string): Promise<unknown>; }"
+					"signature": "export declare class PageBridge { private readonly deadlineMs; private nextId; private readonly queue; private readonly settled; private waiting; private attached; constructor(deadlineMs?: number); clientAttached(): boolean; take(): Envelope | null; waitForEnvelope(holdMs?: number): Promise<Envelope | null>; private dispatch; deliver(body: unknown): void; private enqueue; listTools(tabId: number): Promise<ReadonlyArray<Record<string, unknown>>>; activeTab(): Promise<{ tabId: number; origin: string; }>; callTool(name: string, args: Record<string, unknown>, tabId: number, callerOrigin: string): Promise<unknown>; }"
+				},
+				{
+					"kind": "class",
+					"name": "PageBridgeProvider",
+					"signature": "export declare class PageBridgeProvider implements BridgeProvider { private readonly bridge; constructor(bridge: PageBridge); listTools(): Promise<ReadonlyArray<Record<string, unknown>>>; callTool(name: string, args: Record<string, unknown>): Promise<ToolOutcome>; private tab; }"
 				},
 				{
 					"kind": "function",
@@ -413,6 +508,11 @@
 				},
 				{
 					"kind": "function",
+					"name": "readCallerOrigin",
+					"signature": "export declare function readCallerOrigin(argv: unknown): string"
+				},
+				{
+					"kind": "function",
 					"name": "readDiscoveryFile",
 					"signature": "export declare function readDiscoveryFile(directory: string): DiscoveryFile"
 				},
@@ -427,6 +527,21 @@
 					"signature": "export declare function readResponse(value: unknown): JsonRpcResponse"
 				},
 				{
+					"kind": "function",
+					"name": "readToolOutcome",
+					"signature": "export declare function readToolOutcome(value: unknown): ToolOutcome"
+				},
+				{
+					"kind": "function",
+					"name": "refusedResult",
+					"signature": "export declare function refusedResult(message: string): Record<string, unknown>"
+				},
+				{
+					"kind": "function",
+					"name": "registryCommand",
+					"signature": "export declare function registryCommand(manifestPath: string): { readonly file: string; readonly args: ReadonlyArray<string>; }"
+				},
+				{
 					"kind": "interface",
 					"name": "RequestMeta",
 					"signature": "interface RequestMeta { readonly protocolVersion: string; readonly clientCapabilities: unknown; readonly clientInfo?: unknown; }"
@@ -434,7 +549,12 @@
 				{
 					"kind": "function",
 					"name": "resolveDiscoveryDir",
-					"signature": "export declare function resolveDiscoveryDir(env: unknown, onWarn?: (message: string) => void): string"
+					"signature": "export declare function resolveDiscoveryDir(env: unknown, onWarn?: (message: string) => void, platform?: string): string"
+				},
+				{
+					"kind": "function",
+					"name": "runBroker",
+					"signature": "export declare function runBroker(input: NodeJS.ReadableStream, output: NodeJS.WritableStream, discoveryDir: string, argv: unknown): Promise<void>"
 				},
 				{
 					"kind": "function",
@@ -445,6 +565,11 @@
 					"kind": "function",
 					"name": "serializeFrame",
 					"signature": "export declare function serializeFrame(response: JsonRpcResponse): string"
+				},
+				{
+					"kind": "function",
+					"name": "serveDiscovery",
+					"signature": "export declare function serveDiscovery(discoveryDir: string): Record<string, unknown>"
 				},
 				{
 					"kind": "function",
@@ -462,6 +587,11 @@
 					"signature": "export declare const SUPPORTED_VERSIONS: ReadonlyArray<string>"
 				},
 				{
+					"kind": "type",
+					"name": "ToolOutcome",
+					"signature": "type ToolOutcome = ToolCompleted | ToolApprovalRequired | ToolRefusal"
+				},
+				{
 					"kind": "interface",
 					"name": "Transport",
 					"signature": "interface Transport { readonly port: number; readonly bearer: string; readonly discoveryPath: string; close(): Promise<void>; }"
@@ -469,7 +599,12 @@
 				{
 					"kind": "interface",
 					"name": "TransportOptions",
-					"signature": "interface TransportOptions { readonly discoveryDir: string; readonly host?: string; readonly port?: number; readonly bridge?: BridgeRoutes; }"
+					"signature": "interface TransportOptions { readonly discoveryDir: string; readonly host?: string; readonly port?: number; readonly bridge?: BridgeRoutes; readonly provider?: BridgeProvider; readonly info?: DaemonInfo; }"
+				},
+				{
+					"kind": "const",
+					"name": "WINDOWS_REGISTRY_KEY",
+					"signature": "export declare const WINDOWS_REGISTRY_KEY: \"HKCU\\\\Software\\\\Google\\\\Chrome\\\\NativeMessagingHosts\""
 				},
 				{
 					"kind": "function",
