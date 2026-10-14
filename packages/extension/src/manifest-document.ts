@@ -71,13 +71,23 @@ export function createManifestDocument(
 		description,
 		incognito: held.incognito,
 		background: { service_worker: "sw.js", type: "module" },
-		// The only permissions the bridge needs: script injection into Main
-		// world, and the side panel the confirmation renders in. Nothing else is
-		// read — `chrome.tabs.onUpdated` reports `status` without the `tabs`
-		// permission, and tab URLs come from the host scope above — so nothing
-		// else is requested.
+		// The only permissions the bridge needs, and each one is here for a
+		// named reason rather than because the API was convenient:
+		//
+		// - `scripting`       inject the Main-world enumerators.
+		// - `sidePanel`       the confirmation surface, the only place a person
+		//                    can be asked.
+		// - `nativeMessaging` reach a local daemon at all. A service worker has
+		//                    no filesystem and no socket, so this is the only
+		//                    channel to a process on this machine.
+		// - `webNavigation`  a browser-asserted document identity. `chrome.tabs`
+		//                    carries no `documentId`, so without this an approval
+		//                    would be bound to a string this package composed.
+		//
+		// No `tabs` permission: `onUpdated` reports `status` without it, and tab
+		// URLs come from the host scope above.
 		host_permissions: [...held.hostMatches],
-		permissions: ["scripting", "sidePanel"],
+		permissions: ["scripting", "sidePanel", "nativeMessaging", "webNavigation"],
 		content_security_policy: {
 			extension_pages: "script-src 'self'; object-src 'self'",
 		},
