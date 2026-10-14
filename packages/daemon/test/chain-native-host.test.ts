@@ -16,7 +16,6 @@
 
 import { spawn, spawnSync } from "node:child_process";
 import {
-	mkdirSync,
 	mkdtempSync,
 	readFileSync,
 	rmSync,
@@ -190,12 +189,18 @@ async function relayStatus(): Promise<string> {
 }
 
 beforeAll(async () => {
+	// A file-scope hook runs even when every `describe` in the file is skipped,
+	// so guarding the describe is not enough on its own. Without this the suite
+	// launches a headful browser and shells out to `reg.exe` on a Linux runner,
+	// and fails there for a reason that has nothing to do with the code.
+	if (process.platform !== "win32") {
+		return;
+	}
 	root = mkdtempSync(join(tmpdir(), "ax-chain-"));
 	// The broker resolves its discovery directory from the environment it is
 	// launched with, and a launched process inherits the browser's. Pointing
 	// LOCALAPPDATA at a temporary directory is therefore what makes the whole
 	// chain isolable: daemon, broker and discovery file all land here.
-	mkdirSync(join(root, "NativeMessagingHosts"), { recursive: true });
 	await servePage();
 
 	// Learn the extension id before registering anything, because the manifest's
@@ -252,6 +257,12 @@ beforeAll(async () => {
 }, 240_000);
 
 afterAll(async () => {
+	// Mirrors the guard in `beforeAll`: on a platform where nothing was set up,
+	// there is nothing to tear down, and `reg delete` on a key that was never
+	// written would be the only thing this suite did off Windows.
+	if (process.platform !== "win32") {
+		return;
+	}
 	spawnSync("reg.exe", ["delete", REG_KEY, "/f"], { windowsHide: true });
 	daemon?.kill();
 	await context?.close();
@@ -267,38 +278,60 @@ afterAll(async () => {
 	}
 });
 
-describe("the chain, with the browser doing the part only a browser can do", () => {
-	it("finds the daemon through a host the browser launched", async () => {
-		// No port and no bearer were passed into this test. The worker got both
-		// from a file, through a process the browser started, because it asked.
-		await expect
-			.poll(async () => await relayStatus(), { timeout: 30_000 })
-			.toBe("attached");
-	});
+/**
+ * Windows only, and both the suite and its hooks say so rather than hiding it.
+ *
+ * Registration on Windows is a key under `HKEY_CURRENT_USER`, written with
+ * `reg.exe` — so on any other platform the browser is never told where the host
+ * is, and this file's `reg.exe` calls do not exist.
+ *
+ * Two guards are needed and neither is sufficient alone: Vitest runs a
+ * file-scope `beforeAll` even when every `describe` in the file is skipped, so
+ * the hooks are guarded separately from the suite.
+ *
+ * The alternative was to run it everywhere by writing each platform's real
+ * registration location, which `defaultManifestDir` already knows how to build.
+ * That is not done here because the macOS and Linux paths have not been run on
+ * those platforms, and a green test that has never executed is worse than an
+ * absent one. The gap is recorded rather than papered over.
+ */
+const WINDOWS_ONLY = process.platform === "win32" ? describe : describe.skip;
 
-	it("enumerates the page's real tools through the whole bridge", async () => {
-		const response = await call(1, "tools/list", { _meta: meta() });
-		const result = response["result"] as Record<string, unknown>;
-		expect(result["resultType"]).toBe("complete");
-		const tools = result["tools"] as ReadonlyArray<Record<string, unknown>>;
-		expect(tools.map((tool) => tool["name"])).toEqual(["viewCart"]);
-		// The description is the page's own, not a fixture the test wrote.
-		expect(tools[0]?.["description"]).toBe("Show the cart.");
-	}, 60_000);
-
-	it("executes a tool and returns the page's real value", async () => {
-		const response = await call(2, "tools/call", {
-			_meta: meta(),
-			name: "viewCart",
-			arguments: { detailed: true },
+WINDOWS_ONLY(
+	"the chain, with the browser doing the part only a browser can do",
+	() => {
+		it("finds the daemon through a host the browser launched", async () => {
+			// No port and no bearer were passed into this test. The worker got both
+			// from a file, through a process the browser started, because it asked.
+			await expect
+				.poll(async () => await relayStatus(), { timeout: 30_000 })
+				.toBe("attached");
 		});
-		const result = response["result"] as Record<string, unknown>;
-		expect(result["resultType"]).toBe("complete");
-		expect(result["isError"]).toBeUndefined();
-		// The page's execute callback ran. This is its value, parsed.
-		const payload = JSON.parse(
-			String((result["content"] as ReadonlyArray<{ text: string }>)[0]?.text),
-		) as Record<string, unknown>;
-		expect(payload).toEqual({ items: 3, received: { detailed: true } });
-	}, 60_000);
-});
+
+		it("enumerates the page's real tools through the whole bridge", async () => {
+			const response = await call(1, "tools/list", { _meta: meta() });
+			const result = response["result"] as Record<string, unknown>;
+			expect(result["resultType"]).toBe("complete");
+			const tools = result["tools"] as ReadonlyArray<Record<string, unknown>>;
+			expect(tools.map((tool) => tool["name"])).toEqual(["viewCart"]);
+			// The description is the page's own, not a fixture the test wrote.
+			expect(tools[0]?.["description"]).toBe("Show the cart.");
+		}, 60_000);
+
+		it("executes a tool and returns the page's real value", async () => {
+			const response = await call(2, "tools/call", {
+				_meta: meta(),
+				name: "viewCart",
+				arguments: { detailed: true },
+			});
+			const result = response["result"] as Record<string, unknown>;
+			expect(result["resultType"]).toBe("complete");
+			expect(result["isError"]).toBeUndefined();
+			// The page's execute callback ran. This is its value, parsed.
+			const payload = JSON.parse(
+				String((result["content"] as ReadonlyArray<{ text: string }>)[0]?.text),
+			) as Record<string, unknown>;
+			expect(payload).toEqual({ items: 3, received: { detailed: true } });
+		}, 60_000);
+	},
+);

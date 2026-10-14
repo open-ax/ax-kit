@@ -24,6 +24,8 @@ import { DISCOVERY_FILE_NAME } from "../src/discovery.js";
  */
 
 const EXTENSION = "chrome-extension://knldjmfmopnpolahpmmgbagdohdnhkik";
+/** The same origin with only its id, so a test can append its own spelling. */
+const EXTENSION_ID = "knldjmfmopnpolahpmmgbagdohdnhkik";
 
 const dirs: string[] = [];
 
@@ -95,6 +97,43 @@ describe("caller identity", () => {
 		expect(readCallerOrigin(["host", EXTENSION, "--parent-window=0"])).toBe(
 			EXTENSION,
 		);
+	});
+
+	it("accepts the trailing slash the browser actually writes", () => {
+		// Measured by logging what the browser passes:
+		//
+		//   chrome-extension://<32 chars>/ --parent-window=0
+		//
+		// The slash is part of the value. A pattern anchored without it matches
+		// nothing, and the broker then refuses every connection as though no
+		// browser had called it.
+		const withSlash = `chrome-extension://${EXTENSION_ID}/`;
+		expect(readCallerOrigin(["host", withSlash, "--parent-window=0"])).toBe(
+			withSlash,
+		);
+		// Both spellings are the same origin, so both are admitted.
+		expect(readCallerOrigin(["host", EXTENSION])).toBe(EXTENSION);
+	});
+
+	it("finds the origin where a Windows shim left it", () => {
+		// The documentation says the first argument to the native messaging host
+		// is the caller's origin, and that is true of the process the browser
+		// launches. On Windows that process may be a `.cmd` shim which runs the
+		// real host as a child, so COMSPEC inserts the interpreter and the script
+		// path ahead of it. Measured argv from a shimmed host:
+		//
+		//   [node.exe, .../ax-kit-browser-host.mjs, chrome-extension://…/, --parent-window=0]
+		//
+		// An index-based reader refuses all of that.
+		const withSlash = `chrome-extension://${EXTENSION_ID}/`;
+		expect(
+			readCallerOrigin([
+				"C:\\Program Files\\nodejs\\node.exe",
+				"C:\\repo\\packages\\daemon\\bin\\ax-kit-browser-host.mjs",
+				withSlash,
+				"--parent-window=0",
+			]),
+		).toBe(withSlash);
 	});
 
 	it("refuses a launch that no extension made", () => {

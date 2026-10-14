@@ -59,23 +59,26 @@ export function startRelay(dispatch: RelayHandler): RelayHandle {
 	};
 
 	/**
-	 * Whether a host has ever answered.
+	 * Whether a retry has anything to re-discover.
 	 *
-	 * This one flag is the difference between reconnecting and retrying, and the
-	 * two are not the same thing. A port that drops *after* a successful
-	 * attachment is the case Chrome documents recovering from by calling
-	 * `connectNative` again, and doing so is what lets the bridge survive a
-	 * daemon restart with nobody involved.
+	 * The native port is a rendezvous, not a channel. The broker's whole reply
+	 * is where the daemon is; the extension then talks to the daemon directly
+	 * over loopback and never reads that pipe again. So there are two different
+	 * disconnects and they mean opposite things:
 	 *
-	 * A port that has never attached is a different thing entirely: the host is
-	 * not registered, or cannot be launched. Reconnecting immediately there does
-	 * not recover anything — it only repeats a failure that a person has to fix
-	 * by registering the host. Measured on a browser with no host registered:
-	 * 2812 attempts in about a second and a half, each one logging, none of
-	 * them useful. So an unattached port is not retried, and the way back is an
-	 * event — the worker being revived — rather than a loop.
+	 * - **the port closing** is the broker finishing its one job. Measured after
+	 *   it was made to exit rather than linger: this fires immediately after a
+	 *   successful attachment. Reconnecting here would ask for a rendezvous
+	 *   already had, spawning a broker per cycle forever.
+	 * - **the relay stopping** means the daemon became unreachable, which is a
+	 *   daemon that may come back with a different port. Reconnecting is how the
+	 *   bridge survives a restart with nobody involved, and it is correct there.
+	 *
+	 * An unattached port is not retried either. A browser with no host
+	 * registered answered 2812 `connectNative` calls in about a second and a
+	 * half, each one logging, none of them able to succeed — the fix is a
+	 * person registering the host. The way back is the worker being revived.
 	 */
-	let everAttached = false;
 
 	const onStop = (stop: RelayStop): void => {
 		if (stop.kind === "stopped") {
@@ -83,12 +86,9 @@ export function startRelay(dispatch: RelayHandler): RelayHandle {
 		}
 		state.status = stop.kind === "no-daemon" ? "no-daemon" : "detached";
 		state.reason = stop.reason;
-		// A relay that stopped is not reusable, and nothing else will notice.
-		// Reconnecting here is what lets the bridge survive a daemon restart
-		// without the person doing anything about it.
-		if (everAttached) {
-			connect();
-		}
+		// Re-runs the rendezvous, which re-reads the discovery file and so
+		// picks up a daemon that has restarted on a different port.
+		connect();
 	};
 
 	const connect = (): void => {
@@ -109,20 +109,16 @@ export function startRelay(dispatch: RelayHandler): RelayHandle {
 				state.reason = readRefusal(message);
 				return;
 			}
-			everAttached = true;
 			state.status = "attached";
 			state.reason = "";
 			void serveRelay(attachment, dispatch, onStop);
 		});
 		port.onDisconnect.addListener(() => {
-			// The browser closed the port. Nothing is queued on it any more, and
-			// nothing will bring the host back on its own.
+			// The broker finished its one job and closed the port. This is the
+			// expected end of a rendezvous, not a lost connection, and nothing
+			// was waiting on it. Deliberately no reconnect - see `onStop`.
 			state.status = "detached";
-			state.reason = "the browser closed the native connection";
-			// Only when there was something to lose. See `everAttached`.
-			if (everAttached) {
-				connect();
-			}
+			state.reason = "the broker answered and closed the native connection";
 		});
 		// Say something, or the host has nothing to answer.
 		//

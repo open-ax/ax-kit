@@ -401,6 +401,21 @@ describe("extension loaded in real Chromium", () => {
 		expect(String(reply["error"])).toContain("unknown handler");
 	});
 
+	it("refuses inherited property names, which `in` would have accepted", async () => {
+		// `in` walks the prototype chain, so `"toString" in RELAY_HANDLERS` is
+		// true and the lookup hands back `Object.prototype.toString` — a real
+		// function, not a handler. It runs, and returns a string, and a string
+		// crossing `/result` is by construction a completed tool result: work
+		// that never ran, reported as work that did.
+		//
+		// Each of these is on `Object.prototype`. None is in the map.
+		for (const name of ["toString", "constructor", "hasOwnProperty"]) {
+			const reply = await call("dispatch", { tabId: 1, handler: name });
+			expect(reply["ok"], name).toBe(false);
+			expect(String(reply["error"]), name).toContain("unknown handler");
+		}
+	});
+
 	it("refuses a malformed request rather than reaching the page", async () => {
 		const reply = await call("listTools", { tabId: "not-a-number" });
 		expect(reply["ok"]).toBe(false);

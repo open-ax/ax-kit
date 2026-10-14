@@ -21,15 +21,17 @@ native messaging on the extension's behalf; it reads that file, hands over the
 port and bearer, and exits. It holds no queue, so a worker that is culled
 mid-call costs one re-pull rather than the call itself.
 
-Register it once per browser profile:
+Register it once per browser:
 
 ```sh
-ax-kit-install-native-host "<chrome-profile-dir>" "<extension-id>"
+ax-kit-install-native-host "<extension-id>" ["<manifest-directory>"]
 ```
 
-The profile directory is an argument rather than a guess. A browser can have
-several, and installing into the wrong one produces a bridge that appears to
-work and does nothing.
+The directory is an argument rather than a guess, and it defaults to the place
+the running browser looks. On macOS and Linux that default is scoped to one
+browser profile, so it is genuinely per profile. On Windows the manifest may
+live anywhere and is found through a registry key under `HKEY_CURRENT_USER`, so
+the registration is per **user** and every Chrome that user runs will see it.
 
 ```ts
 import { PageBridge, PageBridgeProvider, startTransport } from "@ax-kit/daemon";

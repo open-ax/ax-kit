@@ -123,11 +123,15 @@ describe("relay connection lifecycle", () => {
 		expect(handle.state.status).toBe("detached");
 	});
 
-	it("reconnects after a host that did answer goes away", async () => {
-		// This is the case the documentation describes recovering from: an
-		// extension reload, an update, a browser restart. The worker held a
-		// working connection, so losing it is worth retrying, and a fresh
-		// `connectNative` gets the current daemon's port and bearer.
+	it("does not re-rendezvous when the broker finishes its one reply", async () => {
+		// The native port is where the daemon is, not a channel to it: the
+		// extension holds the address and bearer already and never reads that
+		// pipe again. The broker is built to exit once it has answered, so this
+		// disconnect fires immediately after every successful attachment.
+		//
+		// Reconnecting here asks for a rendezvous already had. Measured by
+		// making the broker exit rather than linger: one broker per cycle,
+		// forever, each one spawning on the back of the last.
 		const { handle } = await start();
 		ports[0].listeners.message.forEach((cb) => {
 			cb(ATTACHMENT);
@@ -137,7 +141,36 @@ describe("relay connection lifecycle", () => {
 		ports[0].listeners.disconnect.forEach((cb) => {
 			cb();
 		});
-		expect(connectCalls).toBe(2);
+		expect(connectCalls).toBe(1);
+		expect(handle.state).toEqual({
+			status: "detached",
+			reason: "the broker answered and closed the native connection",
+		});
+	});
+
+	it("does not re-rendezvous when the broker finishes its one reply", async () => {
+		// The native port is where the daemon is, not a channel to it: the
+		// extension holds the address and bearer already and never reads that
+		// pipe again. The broker is built to exit once it has answered, so this
+		// disconnect fires immediately after every successful attachment.
+		//
+		// Reconnecting here asks for a rendezvous already had. Measured by
+		// making the broker exit rather than linger: one broker per cycle,
+		// forever, each one spawning on the back of the last.
+		const { handle } = await start();
+		ports[0].listeners.message.forEach((cb) => {
+			cb(ATTACHMENT);
+		});
+		expect(handle.state.status).toBe("attached");
+
+		ports[0].listeners.disconnect.forEach((cb) => {
+			cb();
+		});
+		expect(connectCalls).toBe(1);
+		expect(handle.state).toEqual({
+			status: "detached",
+			reason: "the broker answered and closed the native connection",
+		});
 	});
 
 	it("reports the broker's own words when it refuses", async () => {
