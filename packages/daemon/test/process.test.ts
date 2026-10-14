@@ -83,6 +83,10 @@ describe("daemon process", () => {
 		for (let index = 0; index < 3; index += 1) {
 			ids.push((await client.nextFrame()).id);
 		}
+		// In arrival order. Frames are *started* concurrently, so a slow provider
+		// cannot hold up the ones behind it, but answers are written in the
+		// order their frames arrived: a client reading the pipe line by line
+		// would otherwise get the wrong frame's answer first.
 		expect(ids).toEqual([1, 2, 3]);
 	});
 

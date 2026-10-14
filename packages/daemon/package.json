@@ -18,7 +18,9 @@
 	"module": "./dist/index.mjs",
 	"types": "./dist/index.d.mts",
 	"bin": {
-		"ax-kit-daemon": "./bin/ax-kit-daemon.mjs"
+		"ax-kit-daemon": "./bin/ax-kit-daemon.mjs",
+		"ax-kit-browser-host": "./bin/ax-kit-browser-host.mjs",
+		"ax-kit-install-native-host": "./bin/ax-kit-install-native-host.mjs"
 	},
 	"exports": {
 		".": {

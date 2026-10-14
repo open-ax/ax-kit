@@ -64,6 +64,39 @@ function call(
 	});
 }
 
+/** One CORS preflight, read as headers rather than as a body. */
+function preflight(
+	port: number,
+	origin: string,
+): Promise<{ status: number; headers: Headers }> {
+	return new Promise((resolve, reject) => {
+		const req = httpRequest(
+			{
+				host: "127.0.0.1",
+				port,
+				path: "/",
+				method: "OPTIONS",
+				headers: {
+					origin,
+					"access-control-request-method": "GET",
+					"access-control-request-headers": "x-ax-bearer",
+				},
+			},
+			(res) => {
+				res.resume();
+				res.on("end", () =>
+					resolve({
+						status: res.statusCode ?? 0,
+						headers: new Headers(res.headers as HeadersInit),
+					}),
+				);
+			},
+		);
+		req.on("error", reject);
+		req.end();
+	});
+}
+
 afterEach(async () => {
 	for (const dir of dirs.splice(0)) {
 		await rm(dir, { recursive: true, force: true }).catch(() => {});
@@ -148,6 +181,43 @@ describe("local transport", () => {
 		}
 	});
 
+	it("answers a preflight from the gate's verdict, not from the header", async () => {
+		const dir = await tempDir();
+		const transport = await startTransport({ discoveryDir: dir });
+		try {
+			// Admitted: a loopback MCP client, and the extension either way.
+			const loopback = await preflight(
+				transport.port,
+				`http://127.0.0.1:${transport.port}`,
+			);
+			expect(loopback.status).toBe(204);
+			expect(loopback.headers.get("access-control-allow-origin")).toBe(
+				`http://127.0.0.1:${transport.port}`,
+			);
+
+			const extension = await preflight(
+				transport.port,
+				"chrome-extension://knldjmfmopnpolahpmmgbagdohdnhkik",
+			);
+			expect(extension.headers.get("access-control-allow-origin")).toBe(
+				"chrome-extension://knldjmfmopnpolahpmmgbagdohdnhkik",
+			);
+
+			// Refused: a web page. The preflight carries no allow-origin, so the
+			// browser blocks the response body even though the 204 arrived. This
+			// is the whole point of deriving the header from the same decision
+			// that gates the route - echoing the header instead would hand a page
+			// read access to endpoints whose security rests on the bearer.
+			const refused = await preflight(transport.port, "https://evil.test");
+			expect(refused.status).toBe(204);
+			expect(refused.headers.get("access-control-allow-origin")).toBeNull();
+			expect(refused.headers.get("access-control-allow-headers")).toBeNull();
+			expect(refused.headers.get("access-control-max-age")).toBe("0");
+		} finally {
+			await transport.close();
+		}
+	});
+
 	it("hands queued work to a GET and to nothing else", async () => {
 		const dir = await tempDir();
 		const queue: Envelope[] = [
@@ -156,8 +226,10 @@ describe("local transport", () => {
 		const transport = await startTransport({
 			discoveryDir: dir,
 			bridge: {
-				take: (): Envelope | null => queue.shift() ?? null,
+				waitForEnvelope: (): Promise<Envelope | null> =>
+					Promise.resolve(queue.shift() ?? null),
 				deliver: (): void => {},
+				clientAttached: (): boolean => true,
 			},
 		});
 		try {

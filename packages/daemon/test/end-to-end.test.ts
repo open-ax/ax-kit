@@ -16,7 +16,6 @@ import { BridgeRefusal, PageBridge } from "../src/bridge.js";
 import type { DiscoveryFile } from "../src/discovery.js";
 import type { Transport } from "../src/lifecycle.js";
 import { readDiscoveryFile, startTransport } from "../src/lifecycle.js";
-import type { JsonRpcResponse } from "../src/protocol.js";
 import {
 	createDaemonInfo,
 	dispatchRequest,
@@ -270,14 +269,27 @@ afterAll(async () => {
 	});
 });
 
-/** Answer one MCP request through the spawned daemon's own dispatch path. */
-function respond(
+/**
+ * Answer one MCP request through the spawned daemon's own dispatch path.
+ *
+ * Async because the dispatcher is: the far side of the bridge cannot be
+ * answered synchronously, so a test that passed a plain list of tools would be
+ * exercising a shape the daemon no longer has.
+ */
+async function respond(
 	frame: string,
 	tools: ReadonlyArray<Record<string, unknown>>,
-): string {
-	const response: JsonRpcResponse = dispatchRequest(
+): Promise<string> {
+	const response = await dispatchRequest(
 		parseFrame(frame),
-		tools as Record<string, unknown>[],
+		{
+			listTools: async () => tools,
+			callTool: async () => ({
+				kind: "refused",
+				code: -32601,
+				message: "no page bridge is attached to this test provider",
+			}),
+		},
 		createDaemonInfo(),
 	);
 	return serializeFrame(response);
@@ -312,7 +324,7 @@ describe("tool execution end to end", () => {
 
 	it("answers an MCP tools/list with the page's real tool set", async () => {
 		const tools = await bridge.listTools(tabId);
-		const text = respond(JSON.stringify(toolsListFrame(1)), tools);
+		const text = await respond(JSON.stringify(toolsListFrame(1)), tools);
 		const parsed: unknown = JSON.parse(text);
 		expect(parsed).toMatchObject({ id: 1 });
 		const record = parsed as { result: { tools: unknown[] } };
@@ -327,14 +339,20 @@ describe("tool execution end to end", () => {
 			const listed = await client.nextFrame();
 			expect(listed.error).toBeUndefined();
 			expect(JSON.stringify(listed.result)).toContain("resultType");
-			// A call is refused rather than completed. The spawned process
-			// holds no page bridge, so there is nothing to execute against and the
-			// only honest answer is one that tells the client nothing happened.
+			// A call with no browser behind it is refused *inside* the result
+			// rather than as a JSON-RPC error, because that is where the revision
+			// puts a tool that did not succeed: a client that can see the refusal
+			// can tell "nothing ran" from "the server is broken". What it must not
+			// see is a completion marker with no work behind it.
 			client.write(toolsCallFrame(2, "viewCart", { detailed: true }));
 			const called = await client.nextFrame();
 			expect(called.id).toBe(2);
-			expect(called.result).toBeUndefined();
-			expect(called.error?.message).toMatch(/no page bridge/);
+			const result = called.result as Record<string, unknown>;
+			expect(result.resultType).toBe("complete");
+			expect(result.isError).toBe(true);
+			expect(JSON.stringify(result.content)).toMatch(
+				/no extension is attached/,
+			);
 			client.endInput();
 			expect(await client.waitForExit()).toBe(0);
 		} finally {
