@@ -62,7 +62,10 @@ export interface BridgeRoutes {
 	 * client looping on an instant 204 for as long as the page has no tools,
 	 * which is most of the time. A held request costs nothing when idle.
 	 */
-	waitForEnvelope(holdMs: number): Promise<Envelope | null>;
+	waitForEnvelope(
+		holdMs: number,
+		signal?: AbortSignal,
+	): Promise<Envelope | null>;
 	/** Accept a result and settle the matching call. */
 	deliver(body: unknown): void;
 	/** Whether a worker is currently attached, for refusing work in bounded time. */
@@ -301,7 +304,17 @@ async function handleRequest(
 	if (path === "/pull" && request.method === "GET") {
 		// Held open until there is something to hand over. An instant answer
 		// would make the worker spin; a long hold makes an idle bridge free.
-		const next = await bridge.waitForEnvelope(PULL_HOLD_MS);
+		//
+		// The hold ends when the socket does, not only when the hold expires.
+		// Chrome culls service workers, and a culled worker drops this socket
+		// mid-pull; without the abort its waiter would stay eligible for
+		// dispatch, so the next envelope would be written to a socket nobody
+		// will read and the work would be lost rather than re-pulled.
+		const gone = new AbortController();
+		request.on("close", () => {
+			gone.abort();
+		});
+		const next = await bridge.waitForEnvelope(PULL_HOLD_MS, gone.signal);
 		if (next === null) {
 			// Idle, not an error: the client should come back.
 			response.writeHead(204, cors);

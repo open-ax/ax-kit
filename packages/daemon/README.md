@@ -135,23 +135,26 @@ Frames go in one per line and come out one per line. There is no handshake:
 the first frame you send is answered. Diagnostics go to standard error, and
 closing standard input is how you stop it.
 
-`tools/call` is refused rather than answered. A completion marker on a frame
-whose work was never performed is the worst answer this daemon could give: a
-client that reads one reports the tool as run.
+`tools/call` is answered from whatever the attached page exposes. Work that was
+never performed is refused rather than marked complete: a completion marker on a
+frame whose work never happened is the worst answer this daemon could give, and
+a client that reads one reports the tool as run.
 
 To consume the policy helpers directly, import them:
 
 ```ts
 import {
-	createDaemonInfo,
-	dispatchRequest,
-	parseFrame,
-	serializeFrame,
+  createDaemonInfo,
+  dispatchRequest,
+  emptyBridgeProvider,
+  parseFrame,
+  serializeFrame,
 } from "@ax-kit/daemon";
 
 const info = createDaemonInfo();
 const request = parseFrame(process.argv[2] as string);
-const response = dispatchRequest(request, [], info);
+// `dispatchRequest` is async because reaching a page is: it crosses a network.
+const response = await dispatchRequest(request, emptyBridgeProvider(), info);
 process.stdout.write(`${serializeFrame(response)}\n`);
 ```
 

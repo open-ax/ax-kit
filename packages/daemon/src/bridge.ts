@@ -215,17 +215,32 @@ export class PageBridge {
 	}
 
 	/**
-	 * Wait for work, up to `holdMs`.
+	 * Wait for work, up to `holdMs`, or until `signal` aborts.
 	 *
-	 * Resolves with an envelope the moment one is queued, or with `null` when
-	 * the hold expires. A client looping on an endpoint that answers instantly
-	 * when idle spends a core doing nothing; holding the request open costs
-	 * nothing while there is nothing to do.
+	 * Resolves with an envelope the moment one is queued, `null` when the hold
+	 * expires, and `null` when the caller goes away. A client looping on an
+	 * endpoint that answers instantly when idle spends a core doing nothing;
+	 * holding the request open costs nothing while there is nothing to do.
+	 *
+	 * The abort is not optional and is the reason this cannot just be a hold.
+	 * A waiter's removal happens on dispatch and on timeout — so a waiter whose
+	 * *socket* has closed stays live for the whole hold, still counting as an
+	 * attached client, and is still eligible for dispatch. Chrome can cull the
+	 * worker mid-pull. The envelope then goes to a socket nobody will read, the
+	 * work is lost rather than re-pulled, and the caller fails at its deadline
+	 * with an outcome it never had. That is the opposite of the property this
+	 * layer exists to provide.
 	 */
-	waitForEnvelope(holdMs: number = PULL_HOLD_MS): Promise<Envelope | null> {
+	waitForEnvelope(
+		holdMs: number = PULL_HOLD_MS,
+		signal?: AbortSignal,
+	): Promise<Envelope | null> {
 		const ready = this.take();
 		if (ready !== null) {
 			return Promise.resolve(ready);
+		}
+		if (signal?.aborted === true) {
+			return Promise.resolve(null);
 		}
 		return new Promise<Envelope | null>((resolve) => {
 			let settled = false;
@@ -235,6 +250,7 @@ export class PageBridge {
 				}
 				settled = true;
 				clearTimeout(timer);
+				signal?.removeEventListener("abort", onAbort);
 				const at = this.waiting.indexOf(onWork);
 				if (at !== -1) {
 					this.waiting.splice(at, 1);
@@ -245,6 +261,9 @@ export class PageBridge {
 			const onWork = (envelope: Envelope | null): void => {
 				finish(envelope);
 			};
+			const onAbort = (): void => {
+				finish(null);
+			};
 			const timer = setTimeout(() => {
 				finish(null);
 			}, holdMs);
@@ -253,6 +272,7 @@ export class PageBridge {
 			timer.unref?.();
 			this.attached += 1;
 			this.waiting.push(onWork);
+			signal?.addEventListener("abort", onAbort, { once: true });
 		});
 	}
 
