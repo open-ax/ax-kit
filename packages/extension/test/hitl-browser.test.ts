@@ -462,20 +462,40 @@ describe("consequential confirmation", () => {
 		expect(replayed.result?.["requiresConfirmation"]).toBe(true);
 	});
 
-	it("names the missing field when a consequential call cannot be bound", async () => {
+	it("binds an approval to the browser's document, not one the caller names", async () => {
 		await clearPending();
-		// The document is what an approval is bound to, so a consequential call
-		// without one cannot reach a person. The refusal has to say that, rather
-		// than reporting a malformed key the caller cannot see.
-		const unbound = await invoke("executeTool", {
+		// The binding used to be built from a `documentId` in the request. That
+		// made the target of an approval something the caller chose, which is the
+		// one thing a binding exists to prevent — and the value that stood in for
+		// it, `tab-<n>`, survived every navigation in the tab.
+		//
+		// The identity is now read from the browser's own commit record. A caller
+		// can still put a `documentId` in the request; it is ignored, and the key
+		// that comes back must not contain it.
+		const filed = await invoke("executeTool", {
 			tabId,
 			frameId: 0,
 			name: "payNow",
-			args: { amount: 400 },
+			args: { amount: 250 },
 			callerOrigin: origin,
+			documentId: "caller-supplied-document",
 		});
-		expect(unbound.ok).toBe(false);
-		expect(unbound.error).toMatch(/needs a documentId/);
+		expect(filed.ok).toBe(true);
+		const binding = String(filed.result?.["pendingApproval"]);
+		expect(binding.length).toBeGreaterThan(0);
+		expect(binding).not.toContain("caller-supplied-document");
+		// The key is the JSON array of the five binding parts, in order, so this
+		// says something specific: the second element is the document identity,
+		// and it is neither the caller's string nor the old tab-scoped one.
+		const parts = JSON.parse(binding) as ReadonlyArray<unknown>;
+		expect(parts.length).toBe(5);
+		expect(parts[0]).toBe(tabId);
+		expect(parts[1]).not.toBe("caller-supplied-document");
+		expect(parts[1]).not.toBe(`tab-${String(tabId)}`);
+		expect(typeof parts[1]).toBe("string");
+		// A real Chromium document id, which the browser mints per document and
+		// which nothing in this repository composes.
+		expect(String(parts[1]).length).toBeGreaterThan(8);
 	});
 
 	it("does not raise the panel for a tool that is not consequential", async () => {

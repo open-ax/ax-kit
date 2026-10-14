@@ -25,6 +25,7 @@ import {
 	hashArgs,
 	hitlKeyToString,
 } from "./hitl.js";
+import { startRelay } from "./relay-host.js";
 import type { FrameToolView } from "./trusted-tier.js";
 import {
 	AUDIT_TRAIL_DISCLAIMER,
@@ -279,6 +280,123 @@ const INJECTORS = {
 	executeTool: executeToolInPage,
 } as const;
 
+/**
+ * The tab the person is looking at, read from the browser.
+ *
+ * A client on the other side of a socket has no concept of a tab, so "which
+ * one" has to be answered by asking rather than guessing. Guessing would pick
+ * whichever tab was created first, which for a tool that spends money is the
+ * worst available answer.
+ *
+ * The origin travels with it because the caller needs one and cannot honestly
+ * invent one: this worker has no origin of its own, and the page is exposed to
+ * itself. It is read from the tab's own URL rather than composed.
+ */
+async function readActiveTab(): Promise<{ tabId: number; origin: string }> {
+	const tabs = await chrome.tabs.query({
+		active: true,
+		lastFocusedWindow: true,
+	});
+	const tab = tabs[0];
+	if (tab === undefined || typeof tab.id !== "number") {
+		throw new TypeError("no active tab");
+	}
+	const url = typeof tab.url === "string" ? tab.url : tab.pendingUrl;
+	if (typeof url !== "string" || url.length === 0) {
+		throw new TypeError("no tab origin");
+	}
+	const origin = new URL(url).origin;
+	if (origin === "null") {
+		throw new TypeError("opaque tab origin");
+	}
+	return { tabId: tab.id, origin };
+}
+
+/**
+ * The document identities this worker has seen, keyed by tab and frame.
+ *
+ * `chrome.tabs.Tab` has no `documentId` — checked against the API reference
+ * rather than assumed — so the only browser-asserted identities available are
+ * the ones `webNavigation` reports at commit time. That is exactly what an
+ * approval needs to be bound to: a value the browser asserts, which a page
+ * cannot forge and a caller cannot compose.
+ *
+ * The previous code passed `tab-${tabId}` and called it a placeholder. A string
+ * that survives every navigation in a tab is not a weaker document identity, it
+ * is no document identity at all, and it outlives the thing it was standing in
+ * for.
+ */
+const documents = new Map<string, { documentId: string; lifecycle: string }>();
+
+function frameKey(tabId: number, frameId: number): string {
+	return `${String(tabId)}:${String(frameId)}`;
+}
+
+chrome.webNavigation.onCommitted.addListener((details) => {
+	const { tabId, frameId, documentId, documentLifecycle } = details;
+	if (
+		typeof tabId !== "number" ||
+		typeof frameId !== "number" ||
+		typeof documentId !== "string" ||
+		documentId.length === 0
+	) {
+		return;
+	}
+	const key = frameKey(tabId, frameId);
+	documents.set(key, {
+		documentId,
+		lifecycle:
+			typeof documentLifecycle === "string" ? documentLifecycle : "active",
+	});
+	// A commit is the browser saying the document an approval was bound to is
+	// gone. This is the earliest and most reliable point at which that is true:
+	// `onBeforeNavigate` fires before a document id exists to bind to.
+	invalidateApprovalsFor(tabId, "the tab navigated");
+});
+
+/**
+ * The live document identity for a frame, or null when this worker has not
+ * seen one.
+ *
+ * Absent means the worker cannot bind an approval, and refusing is the right
+ * answer rather than falling back to something weaker: an unbound approval is
+ * exactly the thing a replayed call is trying to obtain.
+ */
+function liveDocument(
+	tabId: number,
+	frameId: number,
+): { documentId: string; lifecycle: string } | null {
+	return documents.get(frameKey(tabId, frameId)) ?? null;
+}
+
+/**
+ * Ask the browser whether these three still name one live document.
+ *
+ * This is the anti-replay gate, and it is the browser's answer rather than a
+ * comparison of strings this package composed. A tab, a frame and a document id
+ * that do not go together any more are not a document; they are three plausible
+ * values from three different moments.
+ */
+async function documentIsLive(
+	tabId: number,
+	frameId: number,
+	documentId: string,
+): Promise<boolean> {
+	try {
+		const frame: unknown = await chrome.webNavigation.getFrame({
+			tabId,
+			frameId,
+			documentId,
+		});
+		return frame !== null && frame !== undefined;
+	} catch {
+		// A lookup that throws is the browser declining to confirm it. Failing
+		// closed here is the point: the alternative is treating an unconfirmable
+		// identity as confirmed.
+		return false;
+	}
+}
+
 /** Inject one handler into a tab's Main world and return its result. */
 async function inject(
 	tabId: number,
@@ -408,14 +526,31 @@ async function handle(request: InjectionRequest): Promise<unknown> {
 		// consequential call needs a document to bind an approval to: asking a
 		// read-only tool for one would refuse an invocation that involves no
 		// approval at all.
-		const documentId = args["documentId"];
-		if (typeof documentId !== "string" || documentId.length === 0) {
-			// Named rather than left to the key constructor, because this is the
-			// one field a caller can plausibly omit and the refusal should say
-			// what is missing rather than what is malformed.
+		//
+		// The identity is read from the browser's own commit record, never from
+		// the request. A caller that named its own `documentId` would be choosing
+		// the target its approval applies to, which is the one thing the binding
+		// exists to prevent.
+		const live = liveDocument(tabId, frameId);
+		if (live === null) {
 			throw new TypeError(
-				"a consequential call needs a documentId to bind its approval to",
+				"no document identity is known for this frame, so nothing can be approved against it",
 			);
+		}
+		// A prerendered document is not the document the person is looking at.
+		// Binding an approval to one would authorise a call against a page that
+		// may never be shown.
+		if (live.lifecycle === "prerender") {
+			throw new TypeError(
+				"that frame is prerendered, not the document in view",
+			);
+		}
+		const { documentId } = live;
+		if (!(await documentIsLive(tabId, frameId, documentId))) {
+			// The recorded identity no longer names a live document, so the tab
+			// moved between the commit and this call. Refuse rather than ask: the
+			// person was never shown anything about this document.
+			throw new TypeError("the document moved before the call arrived");
 		}
 		const argsJson = canonicalizeArgs(minimised);
 		const key = createHitlKey({
@@ -554,11 +689,57 @@ const filed = new Map<string, PanelApproval>();
  * worker rather than trusting a pushed payload. The notification carries no
  * approval data at all — it is a hint to look again.
  */
-function announceChange(): void {
-	void chrome.runtime.sendMessage({ handler: "pendingChanged" }).catch(() => {
-		// No panel is open. That is the common case, not a failure.
-	});
+function announceChange(reason?: string): void {
+	void chrome.runtime
+		.sendMessage({ handler: "pendingChanged", reason: reason ?? "" })
+		.catch(() => {
+			// No panel is open. That is the common case, not a failure.
+		});
 }
+
+/**
+ * Say on the toolbar icon that something is waiting.
+ *
+ * The panel cannot simply be opened for a person. `chrome.sidePanel.open()`
+ * refuses to run outside a user gesture — verified against the Chromium
+ * implementation, not just the docs — and a tool call is not a gesture. So the
+ * icon carries the count and the tooltip carries the reason, and the person
+ * clicks. An approval they have to go and find is still an approval; an approval
+ * panel that silently failed to open is not.
+ */
+function refreshBadge(): void {
+	const pending = approvals.pendingKeys().length;
+	const badge = pending > 0 ? String(Math.min(pending, 99)) : "";
+	void chrome.action
+		.setBadgeBackgroundColor({ color: "#1f6feb" })
+		.then(() => chrome.action.setBadgeText({ text: badge }))
+		.then(() =>
+			chrome.action.setTitle({
+				title:
+					pending > 0
+						? `ax-kit — ${String(pending)} confirmation${pending === 1 ? "" : "s"} waiting`
+						: "ax-kit",
+			}),
+		)
+		.catch(() => {
+			// A worker that is shutting down may not get to paint the badge. The
+			// panel is still the real surface; this is only a pointer to it.
+		});
+}
+
+/**
+ * Make the confirmation surface reachable.
+ *
+ * `openPanelOnActionClick` defaults to false, so without this the panel exists
+ * and can never be opened by the person who needs it. The call is refused on a
+ * browser that does not support it, which is not a failure worth propagating:
+ * the panel can still be opened from the extensions menu.
+ */
+void chrome.sidePanel
+	.setPanelBehavior({ openPanelOnActionClick: true })
+	.catch(() => {
+		// Older browser, or a context where the call is not permitted.
+	});
 
 /**
  * File a pending approval from the worker's own validated view.
@@ -586,7 +767,8 @@ function fileApproval(details: ApprovalDetails): PanelApproval {
 		origin: entry.origin,
 		decision: "requested",
 	});
-	announceChange();
+	refreshBadge();
+	announceChange(`"${entry.toolName}" is waiting for your confirmation`);
 	return entry;
 }
 
@@ -701,41 +883,66 @@ function panel(op: unknown, args: unknown): unknown {
 }
 
 /**
- * A pending confirmation does not survive navigation.
+ * Drop every approval bound to a tab, and tell the panel.
  *
- * An approval is bound to the document the person was shown. When the tab
- * navigates that document is gone, so a confirmation left standing would
- * authorise an invocation against whatever loaded next — the one case where
- * the binding could outlive its own subject.
+ * Called from the browser's own signals rather than from anything a caller
+ * reports: a navigation, and a switch to a different tab. An approval is bound
+ * to the document a person was shown, and switching tabs *hides* the side panel
+ * rather than destroying it — so a card left standing is a card for a page
+ * nobody is looking at, which is how a confirmation outlives its subject.
  *
- * `chrome.tabs.onUpdated` reporting `status: "loading"` is the browser's own
- * signal and needs no permission beyond the host access already requested.
- * The store is keyed on the reported tab rather than on a document identifier
- * the caller supplied, so what gets discarded is decided from something the
- * browser said rather than something the caller asked.
+ * `onBeforeNavigate` is deliberately not used: it fires before a document
+ * identity exists to bind to. `onCommitted` is the earliest point at which the
+ * browser can say both that the old document is gone and what the new one is.
  */
+function invalidateApprovalsFor(tabId: number, why: string): void {
+	// The store drops its own entries; the copies the panel rendered are this
+	// module's to drop and nothing else will. Whatever is still pending after
+	// the invalidation belonged to another tab, so the difference is exactly
+	// what this discarded.
+	const before = new Set(approvals.pendingKeys());
+	approvals.invalidateTab(tabId);
+	for (const binding of approvals.pendingKeys()) {
+		before.delete(binding);
+	}
+	if (before.size === 0) {
+		return;
+	}
+	for (const binding of before) {
+		filed.delete(binding);
+	}
+	refreshBadge();
+	announceChange(why);
+}
+
 chrome.tabs.onUpdated.addListener(
 	(tabId: number, changeInfo: { status?: unknown }): void => {
 		if (changeInfo.status !== "loading") {
 			return;
 		}
-		// The store drops its own entries; the copies the panel rendered are this
-		// module's to drop and nothing else will. Whatever is still pending after
-		// the invalidation belonged to another tab, so the difference is exactly
-		// what the navigation discarded.
-		const before = new Set(approvals.pendingKeys());
-		approvals.invalidateTab(tabId);
-		for (const binding of approvals.pendingKeys()) {
-			before.delete(binding);
-		}
-		for (const binding of before) {
-			filed.delete(binding);
-		}
-		void chrome.runtime.sendMessage({ handler: "pendingChanged" }).catch(() => {
-			// No panel listening. The invalidation above already happened.
-		});
+		invalidateApprovalsFor(tabId, "the tab navigated");
 	},
 );
+
+chrome.tabs.onActivated.addListener((info: { tabId?: unknown }): void => {
+	// Deliberately does not invalidate anything.
+	//
+	// The obvious thing to do here is to retire approvals for every tab the
+	// person is no longer looking at. That was tried, and it is wrong: the
+	// confirmation surface itself can be a tab, so reading the approval retires
+	// the approval, and a person who checked a reference in another window loses
+	// the question they were asked.
+	//
+	// Staleness is already handled where it is actually decidable. Navigation
+	// discards the approvals bound to the document that is gone, and
+	// `verifyAndConsume` re-derives every part of the binding from live values
+	// at the moment of the click — so a card that went stale is refused, not
+	// honoured, whatever the person was looking at when they clicked it.
+	if (typeof info.tabId !== "number") {
+		return;
+	}
+	refreshBadge();
+});
 
 chrome.runtime.onMessage.addListener(
 	(
@@ -782,6 +989,57 @@ chrome.runtime.onMessage.addListener(
 	},
 );
 
+/* ------------------------------------------------------------------ relay */
+
+/**
+ * What the daemon may ask this worker for.
+ *
+ * A closed map rather than a dispatch switch that takes a name: an unknown name
+ * never reaches a function, so a hostile or confused caller cannot reach one by
+ * spelling it.
+ *
+ * `activeTab` is here and not in `HANDLER_NAMES` on purpose. Those name the
+ * functions this worker *injects into a page*, and each takes a `tabId` because
+ * it has to. This one names the tab instead of being handed one, and touches no
+ * page at all — putting it in that set would widen a meaning that is exact.
+ */
+const RELAY_HANDLERS = {
+	activeTab: async (): Promise<unknown> => readActiveTab(),
+	listTools: async (args: Record<string, unknown>): Promise<unknown> =>
+		await handle({ handler: "listTools", args }),
+	getTool: async (args: Record<string, unknown>): Promise<unknown> =>
+		await handle({ handler: "getTool", args }),
+	executeTool: async (args: Record<string, unknown>): Promise<unknown> =>
+		await handle({ handler: "executeTool", args }),
+} as const;
+
+type RelayHandlerName = keyof typeof RELAY_HANDLERS;
+
+async function dispatchRelay(
+	name: unknown,
+	args: Record<string, unknown>,
+): Promise<unknown> {
+	if (typeof name !== "string" || !(name in RELAY_HANDLERS)) {
+		throw new TypeError("unknown handler");
+	}
+	const fn = RELAY_HANDLERS[name as RelayHandlerName] as (
+		args: Record<string, unknown>,
+	) => Promise<unknown>;
+	return await fn(args);
+}
+
+/**
+ * Started at top level, not from an event.
+ *
+ * A Manifest V3 worker is created and destroyed constantly, and its top level
+ * runs on every revival. Connecting here rather than on some particular event
+ * means the bridge reattaches whenever the browser brings the worker back for
+ * any reason, with nothing having to remember to ask.
+ */
+const relay = startRelay(async (request) => {
+	return await dispatchRelay(request.handler, request.args);
+});
+
 // Exposed for tests driving the worker directly through Playwright. Not
 // reachable from the page: a service worker's global is not a page global, and
 // the manifest denies external connections. The panel reaches the worker over
@@ -794,4 +1052,5 @@ Object.assign(globalThis as unknown as Record<string, unknown>, {
 	__axApprovals: approvals,
 	__axPanel: panel,
 	__axTrail: trail,
+	__axRelay: relay,
 });

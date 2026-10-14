@@ -295,7 +295,16 @@ describe("emitted manifest", () => {
 		// A permission the worker never reads is not requested. `tabs` would grant
 		// URL and title across every tab, which `<all_urls>` already covers for
 		// the tabs this extension addresses, and `storage` is not read at all.
-		expect(doc["permissions"]).toEqual(["scripting", "sidePanel"]);
+		// Asserted exactly, in the order the document declares them. A "contains the
+		// ones we expect" assertion would let a permission nobody justified
+		// accumulate unnoticed, and every entry here is something a reviewer has
+		// to be able to notice.
+		expect(doc["permissions"]).toEqual([
+			"scripting",
+			"sidePanel",
+			"nativeMessaging",
+			"webNavigation",
+		]);
 		// Byte-for-byte what the manifest function produces, so the shipped file
 		// cannot drift from the posture it claims.
 		expect(doc).toEqual({ ...defaultManifestDocument() });
