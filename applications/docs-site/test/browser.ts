@@ -209,18 +209,30 @@ describe("the built site", () => {
 		const browser = await chromium.launch();
 		try {
 			const page = await browser.newPage();
-			/** Every request the page and its workers issue. */
+			/**
+			 * Every request the page and its workers issue.
+			 *
+			 * The search index is loaded from a worker, so this has to see worker
+			 * requests as well as page ones. It does, on the version of the runner
+			 * this repository pins: recorded with and without the explicit route
+			 * interception an earlier revision used were the same 26 requests, of
+			 * which 11 were `/pagefind/`. That revision also installed a catch-all
+			 * `page.route` handler and continued every request through it, on the
+			 * belief that worker requests do not surface as page requests. They do
+			 * not need that, and it was the one thing in this test that deliberately
+			 * interfered with the requests it was measuring: every request the
+			 * search makes had to make a round trip through the driver first. On an
+			 * idle machine that measured as noise. It is gone rather than
+			 * re-tuned.
+			 */
 			const requested: string[] = [];
 			page.on("request", (request) => {
 				requested.push(request.url());
 			});
-			// Worker-initiated requests do not surface as page requests, and the
-			// search index is loaded from one. Recording them is the difference
-			// between observing the search and observing only the page that hosts
-			// it.
-			await page.route("**/*", async (route) => {
-				requested.push(route.request().url());
-				await route.continue();
+			/** Requests that were issued and did not complete. */
+			const failed: string[] = [];
+			page.on("requestfailed", (request) => {
+				failed.push(request.url());
 			});
 
 			await page.goto(`${ORIGIN}/`, { waitUntil: "load" });
@@ -260,6 +272,21 @@ describe("the built site", () => {
 			expect(
 				requested.length,
 				"no requests were recorded, so the search did not run",
+			).toBeGreaterThan(0);
+
+			// The observation is judged against the search index itself rather than
+			// against a non-empty list. A list that merely has entries can be
+			// satisfied by the page's own first-party assets, which would let the
+			// off-origin assertion below pass without anything having observed the
+			// search at all. This is what keeps the claim honest now that the
+			// recording no longer goes through an explicit interception: if a runner
+			// ever stops reporting worker requests, this fails and says so, instead
+			// of the search quietly going unobserved and the test going quietly
+			// green.
+			const index = requested.filter((url) => url.includes("/pagefind/"));
+			expect(
+				index.length,
+				`the search index was never requested, so the search went unobserved; ${requested.length} requests recorded, ${failed.length} failed`,
 			).toBeGreaterThan(0);
 
 			// Judged on the parsed host, not on the string, so userinfo
