@@ -238,9 +238,21 @@ export async function handleMcpRequest(
 	}
 	// A notification carries no id and expects no result. Answering one with a
 	// body would put a frame on the wire that the client is not waiting for.
-	if (id === null) {
+	//
+	// Tested for the *absence of the member*, not for `readId` returning null,
+	// because those are different things and only one of them is a notification.
+	// `readId` also returns null for `"id": null`, an object, or a boolean — a
+	// request with a malformed id. Answering those 202 and empty told the client
+	// nothing at all, where the revision says to refuse an invalid request id.
+	// Silently accepting a malformed request is how a request that was never
+	// understood comes to look like one that was understood and discarded.
+	if (!("id" in record)) {
 		response.writeHead(202);
 		response.end();
+		return true;
+	}
+	if (id === null) {
+		refuse(response, 400, null, -32600, "invalid request id");
 		return true;
 	}
 	// Every header is checked against the body, and a disagreement is refused.

@@ -28,6 +28,22 @@ import {
 	serveRelay,
 } from "./relay.js";
 
+/**
+ * Reconnect delay after the relay stops, doubling up to a ceiling.
+ *
+ * A daemon that has gone away and left its discovery file behind is the case
+ * this recovers from, and it is also the case that repeats: the broker reads
+ * the stale file, hands out a dead port, the fetch fails at once, and the next
+ * attempt is scheduled. Undelayed, that is a tight spawn loop — one broker
+ * process per cycle — which is the same shape as the 2812-attempt storm above,
+ * reached by a different road.
+ *
+ * These bound the retry rate. They are not a wait on a state: the relay is
+ * still event-driven, and the counter resets the moment one attempt succeeds.
+ */
+const RECONNECT_BASE_MS = 250;
+const RECONNECT_CEILING_MS = 30_000;
+
 export type RelayStatus = "starting" | "attached" | "detached" | "no-daemon";
 
 /** What the panel shows about the bridge itself. Read-only to a panel. */
@@ -88,9 +104,25 @@ export function startRelay(dispatch: RelayHandler): RelayHandle {
 		state.reason = stop.reason;
 		// Re-runs the rendezvous, which re-reads the discovery file and so
 		// picks up a daemon that has restarted on a different port.
-		connect();
+		//
+		// Backed off, because the failure this recovers from is the one that
+		// repeats. A daemon that exits cleanly *leaves its discovery file
+		// behind*, so the broker keeps handing out a dead port; each attempt
+		// fails at once and each failure schedules the next. With no delay that
+		// is a tight spawn loop — one broker process per cycle — which is the
+		// same shape as the 2812-attempt storm measured above, reached by a
+		// different road.
+		const wait = Math.min(
+			RECONNECT_BASE_MS * 2 ** attempts,
+			RECONNECT_CEILING_MS,
+		);
+		attempts += 1;
+		setTimeout(() => {
+			connect();
+		}, wait);
 	};
 
+	let attempts = 0;
 	let rendezvoused = false;
 
 	const connect = (): void => {
@@ -112,6 +144,7 @@ export function startRelay(dispatch: RelayHandler): RelayHandle {
 				return;
 			}
 			rendezvoused = true;
+			attempts = 0;
 			state.status = "attached";
 			state.reason = "";
 			void serveRelay(attachment, dispatch, onStop);

@@ -10,6 +10,7 @@ import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 
 import type { Envelope } from "../src/bridge.js";
+import { PageBridge } from "../src/bridge.js";
 import {
 	assertLoopbackBind,
 	createBearer,
@@ -213,6 +214,37 @@ describe("local transport", () => {
 			expect(refused.headers.get("access-control-allow-origin")).toBeNull();
 			expect(refused.headers.get("access-control-allow-headers")).toBeNull();
 			expect(refused.headers.get("access-control-max-age")).toBe("0");
+		} finally {
+			await transport.close();
+		}
+	});
+
+	it("stops counting a waiter the moment its socket closes", async () => {
+		// Chrome culls service workers, and a culled worker drops the `/pull`
+		// socket mid-hold. The waiter used to survive that for the whole hold:
+		// still counted as an attached client, still eligible for dispatch, and
+		// the next envelope went to a socket nobody would read. The work was
+		// lost rather than re-pulled, and the caller failed at its deadline with
+		// an outcome that never happened.
+		const dir = await tempDir();
+		const bridge = new PageBridge();
+		const transport = await startTransport({ discoveryDir: dir, bridge });
+		const controller = new AbortController();
+		try {
+			// A hold far longer than this test's own timeout, so the only way it
+			// can resolve is the abort. Holding the hold short would make the
+			// timeout path and the abort path look identical, and the test would
+			// pass against either.
+			const held = bridge.waitForEnvelope(120_000, controller.signal);
+			await new Promise((done) => {
+				setImmediate(done);
+			});
+			expect(bridge.clientAttached()).toBe(true);
+
+			controller.abort();
+			expect(await held).toBeNull();
+			// The whole point: no longer eligible for dispatch.
+			expect(bridge.clientAttached()).toBe(false);
 		} finally {
 			await transport.close();
 		}

@@ -121,6 +121,18 @@ describe("native host registration", () => {
 		expect(windows.path.endsWith(".cmd")).toBe(true);
 		expect(windows.written).not.toBeNull();
 
+		// The space between the script path and `%*` is load-bearing. `%*` is the
+		// caller's arguments — the extension origin the broker authenticates on,
+		// plus `--parent-window=…` — and written adjacent to the closing quote,
+		// cmd.exe can read `script.mjschrome-extension://…` as one token. The host
+		// then starts with no origin and refuses every connection.
+		//
+		// This went uncaught because the integration test wrote its own shim,
+		// with the space in it, rather than using this launcher.
+		const shim = readFileSync(windows.written as string, "utf8");
+		expect(shim).toContain(`"${broker}" %*`);
+		expect(shim).not.toContain(`"${broker}"%*`);
+
 		const posix = launcherFor(broker, "linux");
 		expect(posix.path).toBe(broker);
 		// POSIX launches the script itself, so the executable bit has to be set or

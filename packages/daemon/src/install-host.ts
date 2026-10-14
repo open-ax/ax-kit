@@ -116,7 +116,19 @@ export function launcherFor(
 		shim,
 		[
 			"@echo off",
-			`"${cmd}" /d /s /c ""${process.execPath}" "${absolute}"%*"`,
+			// The space before `%*` is load-bearing and was missing once.
+			//
+			// `%*` is the caller's arguments — the extension origin and, on
+			// Windows, `--parent-window=…` — and the broker authenticates on the
+			// first of them. Written adjacent to the closing quote, cmd.exe is
+			// free to read `C:\repo\script.mjschrome-extension://…` as one token,
+			// and the host then starts with no origin to check and refuses every
+			// connection as though no browser had called it.
+			//
+			// A separate shim with the space in it worked and this one without
+			// it did not, which is why the integration test did not catch it: it
+			// had been writing its own launcher rather than this one.
+			`"${cmd}" /d /s /c ""${process.execPath}" "${absolute}" %*"`,
 			"",
 		].join("\r\n"),
 		{ mode: 0o755 },

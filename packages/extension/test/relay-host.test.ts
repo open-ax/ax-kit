@@ -46,6 +46,7 @@ let ports: Port[] = [];
 let connectCalls = 0;
 let savedChrome: unknown;
 let savedFetch: unknown;
+let savedSetTimeout: unknown;
 
 function installChrome(): void {
 	ports = [];
@@ -56,6 +57,7 @@ function installChrome(): void {
 	// behind would be inherited by tests that are exercising the real platform.
 	savedChrome = scope["chrome"];
 	savedFetch = scope["fetch"];
+	savedSetTimeout = scope["setTimeout"];
 	scope["chrome"] = {
 		runtime: {
 			connectNative: (): Port => {
@@ -75,6 +77,7 @@ function restoreChrome(): void {
 	const scope = globalThis as unknown as Record<string, unknown>;
 	scope["chrome"] = savedChrome;
 	scope["fetch"] = savedFetch;
+	scope["setTimeout"] = savedSetTimeout;
 }
 
 const ATTACHMENT = { ok: true, port: 43219, token: "0123456789abcdef0123" };
@@ -95,6 +98,11 @@ describe("relay connection lifecycle", () => {
 
 	afterEach(() => {
 		restoreChrome();
+	});
+
+	it("asks the browser for a connection once, when the worker starts", async () => {
+		await start();
+		expect(connectCalls).toBe(1);
 	});
 
 	it("greets the host on connect, because the host only answers", async () => {
@@ -160,6 +168,43 @@ describe("relay connection lifecycle", () => {
 			status: "detached",
 			reason: "the native connection closed before the host answered",
 		});
+	});
+
+	it("waits before re-rendezvous, so a dead daemon cannot spin", async () => {
+		// A daemon that exits leaves its discovery file behind, so the broker
+		// keeps handing out a dead port. Each attempt then fails at once, and
+		// each failure would otherwise schedule the next with no delay: one
+		// broker process per cycle, which is the same shape as the
+		// 2812-attempt storm measured above, reached by a different road.
+		const scheduled: number[] = [];
+		const scope = globalThis as unknown as Record<string, unknown>;
+		const realSetTimeout = globalThis.setTimeout;
+		scope["fetch"] = (): Promise<never> => Promise.reject(new Error("refused"));
+		scope["setTimeout"] = (fn: () => void, ms?: number): unknown => {
+			// 100ms and up is the backoff; anything else is a test's own timer.
+			if (typeof ms === "number" && ms >= 100) {
+				scheduled.push(ms);
+				return 0;
+			}
+			return realSetTimeout(fn, ms);
+		};
+
+		try {
+			await start();
+			ports[0].listeners.message.forEach((cb) => {
+				cb(ATTACHMENT);
+			});
+			// Let the rejected pull unwind into `onStop`.
+			await new Promise((done) => {
+				realSetTimeout(done, 50);
+			});
+			expect(scheduled.length).toBeGreaterThan(0);
+			expect(scheduled[0]).toBeGreaterThanOrEqual(100);
+			// And still no new connection was made without the wait.
+			expect(connectCalls).toBe(1);
+		} finally {
+			scope["setTimeout"] = realSetTimeout;
+		}
 	});
 
 	it("reports the broker's own words when it refuses", async () => {
