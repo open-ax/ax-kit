@@ -119,10 +119,6 @@ function stripComments(source) {
 const TOP_LEVEL_DECLARATION =
 	/export\s+(?:declare\s+)?(?:abstract\s+)?(?:async\s+)?(function|const|class|let|var|interface|type|enum)\s+([A-Za-z0-9_$]+)/;
 
-/** The same, without `export`, for declarations used only to resolve a re-export. */
-const ANY_DECLARATION =
-	/(?:export\s+)?(?:declare\s+)?(?:abstract\s+)?(?:async\s+)?(function|const|class|let|var|interface|type|enum)\s+([A-Za-z0-9_$]+)/;
-
 /**
  * The names a `@private`, `@internal` or `@package` marker takes out of the
  * surface.

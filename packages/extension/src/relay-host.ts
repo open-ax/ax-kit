@@ -91,6 +91,8 @@ export function startRelay(dispatch: RelayHandler): RelayHandle {
 		connect();
 	};
 
+	let rendezvoused = false;
+
 	const connect = (): void => {
 		let port: AxRuntimePort;
 		try {
@@ -109,16 +111,25 @@ export function startRelay(dispatch: RelayHandler): RelayHandle {
 				state.reason = readRefusal(message);
 				return;
 			}
+			rendezvoused = true;
 			state.status = "attached";
 			state.reason = "";
 			void serveRelay(attachment, dispatch, onStop);
 		});
 		port.onDisconnect.addListener(() => {
-			// The broker finished its one job and closed the port. This is the
-			// expected end of a rendezvous, not a lost connection, and nothing
-			// was waiting on it. Deliberately no reconnect - see `onStop`.
-			state.status = "detached";
-			state.reason = "the broker answered and closed the native connection";
+			// The broker exits once it has answered, so this fires immediately
+			// after a *successful* rendezvous. It is the expected end, and it
+			// must not downgrade the status: what this relay is attached to is
+			// the daemon, over loopback, and a finished rendezvous does not
+			// touch that. Reporting "detached" here would show a working bridge
+			// as broken from the moment it started working.
+			//
+			// Deliberately no reconnect either — see `onStop` for why the two
+			// disconnects mean opposite things.
+			if (!rendezvoused) {
+				state.status = "detached";
+				state.reason = "the native connection closed before the host answered";
+			}
 		});
 		// Say something, or the host has nothing to answer.
 		//

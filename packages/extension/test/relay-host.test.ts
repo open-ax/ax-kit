@@ -142,34 +142,23 @@ describe("relay connection lifecycle", () => {
 			cb();
 		});
 		expect(connectCalls).toBe(1);
-		expect(handle.state).toEqual({
-			status: "detached",
-			reason: "the broker answered and closed the native connection",
-		});
+		// Still attached. What this relay is attached to is the daemon, over
+		// loopback, and a finished rendezvous does not touch that — so the
+		// broker's expected exit must not report a working bridge as broken.
+		expect(handle.state.status).toBe("attached");
 	});
 
-	it("does not re-rendezvous when the broker finishes its one reply", async () => {
-		// The native port is where the daemon is, not a channel to it: the
-		// extension holds the address and bearer already and never reads that
-		// pipe again. The broker is built to exit once it has answered, so this
-		// disconnect fires immediately after every successful attachment.
-		//
-		// Reconnecting here asks for a rendezvous already had. Measured by
-		// making the broker exit rather than linger: one broker per cycle,
-		// forever, each one spawning on the back of the last.
+	it("reports a native connection that closed before the host answered", async () => {
+		// The other disconnect, and the one that is a problem: the browser
+		// dropped the port before any reply, so there was no rendezvous and so
+		// there is no address to reach the daemon on.
 		const { handle } = await start();
-		ports[0].listeners.message.forEach((cb) => {
-			cb(ATTACHMENT);
-		});
-		expect(handle.state.status).toBe("attached");
-
 		ports[0].listeners.disconnect.forEach((cb) => {
 			cb();
 		});
-		expect(connectCalls).toBe(1);
 		expect(handle.state).toEqual({
 			status: "detached",
-			reason: "the broker answered and closed the native connection",
+			reason: "the native connection closed before the host answered",
 		});
 	});
 
