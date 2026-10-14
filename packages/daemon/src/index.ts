@@ -4,7 +4,7 @@
 /**
  * Stateless MCP bridge over stdio with local transport and native host.
  *
- * Everything here is ours, not the draft's: the draft defines the page
+ * Everything here is ours, not draft-derived: the draft defines the page
  * surface, while this entry speaks the client protocol on the other side
  * of the bridge. Modern-only behavior follows MCP `2026-07-28` with no
  * handshake, no session header, and no deprecated capabilities.
@@ -19,9 +19,17 @@ export {
 	readEnvelope,
 	readResponse,
 } from "./bridge.js";
+export {
+	decodeMessage,
+	encodeMessage,
+	readCallerOrigin,
+	runBroker,
+	serveDiscovery,
+} from "./browser-host.js";
 export type { DiscoveryFile } from "./discovery.js";
 export {
 	checkBearer,
+	checkRelayOrigin,
 	checkUpgradeOrigin,
 	createDiscoveryFile,
 	DISCOVERY_FILE_NAME,
@@ -30,6 +38,21 @@ export {
 	resolveDiscoveryDir,
 	serializeDiscoveryFile,
 } from "./discovery.js";
+export type {
+	InstallOptions,
+	InstallResult,
+	Launcher,
+} from "./install-host.js";
+export {
+	defaultManifestDir,
+	HOST_NAME,
+	hostManifestPath,
+	installFailure,
+	installNativeHost,
+	launcherFor,
+	registryCommand,
+	WINDOWS_REGISTRY_KEY,
+} from "./install-host.js";
 export type { BridgeRoutes, Transport, TransportOptions } from "./lifecycle.js";
 export {
 	assertLoopbackBind,
@@ -38,8 +61,11 @@ export {
 	startTransport,
 	writeNativeHostManifest,
 } from "./lifecycle.js";
+export { handleMcpRequest, MCP_PATH } from "./mcp-http.js";
 export type { NativeHostManifest } from "./native-host.js";
 export { createNativeHostManifest } from "./native-host.js";
+export type { BridgeProvider, ToolOutcome } from "./outcome.js";
+export { emptyBridgeProvider, readToolOutcome } from "./outcome.js";
 export type {
 	DaemonInfo,
 	JsonRpcRequest,
@@ -47,6 +73,8 @@ export type {
 	RequestMeta,
 } from "./protocol.js";
 export {
+	approvalRequiredResult,
+	completedResult,
 	completeResult,
 	createDaemonInfo,
 	discoveryResult,
@@ -54,9 +82,11 @@ export {
 	isDeprecatedMethod,
 	PROTOCOL_VERSION,
 	parseFrame,
+	refusedResult,
 	SUPPORTED_VERSIONS,
 	serializeFrame,
 } from "./protocol.js";
+export { PageBridgeProvider } from "./provider.js";
 export {
 	logToStderr,
 	MAX_FRAME_BYTES,

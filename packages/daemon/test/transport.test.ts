@@ -1,9 +1,12 @@
 // Copyright 2026 Utpal Sen
 // SPDX-License-Identifier: Apache-2.0
 
+import { join } from "node:path";
+
 import { describe, expect, it } from "vitest";
 import {
 	checkBearer,
+	checkRelayOrigin,
 	checkUpgradeOrigin,
 	createDiscoveryFile,
 	isLoopbackHost,
@@ -44,18 +47,65 @@ describe("local transport", () => {
 	it("prefers the runtime dir, warns on the home fallback", () => {
 		const warnings: string[] = [];
 		expect(
-			resolveDiscoveryDir({ XDG_RUNTIME_DIR: "/run/user/1000" }, (message) =>
-				warnings.push(message),
+			resolveDiscoveryDir(
+				{ XDG_RUNTIME_DIR: "/run/user/1000" },
+				(message) => warnings.push(message),
+				"linux",
 			),
-		).toBe("/run/user/1000/ax");
+		).toBe(join("/run/user/1000", "ax"));
 		expect(warnings).toHaveLength(0);
 		expect(
-			resolveDiscoveryDir({ HOME: "/home/op" }, (message) =>
-				warnings.push(message),
+			resolveDiscoveryDir(
+				{ HOME: "/home/op" },
+				(message) => warnings.push(message),
+				"linux",
 			),
-		).toBe("/home/op/.ax");
+		).toBe(join("/home/op", ".ax"));
 		expect(warnings).toHaveLength(1);
-		expect(() => resolveDiscoveryDir({})).toThrow(TypeError);
+		expect(() => resolveDiscoveryDir({}, undefined, "linux")).toThrow(
+			TypeError,
+		);
+	});
+
+	it("resolves on Windows, where neither XDG nor HOME is normally set", () => {
+		// A plain `cmd.exe` has neither of the two variables the POSIX branch
+		// reads, so a bridge keyed on them throws on the platform it is developed
+		// on. `LOCALAPPDATA` is the user-only directory on Windows, and the only
+		// one of the three that can hold a file no other user can read.
+		const warnings: string[] = [];
+		const onWarn = (message: string): void => {
+			warnings.push(message);
+		};
+		// The values are deliberately not shaped like a real machine's paths. They
+		// stand in for "a directory this platform would have supplied", and a
+		// fixture that looks like someone's actual home directory is a name in
+		// this repository that refers to a machine nobody here has.
+		expect(
+			resolveDiscoveryDir(
+				{ LOCALAPPDATA: "<local-app-data>" },
+				onWarn,
+				"win32",
+			),
+		).toBe(join("<local-app-data>", "ax-kit"));
+		expect(warnings).toHaveLength(0);
+		// A Git Bash shell has HOME and no LOCALAPPDATA; a cmd.exe shell has
+		// neither. Both must land somewhere rather than throwing.
+		expect(
+			resolveDiscoveryDir({ USERPROFILE: "<user-profile>" }, onWarn, "win32"),
+		).toBe(join("<user-profile>", ".ax-kit"));
+		expect(resolveDiscoveryDir({ HOME: "<user-home>" }, onWarn, "win32")).toBe(
+			join("<user-home>", ".ax-kit"),
+		);
+		expect(() => resolveDiscoveryDir({}, onWarn, "win32")).toThrow(TypeError);
+		// The POSIX variable does not win on Windows: a WSL-exported
+		// XDG_RUNTIME_DIR describes a different filesystem namespace entirely.
+		expect(
+			resolveDiscoveryDir(
+				{ XDG_RUNTIME_DIR: "/run/user/1000", LOCALAPPDATA: "<local>" },
+				onWarn,
+				"win32",
+			),
+		).toBe(join("<local>", "ax-kit"));
 	});
 
 	it("binds loopback with bearer and origin checks", () => {
@@ -68,6 +118,49 @@ describe("local transport", () => {
 		expect(() => checkBearer("wrong", "secret-value-0001")).toThrow(TypeError);
 		expect(() => checkUpgradeOrigin("http://127.0.0.1:41237/")).not.toThrow();
 		expect(() => checkUpgradeOrigin("https://example.com/")).toThrow(TypeError);
+	});
+
+	it("admits the extension origin to the relay and still refuses the web", () => {
+		expect(() =>
+			checkRelayOrigin("chrome-extension://knldjmfmopnpolahpmmgbagdohdnhkik"),
+		).not.toThrow();
+		// The browser's own spelling, measured by logging what it sends to a
+		// native host: the trailing slash is part of the value, and a gate that
+		// omits it refuses the caller it exists to admit.
+		expect(() =>
+			checkRelayOrigin("chrome-extension://knldjmfmopnpolahpmmgbagdohdnhkik/"),
+		).not.toThrow();
+		expect(() => checkRelayOrigin("http://127.0.0.1:41237/")).not.toThrow();
+		const refused = [
+			"https://evil.test/",
+			"http://127.0.0.1.evil.test/",
+			"chrome-extension://abc",
+			"chrome-extension://qnldjmfmopnpolahpmmgbagdohdnhkik",
+			"chrome-extension://knldjmfmopnpolahpmmgbagdohdnhkik/path.html",
+			// An opaque origin is what a sandboxed document sends. It is a page.
+			"null",
+		];
+		for (const origin of refused) {
+			expect(() => checkRelayOrigin(origin), origin).toThrow(TypeError);
+		}
+	});
+
+	it("admits an absent origin, which the extension's own fetch sends", () => {
+		// An extension holding host permissions makes a privileged fetch, which
+		// the browser exempts from CORS: no preflight, and no `Origin` header
+		// either. Requiring one refused the extension on every request - the
+		// listener's 403 said so, from a caller that was exactly who it claimed.
+		//
+		// This is not the gate being loosened past a page. A page holds no host
+		// permissions, its fetch is ordinary CORS, and `Origin` is required on a
+		// non-simple request - which is why a page's origin is present, checked,
+		// and refused above. A caller presenting none has already shown it is not
+		// a page. The bearer is what authenticates it.
+		expect(() => checkRelayOrigin(undefined)).not.toThrow();
+		// Not a missing header: a header that is not a string is a malformed
+		// request, and admitting that would be admitting anything.
+		expect(() => checkRelayOrigin(null)).toThrow(TypeError);
+		expect(() => checkRelayOrigin(42)).toThrow(TypeError);
 	});
 });
 

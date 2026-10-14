@@ -2,11 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /**
- * Executable entry point: a read loop over standard input.
+ * Executable entry point: a read loop over standard input, plus the local
+ * listener the extension reaches.
  *
- * Everything here is ours, not the draft's: the draft defines the page
- * surface, while this process speaks the client protocol on the other side of
- * the bridge. The pure helpers in `protocol.ts` and `stdio.ts` do the framing
+ * Everything here is ours, not draft-derived: the draft defines the page
+ * surface, while this process speaks the client protocol on the other side
+ * of the bridge. The pure helpers in `protocol.ts` and `stdio.ts` do the framing
  * and the dispatch; this file is only the loop that feeds them plus the
  * lifecycle that closes them.
  *
@@ -17,9 +18,16 @@
  * - Standard-input close is the only shutdown signal.
  * - Every request is answered independently. There is no session, so a frame
  *   never waits on an earlier one and a refused frame never blocks the frames
- *   after it.
+ *   after it. Frames are dispatched concurrently for exactly that reason: a
+ *   `tools/call` waiting on a person must not stall the `tools/list` behind it.
  */
 
+import { PageBridge } from "./bridge.js";
+import { resolveDiscoveryDir } from "./discovery.js";
+import type { Transport } from "./lifecycle.js";
+import { startTransport } from "./lifecycle.js";
+import type { BridgeProvider } from "./outcome.js";
+import { emptyBridgeProvider } from "./outcome.js";
 import type { DaemonInfo, JsonRpcResponse } from "./protocol.js";
 import {
 	createDaemonInfo,
@@ -27,6 +35,7 @@ import {
 	parseFrame,
 	serializeFrame,
 } from "./protocol.js";
+import { PageBridgeProvider } from "./provider.js";
 import { logToStderr, splitFrames } from "./stdio.js";
 
 /** The input side. The process tests drive this over a real pipe instead. */
@@ -44,11 +53,6 @@ interface StdioSink {
 	close(): void;
 }
 
-/** Where tools come from. Re-read per request: the page may change under us. */
-interface BridgeProvider {
-	listTools(): ReadonlyArray<Record<string, unknown>>;
-}
-
 function protocolError(code: number, message: string): JsonRpcResponse {
 	return { jsonrpc: "2.0", id: null, error: { code, message } };
 }
@@ -57,11 +61,11 @@ function protocolError(code: number, message: string): JsonRpcResponse {
  * Answer one wire frame. Never throws: a failure becomes a typed protocol
  * error, because a refused frame must not be able to stop the loop.
  */
-function answerFrame(
+async function answerFrame(
 	line: string,
-	tools: BridgeProvider,
+	provider: BridgeProvider,
 	info: DaemonInfo,
-): JsonRpcResponse {
+): Promise<JsonRpcResponse> {
 	let request: unknown;
 	try {
 		request = parseFrame(line);
@@ -74,20 +78,49 @@ function answerFrame(
 					`unparsable frame${detail === "" ? "" : `: ${detail}`}`,
 				);
 	}
-	return dispatchRequest(request, tools.listTools(), info);
+	try {
+		return await dispatchRequest(request, provider, info);
+	} catch {
+		// The dispatcher refuses rather than throws, so reaching here means a bug
+		// in a path every caller depends on. The frame still has to be answered:
+		// a client blocked on a request that is never settled is worse than one
+		// told the server is unwell.
+		return protocolError(-32603, "request could not be answered");
+	}
 }
 
 /**
  * Run the loop until the input side closes. Readiness is observed through the
  * pipe itself, so nothing here waits on a timer.
+ *
+ * Work is concurrent; answers are ordered. Those are two different things and
+ * both are wanted. A frame whose tools live on the far side of a browser must
+ * not stop the next frame from being *started*, and a client reading frames off
+ * the pipe one line at a time must still get them in the order it sent them.
+ * The cost is that one genuinely slow frame delays delivery of the ones behind
+ * it, which is what any serial server would do and is not a new failure.
  */
 function runStdioLoop(
 	source: StdioSource,
 	sink: StdioSink,
-	tools: BridgeProvider,
+	provider: BridgeProvider,
 	info: DaemonInfo,
+	onClose: () => void,
 ): void {
 	let buffer = "";
+	// One slot per frame in arrival order, filled in when its answer arrives.
+	const inFlight: Array<{ answer?: JsonRpcResponse }> = [];
+	let nextToWrite = 0;
+	const drain = (): void => {
+		for (;;) {
+			const slot = inFlight[nextToWrite];
+			if (slot === undefined || slot.answer === undefined) {
+				return;
+			}
+			sink.writeFrame(slot.answer);
+			nextToWrite += 1;
+		}
+	};
 	const stopData = source.onData((chunk: string) => {
 		buffer += chunk;
 		let split: { lines: string[]; rest: string };
@@ -105,7 +138,14 @@ function runStdioLoop(
 			if (line.length === 0) {
 				continue;
 			}
-			sink.writeFrame(answerFrame(line, tools, info));
+			// Started, not awaited: the frame behind this one begins its own
+			// work without waiting. The write is what waits, in `drain`.
+			const slot: { answer?: JsonRpcResponse } = {};
+			inFlight.push(slot);
+			void answerFrame(line, provider, info).then((response) => {
+				slot.answer = response;
+				drain();
+			});
 		}
 	});
 	let stopped = false;
@@ -116,6 +156,12 @@ function runStdioLoop(
 		stopped = true;
 		stopData();
 		stopEnd();
+		// The listener is closed before the sink, and it has to be closed at all:
+		// an open server is a live handle, and a daemon whose client has gone
+		// would otherwise sit there holding a port and a discovery file that
+		// points at it. Standard-input close is the only shutdown signal this
+		// process has, so everything it owns has to go with it.
+		onClose();
 		sink.close();
 	});
 }
@@ -152,25 +198,86 @@ function createNodeSink(): StdioSink {
 	};
 }
 
-/** With no page bridge attached the daemon is honest and offers nothing. */
-function createEmptyProvider(warn: (message: string) => void): BridgeProvider {
-	warn("ax-kit daemon: no page bridge attached");
-	return { listTools: () => [] };
-}
-
 /**
  * Start the daemon on this process's real pipes.
  *
  * Called by the `bin` shim rather than guarded by an entry-point check: a shim
  * that imports this module leaves `process.argv[1]` pointing at the shim, so
  * comparing paths would silently never start the loop.
+ *
+ * The listener starts before the loop because a client that attaches to a port
+ * the daemon has not opened yet finds nothing, and "nothing yet" is
+ * indistinguishable from "no bridge". A failure to open it is a warning rather
+ * than a refusal to start: stdio still works on its own, and a host with no
+ * writable runtime directory should still be able to answer `server/discover`.
  */
 export function main(): void {
 	const sink = createNodeSink();
+	const bridge = new PageBridge();
+	const info = createDaemonInfo();
+
+	// Swapped in once the listener is listening. Until then the empty provider
+	// answers, which is the truth: nothing is attached to this port yet.
+	let provider: BridgeProvider = emptyBridgeProvider();
+	let transport: Transport | undefined;
+	// A client that hangs up can arrive before the listener is up. Without this
+	// the close would find nothing to close, the listener would come up a moment
+	// later, and the process would sit there holding a port its client had
+	// already abandoned.
+	let closing = false;
+	void (async () => {
+		try {
+			const discoveryDir = resolveDiscoveryDir(process.env, sink.warn);
+			const open = await startTransport({
+				discoveryDir,
+				bridge,
+				provider: new PageBridgeProvider(bridge),
+				info,
+			});
+			if (closing) {
+				await open.close().catch(() => {
+					// The client is already gone; nothing depends on this.
+				});
+				return;
+			}
+			transport = open;
+			provider = new PageBridgeProvider(bridge);
+			sink.warn(
+				`ax-kit daemon: local transport listening on ${String(open.port)}`,
+			);
+		} catch (error: unknown) {
+			sink.warn(
+				`ax-kit daemon: local transport unavailable (${
+					error instanceof Error ? error.message : "unknown"
+				}); serving stdio only`,
+			);
+		}
+	})();
+
 	runStdioLoop(
 		createNodeSource(),
 		sink,
-		createEmptyProvider(sink.warn),
-		createDaemonInfo(),
+		// Delegating rather than passing `provider` itself: the loop captures the
+		// object it is handed, and the object that replaces this one is a
+		// different object. Passing the variable would pin the loop to whichever
+		// provider existed when it was constructed, which is the empty one.
+		{
+			listTools: () => provider.listTools(),
+			callTool: (name: string, args: Record<string, unknown>) =>
+				provider.callTool(name, args),
+		},
+		info,
+		() => {
+			closing = true;
+			// Closed and forgotten, so a repeat close is a no-op rather than an
+			// unhandled rejection on a second call.
+			const open = transport;
+			transport = undefined;
+			void open?.close().catch(() => {
+				// Already gone. Nothing here depends on it having succeeded.
+			});
+		},
 	);
 }
+
+export { emptyBridgeProvider };

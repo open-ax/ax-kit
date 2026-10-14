@@ -5,15 +5,15 @@
  * Native-messaging host manifest: the document a browser reads to locate the
  * host binary, and the rules its fields must satisfy.
  *
- * This module owns the manifest and nothing else. It does not speak native
- * messaging: no code here opens a `chrome.runtime.connectNative` port, so the
- * per-message size cap, the Windows registry-document rule, the
- * worker-reachability gate, and the renderer-payload sanitizer that a host
- * process would need are absent here rather than present and unreachable.
+ * This module owns the manifest and nothing else. The process it describes is
+ * `browser-host.ts`; the framing it speaks, and the per-message size cap that
+ * has to hold while a message is being written, live there.
  *
- * Unreachable policy is worse than absent policy: a validator nothing calls
- * reads as a control that is already in place. Those four checks belong with
- * the host process, when this package has one.
+ * What remains here is what a caller can get wrong before a process ever
+ * starts: a relative path the browser cannot launch, and an `allowed_origins`
+ * entry admitting an origin no extension should reach. Both are refused at
+ * construction rather than warned about, because both fail as a bridge that
+ * silently does not exist.
  */
 
 export interface NativeHostManifest {

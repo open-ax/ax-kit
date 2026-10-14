@@ -12,14 +12,35 @@ side of the bridge.
 ## The page bridge
 
 The daemon reaches an extension over the loopback listener. A browser cannot
-open a TCP socket, so the extension dials *out*: it reads the discovery file,
-pulls a request, executes it in the Trusted tier, and posts the result back.
+open a TCP socket, so the extension dials *out*: it pulls a request, executes it
+in the Trusted tier, and posts the result back.
+
+A service worker also has no filesystem, so it cannot read the discovery file to
+learn the port. `ax-kit-browser-host` is the process Chrome launches through
+native messaging on the extension's behalf; it reads that file, hands over the
+port and bearer, and exits. It holds no queue, so a worker that is culled
+mid-call costs one re-pull rather than the call itself.
+
+Register it once per browser profile:
+
+```sh
+ax-kit-install-native-host "<chrome-profile-dir>" "<extension-id>"
+```
+
+The profile directory is an argument rather than a guess. A browser can have
+several, and installing into the wrong one produces a bridge that appears to
+work and does nothing.
 
 ```ts
-import { PageBridge, startTransport } from "@ax-kit/daemon";
+import { PageBridge, PageBridgeProvider, startTransport } from "@ax-kit/daemon";
 
 const bridge = new PageBridge();
-const transport = await startTransport({ discoveryDir, bridge });
+const transport = await startTransport({
+  discoveryDir,
+  bridge,
+  provider: new PageBridgeProvider(bridge),
+  info,
+});
 
 const tools = await bridge.listTools(tabId);
 const result = await bridge.callTool("viewCart", { detailed: true }, tabId, origin);
@@ -35,13 +56,32 @@ still execute after the deadline — that refusal carries `outcomeUnknown`, not
 `badRequest`, because the outcome is unknown rather than refused before
 execution.
 
-**This bridge is a library surface, not part of the shipped daemon.** The
-executable starts with no bridge attached, so it answers `server/discover` and
-`tools/list` and refuses `tools/call`: there is no listener and no page behind
-it. Attaching one is the host's job, and the two shapes do not yet meet —
-`BridgeProvider.listTools()` is synchronous while `PageBridge.listTools(tabId)`
-is not, so the provider interface has to change before the daemon can own a
-bridge. Until it does, the example above is how a host wires it.
+The shipped daemon owns this bridge. It opens the listener, writes the
+discovery file, and serves `tools/list` and `tools/call` itself. The example
+above is what that looks like from a host that wants the same wiring explicitly.
+
+With no extension attached it answers `tools/list` with an empty set and
+refuses `tools/call` — **inside the result, with `isError: true`**, because that
+is where the revision puts a tool that did not succeed. A client that can see
+the refusal can tell "nothing ran" from "the server is broken"; what it must
+never see is a completion marker with no work behind it.
+
+A consequential tool answers `resultType: "input_required"` with an
+`elicitation/create` request, which is the protocol's own multi-round-trip
+shape for "I need something from you before I can finish". The client shows it
+to the user; when they approve, it re-invokes and the call goes through.
+
+## MCP over HTTP
+
+The daemon also answers `POST /mcp`, so the protocol conformance suite can be
+pointed at it. Claiming a revision is not evidence of conforming to it, and
+checking our own reading against itself is not a check. The endpoint is the
+documented stateless shape: `POST` only, `GET` and `DELETE` answer `405`, no
+session is ever minted, and `MCP-Protocol-Version`, `Mcp-Method` and `Mcp-Name`
+are required and validated against the body.
+
+It sits behind the same bearer as everything else — the transport checks before
+it routes, so an unauthenticated caller does not learn the endpoint exists.
 
 ## Local transport
 

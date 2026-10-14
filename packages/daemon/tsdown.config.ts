@@ -11,9 +11,18 @@ export default defineConfig([
 		minify: true,
 	},
 	{
-		// The process entry. Single-file ESM, no types, so the binary in a
-		// `bin` field is a file a user can spawn with no resolution step.
-		entry: ["src/main.ts"],
+		// The process entries. Single-file ESM, no types, so a binary in a `bin`
+		// field is a file a user can spawn with no resolution step.
+		//
+		// The shims in `bin/` import from here by exact filename, so these two
+		// are emitted unminified and unsplit: a minifier that renames or splits
+		// them would make `bin/` point at a file that is not there.
+		entry: [
+			"src/main.ts",
+			"src/discovery.ts",
+			"src/browser-host.ts",
+			"src/install-host.ts",
+		],
 		format: ["esm"],
 		dts: false,
 		sourcemap: false,

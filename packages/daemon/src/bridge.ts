@@ -157,6 +157,16 @@ function parseBody(body: unknown): unknown {
 const MAX_PENDING = 256;
 
 /**
+ * How long an idle `/pull` is held open before answering empty.
+ *
+ * Long enough that a worker restarting after the browser culled it does not
+ * spin, short enough that a vanished worker's connection is reclaimed rather
+ * than held for the life of the process. This is a bound on a wait, not a sleep:
+ * a request that arrives resolves the promise immediately.
+ */
+const PULL_HOLD_MS = 25_000;
+
+/**
  * The daemon side of the bridge: holds pending calls and speaks the two
  * endpoints the extension uses.
  */
@@ -164,8 +174,25 @@ export class PageBridge {
 	private nextId = 1;
 	private readonly queue: Envelope[] = [];
 	private readonly settled = new Map<number, PendingCall>();
+	/** Resolvers waiting on a queue that is currently empty. */
+	private waiting: Array<(envelope: Envelope | null) => void> = [];
+	/** Outstanding long-polls. Non-zero means a worker is currently attached. */
+	private attached = 0;
 
 	constructor(private readonly deadlineMs: number = PENDING_DEADLINE_MS) {}
+
+	/**
+	 * Whether a worker is currently holding a pull open.
+	 *
+	 * This is how "no extension attached" gets answered in bounded time.
+	 * Without it every question would be asked by enqueueing work nothing is
+	 * coming to drain, and the only answer available would be the call deadline
+	 * - so a `tools/list` on an idle machine would hang for a minute to report
+	 * that there is nothing to report.
+	 */
+	clientAttached(): boolean {
+		return this.attached > 0;
+	}
 
 	/**
 	 * The next queued request for a pulling client, or null when idle.
@@ -185,6 +212,63 @@ export class PageBridge {
 				return next;
 			}
 		}
+	}
+
+	/**
+	 * Wait for work, up to `holdMs`.
+	 *
+	 * Resolves with an envelope the moment one is queued, or with `null` when
+	 * the hold expires. A client looping on an endpoint that answers instantly
+	 * when idle spends a core doing nothing; holding the request open costs
+	 * nothing while there is nothing to do.
+	 */
+	waitForEnvelope(holdMs: number = PULL_HOLD_MS): Promise<Envelope | null> {
+		const ready = this.take();
+		if (ready !== null) {
+			return Promise.resolve(ready);
+		}
+		return new Promise<Envelope | null>((resolve) => {
+			let settled = false;
+			const finish = (envelope: Envelope | null): void => {
+				if (settled) {
+					return;
+				}
+				settled = true;
+				clearTimeout(timer);
+				const at = this.waiting.indexOf(onWork);
+				if (at !== -1) {
+					this.waiting.splice(at, 1);
+				}
+				this.attached -= 1;
+				resolve(envelope);
+			};
+			const onWork = (envelope: Envelope | null): void => {
+				finish(envelope);
+			};
+			const timer = setTimeout(() => {
+				finish(null);
+			}, holdMs);
+			// A held pull is not a reason to keep the process alive. The listener
+			// and its sockets decide that.
+			timer.unref?.();
+			this.attached += 1;
+			this.waiting.push(onWork);
+		});
+	}
+
+	/** Hand the next envelope to whoever is waiting, if anyone is. */
+	private dispatch(): void {
+		const next = this.take();
+		const waiter = this.waiting.shift();
+		if (waiter === undefined) {
+			// Nobody waiting: put it back at the head so ordering survives.
+			if (next !== null) {
+				this.queue.unshift(next);
+			}
+			return;
+		}
+		// Resolving releases the waiter's own cleanup through `finish`.
+		waiter(next);
 	}
 
 	/** Accept a result from the client and settle the matching call. */
@@ -263,6 +347,10 @@ export class PageBridge {
 				return;
 			}
 			this.queue.push({ id, request });
+			// A waiting puller takes it immediately; otherwise it waits for the
+			// next long-poll. Either way the work is live before `enqueue`
+			// returns, so the caller never has to poll for its own call.
+			this.dispatch();
 		});
 	}
 
@@ -298,6 +386,51 @@ export class PageBridge {
 	}
 
 	/**
+	 * The tab the person is looking at, and the origin of the document in it.
+	 *
+	 * Asked rather than assumed, so it is correct at the moment of the call:
+	 * guessing would enumerate whatever happened to be first, which is the
+	 * failure this whole layer exists to make impossible.
+	 *
+	 * The origin travels with it because the caller needs one and cannot
+	 * honestly invent one. This process is a local socket with no origin; the
+	 * page it acts on is exposed to itself, which is what the draft's default
+	 * means, so the page's own origin is the honest attribution. It is read from
+	 * the browser, not composed here.
+	 */
+	async activeTab(): Promise<{ tabId: number; origin: string }> {
+		const result = await this.enqueue({ handler: "activeTab", args: {} });
+		if (typeof result !== "object" || result === null) {
+			throw new BridgeRefusal(BRIDGE_ERRORS.badRequest, "bad active tab");
+		}
+		const record = result as Record<string, unknown>;
+		const tabId = record["tabId"];
+		const origin = record["origin"];
+		if (
+			typeof tabId !== "number" ||
+			!Number.isInteger(tabId) ||
+			tabId < 0 ||
+			typeof origin !== "string" ||
+			origin.length === 0
+		) {
+			throw new BridgeRefusal(BRIDGE_ERRORS.badRequest, "bad active tab");
+		}
+		return { tabId, origin };
+	}
+
+	/**
+	 * Tools the page in `tabId` currently exposes.
+	 *
+	 * Separate from the tab-choosing provider because a caller that already
+	 * knows which tab it means should not have to be told to ask.
+	 */
+	async listToolsIn(
+		tabId: number,
+	): Promise<ReadonlyArray<Record<string, unknown>>> {
+		return await this.listTools(tabId);
+	}
+
+	/**
 	 * Invoke one tool. A refusal arrives as a `BridgeRefusal`, not a throw of
 	 * text.
 	 *
@@ -305,6 +438,14 @@ export class PageBridge {
 	 * something to compare the page's exposure against. The allow-list does not
 	 * travel: the worker reads the page's own declaration, and an allow-list
 	 * sent from here would be this process deciding what it is allowed to reach.
+	 *
+	 * No document identity travels with it. The worker reads the document's
+	 * identity from `webNavigation.onCommitted` — a record the browser keeps and
+	 * this process cannot influence — and re-checks it with `getFrame` before
+	 * executing. An approval is therefore bound to a document the browser named
+	 * rather than one this process composed, and the placeholder that used to
+	 * stand here (`tab-${tabId}`, a string that survived every navigation in
+	 * that tab) is gone rather than renamed.
 	 */
 	async callTool(
 		name: string,
@@ -320,11 +461,6 @@ export class PageBridge {
 				name,
 				args,
 				callerOrigin,
-				// A tab-scoped placeholder, not a document identity: this process
-				// cannot ask the browser which document that is. Document-scoped
-				// invalidation therefore rests entirely on the worker hearing the
-				// tab navigate, which it does through `chrome.tabs.onUpdated`.
-				documentId: `tab-${tabId}`,
 			},
 		});
 	}

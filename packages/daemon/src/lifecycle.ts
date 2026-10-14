@@ -25,18 +25,21 @@ import type { IncomingMessage, Server, ServerResponse } from "node:http";
 import { createServer } from "node:http";
 import { join } from "node:path";
 import type { Envelope } from "./bridge.js";
-import { readBody, sendJson } from "./bridge.js";
+import { readBody } from "./bridge.js";
 import type { DiscoveryFile } from "./discovery.js";
 import {
 	checkBearer,
-	checkUpgradeOrigin,
+	checkRelayOrigin,
 	createDiscoveryFile,
 	DISCOVERY_FILE_NAME,
 	isLoopbackHost,
 	parseDiscoveryFile,
 	serializeDiscoveryFile,
 } from "./discovery.js";
+import { handleMcpRequest } from "./mcp-http.js";
 import { createNativeHostManifest } from "./native-host.js";
+import type { BridgeProvider } from "./outcome.js";
+import type { DaemonInfo } from "./protocol.js";
 import { PROTOCOL_VERSION } from "./protocol.js";
 
 export interface Transport {
@@ -50,14 +53,20 @@ export interface Transport {
 /** What the listener needs from the bridge to serve its two endpoints. */
 export interface BridgeRoutes {
 	/**
-	 * Next queued request for a pulling client, or `null` when idle.
+	 * Wait for the next request for a pulling client, up to `holdMs`.
 	 *
 	 * `null` is the only idle signal, and the return type says so. The listener
 	 * answers it with 204; anything else is serialised as the `/pull` body.
+	 *
+	 * It waits rather than answering immediately because the alternative is a
+	 * client looping on an instant 204 for as long as the page has no tools,
+	 * which is most of the time. A held request costs nothing when idle.
 	 */
-	take(): Envelope | null;
+	waitForEnvelope(holdMs: number): Promise<Envelope | null>;
 	/** Accept a result and settle the matching call. */
 	deliver(body: unknown): void;
+	/** Whether a worker is currently attached, for refusing work in bounded time. */
+	clientAttached(): boolean;
 }
 
 export interface TransportOptions {
@@ -70,7 +79,25 @@ export interface TransportOptions {
 	 * with no extension attached should do.
 	 */
 	readonly bridge?: BridgeRoutes;
+	/**
+	 * Present when the daemon can speak MCP over HTTP as well as over stdio.
+	 *
+	 * Optional so the relay listener can stand alone in a test, and absent in a
+	 * host that only wants the bridge.
+	 */
+	readonly provider?: BridgeProvider;
+	readonly info?: DaemonInfo;
 }
+
+/**
+ * How long `/pull` is held open before answering idle.
+ *
+ * Below any proxy or browser timeout that would cut it, and long enough that an
+ * idle worker spends nothing re-asking. When the hold expires the worker simply
+ * asks again, so the value is a trade against churn rather than a correctness
+ * bound.
+ */
+const PULL_HOLD_MS = 20_000;
 
 /** Refuse a non-loopback bind outright. */
 export function assertLoopbackBind(host: unknown): string {
@@ -99,7 +126,7 @@ export function startTransport(options: TransportOptions): Promise<Transport> {
 		// Answered, never awaited: a request that throws must become a response,
 		// and an unhandled rejection here would take the whole daemon down with
 		// it. One bad value is a refused request, not a dead process.
-		handleRequest(request, response, bearer, options.bridge).catch(() => {
+		handleRequest(request, response, bearer, options).catch(() => {
 			if (!response.headersSent) {
 				response.writeHead(500, { "content-type": "text/plain" });
 				response.end("request failed");
@@ -166,54 +193,136 @@ function closeTransport(server: Server, discoveryPath: string): Promise<void> {
 /** Bound so a hostile client cannot exhaust memory with one request. */
 const MAX_BRIDGE_BODY = 1024 * 1024;
 
+/**
+ * CORS, answered from the gate's own verdict.
+ *
+ * Earlier this header block was a copy of what the relay needed, and that was
+ * wrong. The extension's relay fetch is *privileged* — the extension holds host
+ * permissions, so the browser exempts it from CORS — which means it sends no
+ * `Origin`, triggers no preflight, and never reads these headers. What does
+ * read them is a browser-based MCP client, which is ordinary CORS and needs
+ * them.
+ *
+ * So the only question is what to echo, and the answer is not "whatever arrived".
+ * Echoing an arbitrary origin would hand a web page read access to the very
+ * endpoints whose security rests on the bearer: the page could not read the
+ * bearer, but being able to read responses is the other half of the attack, and
+ * the gate is one refactor away from not stopping it.
+ *
+ * Hence `originAllowed`: the header set is derived from the same decision that
+ * gates the request, so a refused origin is refused at the preflight too and can
+ * never reach a route.
+ */
+function corsHeaders(origin: unknown): Record<string, string> {
+	try {
+		checkRelayOrigin(origin);
+	} catch {
+		// Refused: answered without an allow-origin, so the browser blocks the
+		// response body even if the refusal itself is returned.
+		return {
+			"access-control-allow-methods": "GET, POST, OPTIONS",
+			"access-control-max-age": "0",
+		};
+	}
+	return {
+		// Only ever a loopback or extension origin, by the check above. Echoing
+		// it back is what makes a credentialed fetch readable by its own caller.
+		...(typeof origin === "string" && origin.length > 0
+			? { "access-control-allow-origin": origin }
+			: {}),
+		"access-control-allow-methods": "GET, POST, OPTIONS",
+		"access-control-allow-headers": "content-type, x-ax-bearer",
+		"access-control-max-age": "600",
+	};
+}
+
+/** Reply with JSON and CORS together, so one shape reaches the caller. */
+function sendJsonWith(
+	response: ServerResponse,
+	status: number,
+	body: unknown,
+	cors: Record<string, string>,
+): void {
+	const text: unknown = JSON.stringify(body);
+	const payload = typeof text === "string" ? text : "null";
+	response.writeHead(status, {
+		...cors,
+		"content-type": "application/json",
+		"content-length": Buffer.byteLength(payload, "utf8"),
+	});
+	response.end(payload);
+}
+
 async function handleRequest(
 	request: IncomingMessage,
 	response: ServerResponse,
 	bearer: string,
-	bridge: BridgeRoutes | undefined,
+	options: TransportOptions,
 ): Promise<void> {
+	const cors = corsHeaders(request.headers.origin);
+	// Answered before the bearer check, because a preflight carries no
+	// credentials and must not be refused for carrying none.
+	if (request.method === "OPTIONS") {
+		response.writeHead(204, cors);
+		response.end();
+		return;
+	}
 	try {
-		checkUpgradeOrigin(request.headers.origin);
+		checkRelayOrigin(request.headers.origin);
 		checkBearer(request.headers["x-ax-bearer"], bearer);
 	} catch (error: unknown) {
-		response.writeHead(403, { "content-type": "text/plain" });
+		response.writeHead(403, { ...cors, "content-type": "text/plain" });
 		response.end(
 			error instanceof TypeError ? error.message : "request refused",
 		);
 		return;
 	}
+	const path = (request.url ?? "/").split("?")[0];
+	if (options.provider !== undefined && options.info !== undefined) {
+		const handled = await handleMcpRequest(
+			request,
+			response,
+			options.provider,
+			options.info,
+		);
+		if (handled) {
+			return;
+		}
+	}
+	const bridge = options.bridge;
 	if (bridge === undefined) {
-		response.writeHead(404, { "content-type": "text/plain" });
+		response.writeHead(404, { ...cors, "content-type": "text/plain" });
 		response.end("no bridge");
 		return;
 	}
-	const path = (request.url ?? "/").split("?")[0];
 	// GET only, as `/result` is POST only. A `DELETE` reaching this branch
 	// would take work off the queue without executing any of it, so a caller
 	// that cannot execute could still discard what is waiting.
 	if (path === "/pull" && request.method === "GET") {
-		const next = bridge.take();
+		// Held open until there is something to hand over. An instant answer
+		// would make the worker spin; a long hold makes an idle bridge free.
+		const next = await bridge.waitForEnvelope(PULL_HOLD_MS);
 		if (next === null) {
 			// Idle, not an error: the client should come back.
-			response.writeHead(204);
+			response.writeHead(204, cors);
 			response.end();
 			return;
 		}
-		sendJson(response, 200, next);
+		sendJsonWith(response, 200, next, cors);
 		return;
 	}
 	if (path === "/result" && request.method === "POST") {
 		try {
 			const body = await readBody(request, MAX_BRIDGE_BODY);
 			bridge.deliver(body);
-			sendJson(response, 200, { ok: true });
+			sendJsonWith(response, 200, { ok: true }, cors);
 		} catch (error: unknown) {
-			response.writeHead(400, { "content-type": "text/plain" });
+			response.writeHead(400, { ...cors, "content-type": "text/plain" });
 			response.end(error instanceof TypeError ? error.message : "bad result");
 		}
 		return;
 	}
-	response.writeHead(404, { "content-type": "text/plain" });
+	response.writeHead(404, { ...cors, "content-type": "text/plain" });
 	response.end("no route");
 }
 
