@@ -228,6 +228,47 @@ describe("executeTool routing", () => {
 		);
 	});
 
+	// Upstream #337, 13 October 2026. `executeTool` reads `tool.window.document` and
+	// then rejects with `InvalidStateError` when that document has no node
+	// navigable — it has been removed from its navigable, so there is nothing to
+	// dispatch into. This is checked *before* the eligibility re-check below,
+	// which collapses a failed target into `NotFoundError`; collapsing this case
+	// would report a detached target as a missing tool.
+	it("rejects a detached target with InvalidStateError", async () => {
+		const mc = context();
+		const tool = await listedBy(mc, "exec_mismatch");
+		const host = document.createElement("iframe");
+		document.body.append(host);
+		const framed = host.contentDocument as Document;
+		const framedContext = installModelContext(framed);
+		await framedContext?.registerTool({
+			name: "exec_detached",
+			description: "a tool in a frame that will be removed",
+			execute: async () => "value",
+		});
+		const framedTool = (await framedContext?.getTools())?.find(
+			(item) => item.name === "exec_detached",
+		);
+		expect(framedTool).toBeDefined();
+		// Capture the Window before removal: afterwards the document is detached
+		// and its `defaultView` is null, which is the state under test.
+		const captured = framedTool as RegisteredTool;
+		host.remove();
+		expect(
+			errorName(
+				await errorOf(
+					framedContext?.executeTool(
+						{ ...captured, window: captured.window },
+						{},
+					) ?? Promise.resolve(),
+				),
+			),
+		).toBe("InvalidStateError");
+		// The reference tool is only here so `listedBy` has something to find; it
+		// never reaches this assertion.
+		expect(tool).toBeDefined();
+	});
+
 	it("rejects opaque origins with NotSupportedError", async () => {
 		const mc = context();
 		const tool = await listedBy(mc, "exec_mismatch");
