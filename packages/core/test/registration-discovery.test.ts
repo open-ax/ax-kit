@@ -466,19 +466,26 @@ describe("getTools ordering and isolation", () => {
 		await expect(
 			mc.registerTool({
 				...tool("reg_squatted"),
+				description: "the late arrival",
 				inputSchema: withToJSON(() => {
-					void mc.registerTool(tool("reg_squatted"));
+					// The squatter gets its own description so the assertion below
+					// can tell which registration the map ended up holding.
+					void mc.registerTool({
+						...tool("reg_squatted"),
+						description: "the squatter",
+					});
 				}),
 			} as unknown as Parameters<ModelContext["registerTool"]>[0]),
 		).rejects.toThrowError(
 			expect.objectContaining({ name: "InvalidStateError" }),
 		);
 		// And the squatter is the one that survives: the late registration must
-		// not have overwritten it.
+		// not have overwritten it. The two descriptions differ so that
+		// "something survived" cannot be confused with "the right thing survived".
 		const listed = await mc.getTools();
 		const survivors = listed.filter((item) => item.name === "reg_squatted");
 		expect(survivors).toHaveLength(1);
-		expect(survivors[0]?.description).toBe("reg_squatted description");
+		expect(survivors[0]?.description).toBe("the squatter");
 	});
 
 	// The same attack through an adjacent read. `registerTool` reads
@@ -491,9 +498,12 @@ describe("getTools ordering and isolation", () => {
 		const mc = context();
 		const hostile = {
 			name: "reg_getter",
-			description: "late arrival",
+			description: "the late arrival",
 			get title(): string {
-				void mc.registerTool(tool("reg_getter"));
+				void mc.registerTool({
+					...tool("reg_getter"),
+					description: "the squatter",
+				});
 				return "t";
 			},
 			execute: async (): Promise<null> => null,
@@ -509,7 +519,48 @@ describe("getTools ordering and isolation", () => {
 			(item) => item.name === "reg_getter",
 		);
 		expect(survivors).toHaveLength(1);
-		expect(survivors[0]?.description).toBe("reg_getter description");
+		expect(survivors[0]?.description).toBe("the squatter");
+	});
+
+	// A rejected registration must not retain anything. The abort listener is
+	// attached to the caller's own signal, so attaching it before the
+	// registration is known to be accepted would leave a closure holding this
+	// document and name that nothing can reach to detach.
+	it("leaves no abort listener behind when registration is rejected", async () => {
+		const mc = context();
+		const controller = new AbortController();
+		let attached = 0;
+		const signal = controller.signal;
+		const add = signal.addEventListener.bind(signal);
+		const remove = signal.removeEventListener.bind(signal);
+		signal.addEventListener = ((...args: Parameters<typeof add>): void => {
+			attached += 1;
+			add(...args);
+		}) as typeof signal.addEventListener;
+		signal.removeEventListener = ((
+			...args: Parameters<typeof remove>
+		): void => {
+			attached -= 1;
+			remove(...args);
+		}) as typeof signal.removeEventListener;
+
+		await expect(
+			mc.registerTool(
+				{
+					...tool("reg_leak"),
+					description: "the late arrival",
+					get title(): string {
+						void mc.registerTool(tool("reg_leak"));
+						return "t";
+					},
+					execute: async (): Promise<null> => null,
+				} as unknown as Parameters<ModelContext["registerTool"]>[0],
+				{ signal },
+			),
+		).rejects.toThrowError(
+			expect.objectContaining({ name: "InvalidStateError" }),
+		);
+		expect(attached).toBe(0);
 	});
 
 	it("rejects when a getter read after serialization detaches the document", async () => {
