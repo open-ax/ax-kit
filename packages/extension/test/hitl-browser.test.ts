@@ -585,9 +585,7 @@ describe("consequential confirmation", () => {
 		// fallback reads.
 		await worker.evaluate(() => {
 			const scope = globalThis as unknown as Record<string, unknown>;
-			(
-				scope["__axTestForgetDocuments"] as () => void
-			)();
+			(scope["__axTestForgetDocuments"] as () => void)();
 		});
 
 		const first = await pay(500);
