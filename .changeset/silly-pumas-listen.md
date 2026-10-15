@@ -14,9 +14,11 @@ Follow the 15 October 2026 draft.
   the schema's `toJSON`, `title`, `execute`, `annotations`, `signal`,
   `exposedTo` - and each can run page script. Without the re-checks a
   registration could silently overwrite one made during its own conversion.
-- The abort listener is attached only once a registration is known to be
-  accepted, so a rejected registration no longer leaves a closure holding the
-  document and the tool name.
+- The abort listener is attached before those re-checks rather than after them.
+  Signal validation duck-types rather than testing the prototype, so
+  `addEventListener` is a method the caller supplied and calling it runs caller
+  script; attached last, it ran in the window the re-checks exist to close. A
+  rejected registration now detaches the listener it attached.
 - `unregisterRecord` returns without notifying when the document is no longer
   fully active, as the draft states. The observable outcome was already correct
   here, because document discovery skips a document with no window - it was

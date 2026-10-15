@@ -228,15 +228,18 @@ describe("executeTool routing", () => {
 		);
 	});
 
-	// Upstream #337, 13 October 2026. `executeTool` reads `tool.window.document` and
-	// then rejects with `InvalidStateError` when that document has no node
-	// navigable — it has been removed from its navigable, so there is nothing to
-	// dispatch into. This is checked *before* the eligibility re-check below,
-	// which collapses a failed target into `NotFoundError`; collapsing this case
-	// would report a detached target as a missing tool.
-	it("rejects a detached target with InvalidStateError", async () => {
+	// Upstream #337, 13 October 2026. The draft reads the target's node navigable
+	// and rejects when it is null *before* it compares traversable navigables, so a
+	// target removed from its navigable is reported as detached rather than as
+	// foreign. Both rejections are `InvalidStateError`, so the message is the only
+	// thing that tells the two apart - and that difference is the step order under
+	// test, so it is what this asserts.
+	//
+	// The call goes through the *top* document's context. Calling through the
+	// frame's own context would never reach the target checks: that document has
+	// gone inactive, so its own caller gate rejects first.
+	it("rejects a detached target as detached, not as foreign", async () => {
 		const mc = context();
-		const tool = await listedBy(mc, "exec_mismatch");
 		const host = document.createElement("iframe");
 		document.body.append(host);
 		const framed = host.contentDocument as Document;
@@ -246,27 +249,19 @@ describe("executeTool routing", () => {
 			description: "a tool in a frame that will be removed",
 			execute: async () => "value",
 		});
-		const framedTool = (await framedContext?.getTools())?.find(
+		const listed = (await framedContext?.getTools())?.find(
 			(item) => item.name === "exec_detached",
 		);
-		expect(framedTool).toBeDefined();
-		// Capture the Window before removal: afterwards the document is detached
-		// and its `defaultView` is null, which is the state under test.
-		const captured = framedTool as RegisteredTool;
+		expect(listed).toBeDefined();
+		// An `about:blank` frame reports an opaque origin, which `executeTool`
+		// refuses before it ever looks at the target, so the recorded origin is
+		// replaced with the caller's. The Window comes from the listing above and is
+		// still readable after removal; `defaultView` would not be.
+		const detached = { ...listed, origin: location.origin } as RegisteredTool;
 		host.remove();
-		expect(
-			errorName(
-				await errorOf(
-					framedContext?.executeTool(
-						{ ...captured, window: captured.window },
-						{},
-					) ?? Promise.resolve(),
-				),
-			),
-		).toBe("InvalidStateError");
-		// The reference tool is only here so `listedBy` has something to find; it
-		// never reaches this assertion.
-		expect(tool).toBeDefined();
+		const error = (await errorOf(mc.executeTool(detached, {}))) as DOMException;
+		expect(errorName(error)).toBe("InvalidStateError");
+		expect(error.message).toBe("detached tool target");
 	});
 
 	it("rejects opaque origins with NotSupportedError", async () => {
