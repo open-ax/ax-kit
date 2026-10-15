@@ -44,11 +44,13 @@
 		"build": "tsdown",
 		"typecheck": "tsc --noEmit -p tsconfig.json",
 		"test": "vitest run",
+		"test:protocol": "vitest run test/protocol-conformance.test.ts",
 		"size": "echo \"no size gate for daemon bridge\"",
 		"publint": "publint --strict",
 		"attw": "attw --pack . --profile node16"
 	},
 	"devDependencies": {
+		"@modelcontextprotocol/conformance": "0.2.0-alpha.12",
 		"@types/node": "^24.19.0",
 		"playwright": "1.63.0",
 		"tsdown": "0.23.1",

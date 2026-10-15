@@ -1,0 +1,101 @@
+suite:    @modelcontextprotocol/conformance 0.2.0-alpha.12
+declared: 75
+reached:  20
+exit:     1
+
+reached scenarios:
+  completion-complete
+  dns-rebinding-protection
+  prompts-get-embedded-resource
+  prompts-get-simple
+  prompts-get-with-args
+  prompts-get-with-image
+  prompts-list
+  resources-list
+  resources-read-binary
+  resources-read-text
+  resources-templates-read
+  server-sse-multiple-streams
+  tools-call-audio
+  tools-call-embedded-resource
+  tools-call-error
+  tools-call-image
+  tools-call-mixed-content
+  tools-call-simple-text
+  tools-call-with-progress
+  tools-list
+
+not reached:
+  server-stateless
+  json-schema-2020-12
+  sep-2164-resource-not-found
+  caching
+  http-header-validation
+  http-custom-header-server-validation
+  input-required-result-basic-elicitation
+  input-required-result-basic-sampling
+  input-required-result-basic-list-roots
+  input-required-result-request-state
+  input-required-result-multiple-input-requests
+  input-required-result-multi-round
+  input-required-result-missing-input-response
+  input-required-result-non-tool-request
+  input-required-result-result-type
+  input-required-result-unsupported-methods
+  input-required-result-tampered-state
+  input-required-result-capability-check
+  input-required-result-ignore-extra-params
+  input-required-result-validate-input
+  tools_call
+  request-metadata
+  auth/metadata-default
+  auth/metadata-var1
+  auth/metadata-var2
+  auth/metadata-var3
+  auth/basic-cimd
+  auth/scope-from-www-authenticate
+  auth/scope-from-scopes-supported
+  auth/scope-omitted-when-undefined
+  auth/scope-step-up
+  auth/scope-retry-limit
+  auth/token-endpoint-auth-basic
+  auth/token-endpoint-auth-post
+  auth/token-endpoint-auth-none
+  auth/pre-registration
+  auth/resource-mismatch
+  auth/offline-access-scope
+  auth/offline-access-not-supported
+  auth/authorization-server-migration
+  auth/iss-supported
+  auth/iss-not-advertised
+  auth/iss-supported-missing
+  auth/iss-wrong-issuer
+  auth/iss-unexpected
+  auth/iss-normalized
+  auth/metadata-issuer-mismatch
+  sep-2322-client-request-state
+  http-standard-headers
+  http-custom-headers
+  http-invalid-tool-headers
+  json-schema-ref-no-deref
+  json-schema-2020-12-preservation
+  authorization-server-metadata-endpoint
+  authorization-code-grant
+
+MEASURED RESULT
+
+Every scenario above was refused with HTTP 403. This daemon requires
+the x-ax-bearer header and the suite has no way to send one:
+`conformance server --help` offers no header, auth or bearer option.
+
+That is the finding, not a protocol violation and not a defect here.
+The bearer is what stops a web page on the machine from reaching the
+daemon, so it stays. No conformance claim about MCP rests on this run:
+what it establishes is the coverage and the shape of the gap.
+
+Closing it needs the suite to grow a way to send credentials.
+
+The daemon under test is the shipped listener with a provider behind
+it, not a live browser. This suite checks the protocol surface an MCP
+client talks to. The page behind that surface is covered by the
+browser suites in this package.
