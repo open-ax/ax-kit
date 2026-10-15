@@ -405,6 +405,14 @@ async function readFrameDocument(
 		lifecycle:
 			typeof documentLifecycle === "string" ? documentLifecycle : "active",
 	};
+	// The lookup above awaited, so a commit may have stored a newer record
+	// while it was in flight. Chrome orders navigation events, not this
+	// lookup against them, so a late answer must not overwrite what arrived
+	// after it was asked for.
+	const current = liveDocument(tabId, frameId);
+	if (current !== null) {
+		return current;
+	}
 	documents.set(frameKey(tabId, frameId), seen);
 	return seen;
 }
