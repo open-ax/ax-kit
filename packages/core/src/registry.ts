@@ -709,7 +709,13 @@ export function unregisterRecord(doc: Document, name: string): boolean {
 	}
 	state.tools.delete(name);
 	record.cleanup?.();
-	notifyToolChange(doc, record.exposedOrigins);
+	// The draft removes the tool definition first, then returns without
+	// notifying when the document is no longer fully active: the notification
+	// algorithm finds documents by walking the node navigable, and an unloaded
+	// document has none to walk from. Removing is unconditional.
+	if (isFullyActive(doc)) {
+		notifyToolChange(doc, record.exposedOrigins);
+	}
 	return true;
 }
 

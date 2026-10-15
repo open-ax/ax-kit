@@ -24,10 +24,27 @@ import { join } from "node:path";
  * `fe52996`, "[WebMCP] Remove origin-keyed agent cluster requirement", committed
  * the same day. They were the same change in the two halves of the suite.
  *
- * The suite has not yet caught up to the current pin (`d0e4e0e`, 9 October
- * 2026): no WPT commit names the execution-error taxonomy (#339) or the
- * declarative removal (#338). The pin stays until a suite revision carries the
- * same change; until then the lag is recorded as `upstream-gap` entries.
+ * The suite has not caught up to the current pin (`3279798`, 15 October 2026),
+ * and moving it forward is now actively unsafe rather than merely premature.
+ *
+ * Two distinct reasons, both verified 2026-10-15 (ADR 0011):
+ *
+ * - No WPT commit names the execution-error taxonomy (#339), the declarative
+ *   removal (#338), or the post-serialization re-checks (#337, #345, #347), so
+ *   the lag persists and is recorded as `upstream-gap` entries.
+ * - WPT `master` has moved to `3a3a022` and is now *ahead* of the draft in one
+ *   place and behind it in another. `3a3a022` reverts "Re-check for a duplicate
+ *   tool name after serializing inputSchema" (`91d7226`), blaming it for a
+ *   Chromium build failure, so the suite no longer tests what #347 added to the
+ *   draft. And `15e7837` "[3/N] Introduce the `Tool` interface object" plus
+ *   `626f5bf` "[2/N] Identify tools by a unique ID" add tests for a `Tool`
+ *   interface and a declarative name-collision API that the 15 October draft
+ *   does not contain.
+ *
+ * Adopting either end of that would make the published conformance number
+ * describe a specification this implementation does not target. The pin moves
+ * when a suite revision carries the same change as the draft it would be
+ * paired with.
  */
 export const WPT_SHA = "fe52996d4465f23617bce91927bdd58e6ce8f541";
 

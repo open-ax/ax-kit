@@ -365,7 +365,9 @@ describe("the built site", () => {
 		// every page precisely so no page can forget.
 		for (const path of ["/quickstart/", "/reference/errors/", "/try-it/"]) {
 			const html = await (await fetch(`${ORIGIN}${path}`)).text();
-			expect(html, `${path} does not name a draft`).toContain("9 October 2026");
+			expect(html, `${path} does not name a draft`).toContain(
+				"15 October 2026",
+			);
 		}
 	});
 });
