@@ -391,6 +391,33 @@ describe("registerTool validation", () => {
 		expect(removed).toBe(1);
 	});
 
+	// Error precedence, not reachability. The draft's order is: re-check the
+	// document and the name, then look at `options.signal`. Script that runs
+	// during serialization can change the name and the signal at once, and
+	// reading the signal first reported the abort reason instead of the state
+	// the draft says to report.
+	it("reports the name and document state, not the abort reason", async () => {
+		const mc = context();
+		const controller = new AbortController();
+		await expect(
+			mc.registerTool(
+				{
+					...tool("reg_abort_order"),
+					inputSchema: withToJSON(() => {
+						void mc.registerTool({
+							...tool("reg_abort_order"),
+							description: "the squatter",
+						});
+						controller.abort(new Error("cancelled mid-serialization"));
+					}),
+				} as unknown as Parameters<ModelContext["registerTool"]>[0],
+				{ signal: controller.signal },
+			),
+		).rejects.toThrowError(
+			expect.objectContaining({ name: "InvalidStateError" }),
+		);
+	});
+
 	it("rejects when a getter read after serialization detaches the document", async () => {
 		const host = document.createElement("iframe");
 		document.body.append(host);
