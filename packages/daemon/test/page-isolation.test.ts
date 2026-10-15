@@ -337,7 +337,7 @@ describe("a page against the daemon listener", () => {
 				});
 				return await response.text();
 			}, EXTENSION_ORIGIN);
-			expect(seen).not.toBe(EXTENSION_ORIGIN);
+			expect(seen).toBe(`http://${FOREIGN_HOST}:${String(fixturePort)}`);
 		} finally {
 			await page.close();
 		}
