@@ -439,28 +439,15 @@ export class ModelContextImpl extends EventTarget implements ModelContext {
 		const exposedOrigins =
 			rawExposed === undefined ? [] : parseOriginList(rawExposed, "exposedTo");
 
-		// Upstream #337 and #347, 13-15 October 2026: re-check, immediately before
-		// anything is retained, that the owning document is still fully active and
-		// that the name is still free.
+		// Attached before the re-checks below, not after. `isAbortSignal` duck-types
+		// rather than testing the prototype, so `addEventListener` is a method this
+		// caller chose and calling it runs whatever that method runs. Attaching last
+		// would put it between the re-checks and the write - the one window those
+		// exist to close - and measured that way, detaching the document from inside
+		// this call left `registerTool` resolving with the tool stored in a document
+		// that had left its navigable.
 		//
-		// The placement is the whole point. Everything between the gate at the top
-		// of this method and this point reads a caller-supplied object - the
-		// schema's `toJSON`, `title`, `execute`, `annotations`, `signal`,
-		// `exposedTo` - and each of those can run page script. A check placed
-		// after serialization but before them would still be satisfiable by script
-		// that runs afterwards.
-		if (!isFullyActive(owner)) {
-			throw invalidState("inactive document");
-		}
-		// `checkName` already owns the duplicate-name rule and its message.
-		// Calling it rather than restating the rule leaves one place that decides
-		// it, and `name` was validated moments ago so only the duplicate branch
-		// can fire here.
-		checkName(name, state.tools);
-
-		// Attached only once the registration is known to be accepted. A listener
-		// added before this point would outlive a rejection, holding the document,
-		// the name and this record in a closure that nothing can reach to detach.
+		// Because it is attached first, a rejection below has to hand it back.
 		//
 		// Removal detaches it, so an unregister through any path never leaves a
 		// stale abort subscription behind.
@@ -475,6 +462,30 @@ export class ModelContextImpl extends EventTarget implements ModelContext {
 			removeRegAbort = (): void => {
 				signal.removeEventListener("abort", onAbort);
 			};
+		}
+
+		// Upstream #337 and #347, 13-15 October 2026: re-check, immediately before
+		// the write, that the owning document is still fully active and that the
+		// name is still free.
+		//
+		// The placement is the whole point. Everything between the gate at the top
+		// of this method and this point reads or calls a caller-supplied object -
+		// the schema's `toJSON`, `title`, `execute`, `annotations`, `signal`,
+		// `exposedTo`, and the signal's own `addEventListener` - and each of those
+		// can run page script. A check placed anywhere earlier is satisfiable by
+		// script that runs after it, which is the bug rather than a near miss.
+		try {
+			if (!isFullyActive(owner)) {
+				throw invalidState("inactive document");
+			}
+			// `checkName` already owns the duplicate-name rule and its message.
+			// Calling it rather than restating the rule leaves one place that decides
+			// it, and `name` was validated moments ago so only the duplicate branch
+			// can fire here.
+			checkName(name, state.tools);
+		} catch (error) {
+			removeRegAbort?.();
+			throw error;
 		}
 
 		const record: ToolRecord = {
@@ -569,17 +580,22 @@ export class ModelContextImpl extends EventTarget implements ModelContext {
 			throw new TypeError("bad tool target");
 		}
 
-		if (topDocument(caller) !== topDocument(target)) {
-			throw invalidState("foreign tool target");
-		}
-
-		// Upstream #337, 13 October 2026. A target with no window proxy has been
-		// removed from its navigable, so there is nothing left to dispatch into.
-		// Checked here, before the eligibility re-check below, which collapses a
-		// failed target into `NotFoundError`; collapsing this one would report a
-		// detached target as a missing tool, which is a different fact.
+		// Upstream #337, 13 October 2026. The draft reads the target's node
+		// navigable and rejects when it is null, immediately after reading the
+		// document and immediately before comparing traversable navigables.
+		//
+		// The order is load-bearing and was wrong here: a detached document cannot
+		// be walked up to a traversable, so the cross-tree comparison below also
+		// rejects it, and putting this check second meant the target was always
+		// reported as foreign. Same exception type either way, so the misordering
+		// cost a diagnostic rather than a failure - but the draft says which of the
+		// two it is, and a detached target is a different fact from a foreign one.
 		if (!isFullyActive(target)) {
 			throw invalidState("detached tool target");
+		}
+
+		if (topDocument(caller) !== topDocument(target)) {
+			throw invalidState("foreign tool target");
 		}
 
 		// Authority can change after registration: re-check the target's

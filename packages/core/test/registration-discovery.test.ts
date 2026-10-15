@@ -351,6 +351,46 @@ describe("registerTool validation", () => {
 		expect(attached).toBe(0);
 	});
 
+	// `isAbortSignal` duck-types rather than testing the prototype, so
+	// `addEventListener` is a method this caller chose and calling it runs
+	// whatever that method runs. With the listener attached between the
+	// re-checks and the write, that window was open: detaching from here left
+	// `registerTool` resolving with the tool stored in a document that had left
+	// its navigable, which is the outcome the re-checks exist to prevent.
+	//
+	// Both halves are asserted. The rejection proves the re-check now covers
+	// this call too; the removal count proves giving the listener back is not
+	// left to a future caller to remember.
+	it("rejects when the signal's addEventListener detaches the document", async () => {
+		const host = document.createElement("iframe");
+		document.body.append(host);
+		const framed = host.contentDocument as Document;
+		const framedContext = installModelContext(framed);
+		expect(framedContext).toBeDefined();
+		let attached = 0;
+		let removed = 0;
+		const signal = {
+			aborted: false,
+			reason: undefined,
+			addEventListener: (): void => {
+				attached += 1;
+				host.remove();
+			},
+			removeEventListener: (): void => {
+				removed += 1;
+			},
+		};
+		await expect(
+			framedContext?.registerTool(tool("reg_signal_detach"), {
+				signal: signal as unknown as AbortSignal,
+			}) ?? Promise.resolve(),
+		).rejects.toThrowError(
+			expect.objectContaining({ name: "InvalidStateError" }),
+		);
+		expect(attached).toBe(1);
+		expect(removed).toBe(1);
+	});
+
 	it("rejects when a getter read after serialization detaches the document", async () => {
 		const host = document.createElement("iframe");
 		document.body.append(host);
