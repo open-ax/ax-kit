@@ -142,11 +142,15 @@ async function openPanel(): Promise<Page> {
  * The debugger-protocol target id of this extension's service worker, or
  * null when the browser reports none.
  *
- * Read from `unknown` like every other boundary value: the protocol answers
- * with JSON, and a shape change must refuse rather than kill the wrong
- * target.
+ * Matched on the worker's exact URL, not on the extension-id prefix: a
+ * long run can list stale worker targets from earlier idle-stop cycles,
+ * and first-match would then kill a corpse while the live worker answers
+ * on — the kill succeeds, the worker stays alive, and the confirmation
+ * below waits out its bound. Read from `unknown` like every other boundary
+ * value: the protocol answers with JSON, and a shape change must refuse
+ * rather than kill the wrong target.
  */
-function workerTargetId(listed: unknown): string | null {
+function workerTargetId(listed: unknown, expectedUrl: string): string | null {
 	if (typeof listed !== "object" || listed === null) {
 		return null;
 	}
@@ -154,7 +158,6 @@ function workerTargetId(listed: unknown): string | null {
 	if (!Array.isArray(infos)) {
 		return null;
 	}
-	const prefix = `chrome-extension://${extensionId}/`;
 	for (const entry of infos) {
 		if (typeof entry !== "object" || entry === null) {
 			continue;
@@ -170,7 +173,7 @@ function workerTargetId(listed: unknown): string | null {
 		) {
 			continue;
 		}
-		if (type === "service_worker" && url.startsWith(prefix)) {
+		if (type === "service_worker" && url === expectedUrl) {
 			return targetId;
 		}
 	}
@@ -626,8 +629,8 @@ describe("consequential confirmation", () => {
 		// awaited as an event.)
 		const session = await context.newCDPSession(page);
 		const listed: unknown = await session.send("Target.getTargets", {});
-		const targetId = workerTargetId(listed);
-		expect(targetId).not.toBeNull();
+		const targetId = workerTargetId(listed, worker.url());
+		expect(targetId, `no CDP target for worker ${worker.url()}`).not.toBeNull();
 		// Registered before the close is sent: `closeTarget` acknowledges
 		// the request before destruction completes, so a listener added
 		// after it could miss the event. Three signals, first wins. The
