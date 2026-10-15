@@ -22,8 +22,8 @@ interface definitions are byte-identical across the range, verified by
 extracting and comparing every IDL block. See `docs/adr/0011`.
 
 The draft also adds re-checks to `registerTool` after `inputSchema`
-serialization, for script that a `toJSON()` method can run. Those are not
-implemented here because they are unreachable: the schema validator refuses a
-function value before `JSON.stringify` can call one, so no script runs during
-serialization in this implementation. The reason is recorded in the decision log
-rather than papered over with unreachable code.
+serialization, for script that a `toJSON()` method can run. Those were
+implemented too: the schema walk rejects an *enumerable* function value, but a
+non-enumerable `toJSON` is invisible to it and still reached by
+`JSON.stringify`. Without the re-checks, a registration could silently
+overwrite one made during its own serialization. See `docs/adr/0011`.

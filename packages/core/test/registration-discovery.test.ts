@@ -439,6 +439,67 @@ describe("getTools ordering and isolation", () => {
 		}
 	});
 
+	// Upstream #337 and #347. `registerTool` serializes `inputSchema` before it
+	// writes the tool definition, and serializing calls `JSON.stringify`, which
+	// calls a `toJSON()` method. A non-enumerable one is invisible to the schema
+	// walk and still runs, so script really can execute at that point — and the
+	// draft re-checks both conditions afterwards. These two use a non-enumerable
+	// `toJSON` deliberately: an enumerable function value is refused by the
+	// validator before serialization, which would make the test pass for the
+	// wrong reason.
+	function withToJSON(run: () => void): Record<string, unknown> {
+		const schema: Record<string, unknown> = { type: "object" };
+		Object.defineProperty(schema, "toJSON", {
+			value: () => {
+				run();
+				return { type: "object" };
+			},
+			enumerable: false,
+		});
+		return schema;
+	}
+
+	it("rejects a name taken by script run while serializing inputSchema", async () => {
+		const mc = context();
+		// The name is free when the duplicate check above runs, and taken by the
+		// time the record would be written.
+		await expect(
+			mc.registerTool({
+				...tool("reg_squatted"),
+				inputSchema: withToJSON(() => {
+					void mc.registerTool(tool("reg_squatted"));
+				}),
+			} as unknown as Parameters<ModelContext["registerTool"]>[0]),
+		).rejects.toThrowError(
+			expect.objectContaining({ name: "InvalidStateError" }),
+		);
+		// And the squatter is the one that survives: the late registration must
+		// not have overwritten it.
+		const listed = await mc.getTools();
+		expect(listed.filter((item) => item.name === "reg_squatted")).toHaveLength(
+			1,
+		);
+	});
+
+	it("rejects when script run while serializing inputSchema detaches the document", async () => {
+		const host = document.createElement("iframe");
+		document.body.append(host);
+		const framed = host.contentDocument as Document;
+		const framedContext = installModelContext(framed);
+		expect(framedContext).toBeDefined();
+		await expect(
+			framedContext?.registerTool({
+				...tool("reg_detached"),
+				inputSchema: withToJSON(() => {
+					host.remove();
+				}),
+			} as unknown as Parameters<ModelContext["registerTool"]>[0]) ??
+				Promise.resolve(),
+		).rejects.toThrowError(
+			expect.objectContaining({ name: "InvalidStateError" }),
+		);
+	});
+
 	it("rejects registration on documents without a browsing context", async () => {
 		const mc = context();
 		const detached = document.implementation.createHTMLDocument("detached");

@@ -421,6 +421,23 @@ export class ModelContextImpl extends EventTarget implements ModelContext {
 
 		const schemaJson = serializeInputSchema(input.inputSchema);
 
+		// Upstream #337 and #347, 13-15 October 2026. Serializing `inputSchema`
+		// runs `JSON.stringify`, which calls a `toJSON()` method and can therefore
+		// run script. That script can do two things the checks above have already
+		// passed: detach the owning document, and register a tool under this name.
+		//
+		// The schema walk rejects an *enumerable* function value, but a
+		// non-enumerable `toJSON` is invisible to it and still reached by
+		// `JSON.stringify`, so both re-checks below are reachable rather than
+		// defensive. Without them a registration can silently overwrite one made
+		// during its own serialization.
+		if (!isFullyActive(owner)) {
+			throw invalidState("inactive document");
+		}
+		if (state.tools.has(name)) {
+			throw invalidState(`duplicate tool ${name}`);
+		}
+
 		const rawTitle: unknown = input.title;
 		const title = rawTitle === undefined ? null : toUSVString(rawTitle);
 
