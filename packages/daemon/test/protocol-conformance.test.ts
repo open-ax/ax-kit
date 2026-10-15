@@ -49,6 +49,7 @@
 import { spawn } from "node:child_process";
 import { readFileSync, rmSync } from "node:fs";
 import { mkdir, mkdtemp, readdir, readFile, writeFile } from "node:fs/promises";
+import { request as httpRequest } from "node:http";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -218,6 +219,41 @@ async function readChecks(
 	return byScenario;
 }
 
+/**
+ * One request answered directly by the daemon, bypassing the suite.
+ *
+ * `handleRequest` checks the origin before the bearer and answers both refusals
+ * with the same `403 text/plain`, so the status code alone cannot say which
+ * guard fired. The body does: `bad origin`, or `bad bearer`.
+ *
+ * This exists because the suite's own report stops at `content-type text/plain`
+ * and never carries the body. Without a direct probe a `403` from the suite
+ * could be attributed to either guard, and the finding would be a claim about a
+ * status code wearing the clothes of a claim about a cause.
+ */
+async function probe(
+	port: number,
+	headers: Record<string, string>,
+): Promise<{ readonly status: number; readonly body: string }> {
+	return new Promise((resolve, reject) => {
+		const call = httpRequest(
+			{ host: "127.0.0.1", port, path: "/mcp", method: "POST", headers },
+			(response) => {
+				let body = "";
+				response.setEncoding("utf8");
+				response.on("data", (chunk: string) => {
+					body += chunk;
+				});
+				response.on("end", () => {
+					resolve({ status: response.statusCode ?? 0, body: body.trim() });
+				});
+			},
+		);
+		call.on("error", reject);
+		call.end('{"jsonrpc":"2.0","id":1,"method":"tools/list"}');
+	});
+}
+
 /** Every server scenario the suite itself declares for this revision. */
 function declaredScenarios(stdout: string): string[] {
 	// The listing has a server section and a client section. Only the server
@@ -271,6 +307,11 @@ let checks: ReadonlyMap<
 	string,
 	{ readonly status: string; readonly message: string }
 >;
+// Vitest runs `afterAll` even when `beforeAll` threw. Without this flag a setup
+// failure is reported as a `TypeError` from reading state the failed setup never
+// assigned - the less useful of the two errors - and a half-built run still
+// rewrites the committed reports.
+let setupComplete = false;
 
 beforeAll(async () => {
 	discoveryDir = await mkdtemp(join(tmpdir(), "ax-mcp-conformance-"));
@@ -302,14 +343,22 @@ beforeAll(async () => {
 		resultsDir,
 	]);
 	checks = await readChecks(resultsDir);
+	setupComplete = true;
 }, 600_000);
 
 afterAll(async () => {
 	await transport?.close();
-	// Every other `mkdtemp` user in this package removes its directory; this one
-	// was the exception. On a clean close the directory is already empty, but a
-	// crash mid-run leaves `relay.json`, which carries the bearer.
-	rmSync(discoveryDir, { recursive: true, force: true });
+	// Every other `mkdtemp` user in this package removes its directory; these
+	// were the exceptions. On a clean close `discoveryDir` is already empty, but
+	// a crash mid-run leaves `relay.json`, which carries the bearer. Each is
+	// guarded because this hook runs even when `beforeAll` threw part-way, in
+	// which case the second directory may never have been created.
+	if (discoveryDir !== undefined) {
+		rmSync(discoveryDir, { recursive: true, force: true });
+	}
+	if (resultsDir !== undefined) {
+		rmSync(resultsDir, { recursive: true, force: true });
+	}
 });
 
 describe(`MCP conformance suite ${SUITE_VERSION}`, () => {
@@ -338,12 +387,17 @@ describe(`MCP conformance suite ${SUITE_VERSION}`, () => {
 	// The check that makes a green run mean something. Without it, a run that
 	// connected to nothing and therefore failed nothing would be reported as a
 	// pass, which is the single most likely way this number becomes decoration.
-	it("reaches the tool methods rather than passing because it ran nothing", () => {
+	//
+	// "Reported", not "executed": the suite issues each scenario and records a
+	// verdict for it, and the 403 means the daemon refused before any MCP method
+	// ran. The claim here is that the suite *reached* those scenarios, which is
+	// what makes the refusal evidence rather than silence.
+	it("reports the tool scenarios rather than passing because it ran nothing", () => {
 		const reached = reachedScenarios(first);
 		expect(reached.size).toBeGreaterThan(0);
 		expect(
 			[...reached],
-			`the suite never reached a tool method; reached: ${[...reached].join(", ")}`,
+			`the suite reported no tool scenario; reported: ${[...reached].join(", ")}`,
 		).toEqual(expect.arrayContaining(["tools-list", "tools-call-simple-text"]));
 	});
 
@@ -403,21 +457,56 @@ describe(`MCP conformance suite ${SUITE_VERSION}`, () => {
 
 	// The finding, asserted against what the suite actually observed rather than
 	// against the exit code. `exitCode === 1` cannot distinguish "refused at the
-	// gate" from "crashed at startup" or "died after three scenarios"; the
-	// status code and the header name can, and this is the assertion that makes
-	// the archive a measurement rather than a narrative.
-	it("observes a 403 at the gate in every scenario that failed", () => {
+	// gate" from "crashed at startup" or "died after three scenarios"; the status
+	// code can, and this is the assertion that makes the archive a measurement
+	// rather than a narrative.
+	//
+	// What it does *not* claim is which guard refused. A `403` here is a claim
+	// about a status code; `handleRequest` answers both the origin guard and the
+	// bearer guard the same way. The control test above is what pins the cause to
+	// the bearer, and this one is deliberately worded no stronger than what the
+	// suite's own output can support.
+	it("observes HTTP 403 in every scenario that failed", () => {
 		expect(checks.size).toBeGreaterThan(0);
 		const offenders = [...checks].filter(
-			([, check]) =>
-				!/\b403\b/.test(check.message) && !/HTTP 403/.test(check.message),
+			([, check]) => !/\b403\b/.test(check.message),
 		);
 		expect(
 			offenders.map(([dir, check]) => `${dir}: ${check.message}`),
-			"a scenario failed for a reason other than the bearer gate; the " +
-				"recorded finding no longer describes this run, so it needs reading " +
-				"before it is published",
+			"a scenario failed without reporting HTTP 403; the recorded finding " +
+				"no longer describes this run, so it needs reading before it is " +
+				"published",
 		).toEqual([]);
+	});
+
+	// The control for the test above. `handleRequest` checks the origin before the
+	// bearer and answers both with the same status and content type, so "the suite
+	// saw 403" does not identify a cause on its own. These two probes do.
+	//
+	// The first is the suite's own request shape: a loopback Host and Origin, no
+	// bearer. The second is the same request with an origin the relay gate refuses.
+	// If the first said `bad origin`, the suite would be measuring the origin guard
+	// and every claim built on it would be wrong.
+	it("tells the two refusals apart, and the suite's shape clears the origin gate", async () => {
+		const loopback = `http://127.0.0.1:${String(transport.port)}`;
+		const unauthenticated = await probe(transport.port, {
+			host: `127.0.0.1:${String(transport.port)}`,
+			origin: loopback,
+			"content-type": "application/json",
+		});
+		expect(unauthenticated.status).toBe(403);
+		expect(unauthenticated.body).toBe("bad bearer");
+
+		const foreign = await probe(transport.port, {
+			host: `127.0.0.1:${String(transport.port)}`,
+			origin: "https://example.invalid",
+			"content-type": "application/json",
+		});
+		expect(foreign.status).toBe(403);
+		// Measured, not assumed: the relay gate reports a non-loopback origin under
+		// its own name, and the point is that it is *not* the bearer's message.
+		expect(foreign.body).toBe("non-loopback origin");
+		expect(foreign.body).not.toBe(unauthenticated.body);
 	});
 });
 
@@ -426,8 +515,19 @@ describe(`MCP conformance suite ${SUITE_VERSION}`, () => {
  *
  * Written after the assertions rather than before, so the archive is only ever
  * produced by a run that also ran the checks above.
+ *
+ * Two guards, because the archive is committed evidence and a run that did not
+ * measure must not be able to overwrite it. `setupComplete` covers a setup
+ * failure, which Vitest still runs this hook for; the pair below covers a run
+ * that finished but is not the finding — a suite that suddenly passed, or died
+ * before writing any checks. In both cases the assertions fail loudly and the
+ * files on disk are left alone. Rewriting the record of what was measured from a
+ * broken run is worse than a dirty working tree.
  */
 afterAll(async () => {
+	if (!setupComplete || first.exitCode !== 1 || checks.size === 0) {
+		return;
+	}
 	const dir = join(
 		dirname(fileURLToPath(import.meta.url)),
 		"..",
