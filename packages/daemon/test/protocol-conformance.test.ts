@@ -48,7 +48,7 @@
 
 import { spawn } from "node:child_process";
 import { readFileSync, rmSync } from "node:fs";
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -160,10 +160,62 @@ function suite(args: string[]): Promise<Run> {
 			stderr += chunk;
 		});
 		child.on("error", reject);
-		child.on("close", (code) => {
-			resolve({ exitCode: code ?? 0, stdout, stderr });
+		child.on("close", (code, signal) => {
+			// A signalled child reports `code === null`. Collapsing that to 0
+			// would record a crashed suite as a passing one, and this file's whole
+			// claim is about what an exit code means.
+			resolve({ exitCode: signal === null ? (code ?? 0) : -1, stdout, stderr });
 		});
 	});
+}
+
+/**
+ * The suite's own per-scenario results, read from the `checks.json` files its
+ * `--output-dir` writes.
+ *
+ * This is what makes the finding evidenced rather than asserted. The suite's
+ * stdout reports a verdict count per scenario and nothing about *why* — a reader
+ * cannot tell a protocol violation from a refusal at the gate by looking at it,
+ * and `403` appears nowhere in it. `checks.json` carries each check's id, its
+ * status, and the error message the suite actually observed.
+ */
+async function readChecks(
+	dir: string,
+): Promise<
+	ReadonlyMap<string, { readonly status: string; readonly message: string }>
+> {
+	const byScenario = new Map<string, { status: string; message: string }>();
+	for (const entry of await readdir(dir, { withFileTypes: true })) {
+		if (!entry.isDirectory() || !entry.name.startsWith("server-")) {
+			continue;
+		}
+		const raw = await readFile(join(dir, entry.name, "checks.json"), "utf8");
+		const parsed: unknown = JSON.parse(raw);
+		if (!Array.isArray(parsed)) {
+			continue;
+		}
+		for (const check of parsed as ReadonlyArray<{
+			id?: unknown;
+			status?: unknown;
+			errorMessage?: unknown;
+		}>) {
+			if (
+				typeof check.id === "string" &&
+				typeof check.status === "string" &&
+				check.status !== "SUCCESS"
+			) {
+				byScenario.set(entry.name, {
+					status: check.status,
+					message:
+						typeof check.errorMessage === "string"
+							? check.errorMessage
+							: "(no message)",
+				});
+				break;
+			}
+		}
+	}
+	return byScenario;
 }
 
 /** Every server scenario the suite itself declares for this revision. */
@@ -214,9 +266,15 @@ let transport: Transport;
 let first: Run;
 let declared: string[];
 let discoveryDir: string;
+let resultsDir: string;
+let checks: ReadonlyMap<
+	string,
+	{ readonly status: string; readonly message: string }
+>;
 
 beforeAll(async () => {
 	discoveryDir = await mkdtemp(join(tmpdir(), "ax-mcp-conformance-"));
+	resultsDir = await mkdtemp(join(tmpdir(), "ax-mcp-results-"));
 	transport = await startTransport({
 		discoveryDir,
 		// A bridge nobody pulls from, so the HTTP surface is exercised without a
@@ -237,7 +295,13 @@ beforeAll(async () => {
 		"--spec-version",
 		MCP_REVISION,
 		"--verbose",
+		// Ask for the per-scenario result files rather than scraping the summary
+		// block, so the archive carries what the suite observed and not only what
+		// it counted.
+		"--output-dir",
+		resultsDir,
 	]);
+	checks = await readChecks(resultsDir);
 }, 600_000);
 
 afterAll(async () => {
@@ -336,6 +400,25 @@ describe(`MCP conformance suite ${SUITE_VERSION}`, () => {
 			"the run reached no scenario, so the refusal proves nothing",
 		).toContain("tools-list");
 	});
+
+	// The finding, asserted against what the suite actually observed rather than
+	// against the exit code. `exitCode === 1` cannot distinguish "refused at the
+	// gate" from "crashed at startup" or "died after three scenarios"; the
+	// status code and the header name can, and this is the assertion that makes
+	// the archive a measurement rather than a narrative.
+	it("observes a 403 at the gate in every scenario that failed", () => {
+		expect(checks.size).toBeGreaterThan(0);
+		const offenders = [...checks].filter(
+			([, check]) =>
+				!/\b403\b/.test(check.message) && !/HTTP 403/.test(check.message),
+		);
+		expect(
+			offenders.map(([dir, check]) => `${dir}: ${check.message}`),
+			"a scenario failed for a reason other than the bearer gate; the " +
+				"recorded finding no longer describes this run, so it needs reading " +
+				"before it is published",
+		).toEqual([]);
+	});
 });
 
 /**
@@ -353,6 +436,10 @@ afterAll(async () => {
 	await mkdir(dir, { recursive: true });
 	const reached = reachedScenarios(first);
 	const unreached = declared.filter((name) => !reached.has(name));
+	const resultsDirRegExp = new RegExp(
+		resultsDir.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+		"g",
+	);
 	await writeFile(
 		join(dir, "server-run.txt"),
 		[
@@ -364,9 +451,13 @@ afterAll(async () => {
 			`${String(first.exitCode)}`,
 			"",
 			"--- stdout (verbatim) ---",
-			first.stdout,
+			// The suite echoes the `--output-dir` it was given, which is an
+			// ephemeral temp path. Stripped rather than committed: this file is
+			// public, the path says nothing about the run, and it differs on every
+			// machine. Everything else below is the suite's own words.
+			first.stdout.replace(resultsDirRegExp, "<output-dir>"),
 			"--- stderr (verbatim) ---",
-			first.stderr,
+			first.stderr.replace(resultsDirRegExp, "<output-dir>"),
 		].join("\n"),
 		"utf8",
 	);
@@ -386,23 +477,29 @@ afterAll(async () => {
 				? ["  (none)"]
 				: unreached.map((name) => `  ${name}`)),
 			"",
-			"MEASURED RESULT",
+			"WHAT THE SUITE REPORTED, per scenario",
 			"",
-			`Every scenario above was refused with HTTP 403. This daemon requires`,
-			"the x-ax-bearer header and the suite has no way to send one:",
-			"`conformance server --help` offers no header, auth or bearer option.",
+			"Quoted from the suite's own checks.json, not summarised. This is the",
+			"evidence for the finding: every refusal is the bearer gate, not a",
+			"protocol violation.",
 			"",
-			"That is the finding, not a protocol violation and not a defect here.",
-			"The bearer is what stops a web page on the machine from reaching the",
-			"daemon, so it stays. No conformance claim about MCP rests on this run:",
-			"what it establishes is the coverage and the shape of the gap.",
-			"",
-			"Closing it needs the suite to grow a way to send credentials.",
-			"",
+			...[...checks]
+				.sort()
+				.map(([dir, check]) =>
+					[
+						`  ${dir.replace(/^server-/, "").replace(/-[0-9TZ.-]+$/, "")}`,
+						`      ${check.status}: ${check.message.replace(/\s+/g, " ").trim()}`,
+					].join("\n"),
+				),
 			"The daemon under test is the shipped listener with a provider behind",
 			"it, not a live browser. This suite checks the protocol surface an MCP",
 			"client talks to. The page behind that surface is covered by the",
 			"browser suites in this package.",
+			"",
+			"WHY, and why nothing is changed about it, is in the pull request and",
+			"in packages/daemon/test/protocol-conformance.test.ts's header. It is",
+			"not repeated here, because a generated file that restates a conclusion",
+			"keeps restating it after the conclusion stops being true.",
 		].join("\n"),
 		"utf8",
 	);
