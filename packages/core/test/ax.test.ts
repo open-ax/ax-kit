@@ -12,6 +12,7 @@ import {
 import type { ModelContext } from "../src/index.js";
 import * as root from "../src/index.js";
 import { installModelContext } from "../src/index.js";
+import { unregisterRecord } from "../src/registry.js";
 
 installModelContext(document);
 
@@ -117,6 +118,43 @@ describe("unregisterTool", () => {
 		).toBe(false);
 		await settleTasks();
 		expect(changes).toBe(1);
+	});
+
+	// Upstream #345, 14 October 2026. The draft removes the tool definition
+	// first and then returns without notifying when the document is no longer
+	// fully active, because the notification algorithm finds documents by
+	// walking the node navigable and an unloaded document has none to walk.
+	// Removal therefore still happens; only the notification is suppressed.
+	//
+	// The control case above asserts the notification *does* fire for an active
+	// document, which is what makes the zero below a measurement rather than a
+	// tautology.
+	it("removes without notifying when the document is no longer active", async () => {
+		const host = document.createElement("iframe");
+		document.body.append(host);
+		const framed = host.contentDocument as Document;
+		const mc = installModelContext(framed);
+		expect(mc).toBeDefined();
+		await mc?.registerTool({
+			name: "ax_inactive_unreg",
+			description: "removed after the document goes inactive",
+			execute: async () => null,
+		});
+		await settleTasks();
+
+		let changes = 0;
+		mc?.addEventListener("toolchange", () => {
+			changes += 1;
+		});
+		// Removal is unconditional: the draft removes the definition before it
+		// consults the document's state.
+		host.remove();
+		expect(unregisterRecord(framed, "ax_inactive_unreg")).toBe(true);
+		// And the tool is gone from the map, so a second removal reports that it
+		// found nothing.
+		expect(unregisterRecord(framed, "ax_inactive_unreg")).toBe(false);
+		await settleTasks();
+		expect(changes).toBe(0);
 	});
 });
 

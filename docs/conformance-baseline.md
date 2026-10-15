@@ -4,8 +4,8 @@ Conformance here means one thing: zero unexpected failures against the pinned
 draft named below. It never means blanket green, because the reference browser
 itself does not pass the whole official suite.
 
-Pinned draft: WebMCP Draft Community Group Report, 9 October 2026
-(upstream `d0e4e0e`), exported as `SPEC_VERSION` from `@ax-kit/core`.
+Pinned draft: WebMCP Draft Community Group Report, 15 October 2026
+(upstream `3279798`), exported as `SPEC_VERSION` from `@ax-kit/core`.
 
 ## Layers
 
@@ -58,8 +58,8 @@ Pinned draft: WebMCP Draft Community Group Report, 9 October 2026
   unexposed tools reject with `NotFoundError` (origin mismatch included, to
   prevent probing), foreign traversables with `InvalidStateError`, bad input
   with `DataError`, callback rejection and unserializable results with
-  `OperationError`, and target unload with `AbortError`. Verified 2026-10-11
-  against upstream `index.bs` at `d0e4e0e`.
+  `OperationError`, and target unload with `AbortError`. Verified 2026-10-15
+  against upstream `index.bs` at `3279798`.
 
 ## Official layer (WPT `/webmcp`)
 

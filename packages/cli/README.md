@@ -2,7 +2,7 @@
 
 In-page contract audit for `document.modelContext` under headless Chromium.
 
-Pinned draft: WebMCP Draft Community Group Report, 9 October 2026, from
+Pinned draft: WebMCP Draft Community Group Report, 15 October 2026, from
 the W3C Web Machine Learning Community Group. The pin is exported as
 `SPEC_VERSION` from `@ax-kit/core` and repeated in every release note.
 
