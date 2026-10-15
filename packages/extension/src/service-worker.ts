@@ -1120,4 +1120,15 @@ Object.assign(globalThis as unknown as Record<string, unknown>, {
 	__axPanel: panel,
 	__axTrail: trail,
 	__axRelay: relay,
+	// Test-only: drop the commit record without stopping the worker.
+	// Production reaches this state when a slow start misses `onCommitted`:
+	// the tab is live, the map is empty, and no navigation follows to refill
+	// it. Killing the worker through the debugger protocol reproduces it on
+	// a local machine but hangs hosted runners — no close event, and an
+	// evaluate that pends rather than rejecting — so the test that covers
+	// the re-learn drives this instead. Like the entries above, it lives on
+	// the worker global, which no page can reach.
+	__axTestForgetDocuments: () => {
+		documents.clear();
+	},
 });
