@@ -139,48 +139,6 @@ async function openPanel(): Promise<Page> {
 }
 
 /**
- * The debugger-protocol target id of this extension's service worker, or
- * null when the browser reports none.
- *
- * Matched on the worker's exact URL, not on the extension-id prefix: a
- * long run can list stale worker targets from earlier idle-stop cycles,
- * and first-match would then kill a corpse while the live worker answers
- * on — the kill succeeds, the worker stays alive, and the confirmation
- * below waits out its bound. Read from `unknown` like every other boundary
- * value: the protocol answers with JSON, and a shape change must refuse
- * rather than kill the wrong target.
- */
-function workerTargetId(listed: unknown, expectedUrl: string): string | null {
-	if (typeof listed !== "object" || listed === null) {
-		return null;
-	}
-	const infos: unknown = (listed as Record<string, unknown>)["targetInfos"];
-	if (!Array.isArray(infos)) {
-		return null;
-	}
-	for (const entry of infos) {
-		if (typeof entry !== "object" || entry === null) {
-			continue;
-		}
-		const record = entry as Record<string, unknown>;
-		const targetId: unknown = record["targetId"];
-		const type: unknown = record["type"];
-		const url: unknown = record["url"];
-		if (
-			typeof targetId !== "string" ||
-			typeof type !== "string" ||
-			typeof url !== "string"
-		) {
-			continue;
-		}
-		if (type === "service_worker" && url === expectedUrl) {
-			return targetId;
-		}
-	}
-	return null;
-}
-
-/**
  * Answer a filed invocation the way a person clicking Approve would.
  *
  * Filing is the worker's own job now, so this only answers: the binding came
@@ -609,77 +567,28 @@ describe("consequential confirmation", () => {
 		await panel.close();
 	});
 
-	it("re-learns the document after a worker restart with no new navigation", async () => {
+	it("re-learns the document when the commit record is empty", async () => {
 		await clearPending();
-		// A Manifest V3 worker is stopped when idle and revived on demand. The
-		// revival re-runs the worker top level with empty memory: the commit
-		// record is gone, and no navigation follows to re-fire `onCommitted`
-		// for this tab. The worker asks the browser for the frame instead of
-		// refusing a call a person could approve. Release run 38681385339
-		// failed all seven consequential cases this way: a slow start under
-		// load missed the commit, and every call threw "no document identity"
-		// for the rest of the file.
-		// Stopped through the debugger protocol, which is what an idle stop
-		// is: the extension stays enabled and the tabs stay open, so the only
-		// thing lost is the worker's memory. (`chrome.runtime.reload` was
-		// tried first: it leaves the extension mid-reload, and opening the
-		// wake panel then fails with ERR_BLOCKED_BY_CLIENT. The context's
-		// `serviceworker` event does not fire for this revival either, so
-		// the current worker object is re-read from the list instead of
-		// awaited as an event.)
-		const session = await context.newCDPSession(page);
-		const listed: unknown = await session.send("Target.getTargets", {});
-		const targetId = workerTargetId(listed, worker.url());
-		expect(targetId, `no CDP target for worker ${worker.url()}`).not.toBeNull();
-		// Registered before the close is sent: `closeTarget` acknowledges
-		// the request before destruction completes, so a listener added
-		// after it could miss the event. Three signals, first wins. The
-		// close event is definitive but unreliable in this harness — measured
-		// locally, no event within 10 s of a kill whose evaluate already
-		// rejects — so the rejection stays as the signal that actually
-		// fires here. An "alive" answer proves nothing either way (shutdown
-		// may still be in progress), so it defers to the close event rather
-		// than failing. The 10 s bound is a failure limit, not a wait for
-		// state: without it a pended evaluate consumes the 30 s test
-		// timeout with no diagnostic, as observed on hosted runners.
-		const stopped = new Promise<void>((resolve) => {
-			worker.once("close", () => resolve());
+		// The tab is live but the worker remembers no document for it: a slow
+		// start under load missed `onCommitted`, and no navigation follows to
+		// re-fire it. Release run 38681385339 failed all seven consequential
+		// cases this way — every call threw "no document identity" for the
+		// rest of the file. The worker asks the browser for the frame instead
+		// of refusing a call a person could approve.
+		//
+		// Driven through the test hook rather than by killing the worker:
+		// a debugger-protocol kill reproduces this locally but never settles
+		// on hosted runners (no close event, and an evaluate that pends
+		// rather than rejecting), so the kill-based version of this test
+		// hung there twice. The state under test is identical either way —
+		// a live tab, an empty record — and only that state is what the
+		// fallback reads.
+		await worker.evaluate(() => {
+			const scope = globalThis as unknown as Record<string, unknown>;
+			(
+				scope["__axTestForgetDocuments"] as () => void
+			)();
 		});
-		if (targetId !== null) {
-			await session.send("Target.closeTarget", { targetId });
-		}
-		await session.detach();
-		await Promise.race([
-			stopped,
-			worker
-				.evaluate(() => "alive")
-				.then(
-					() => stopped,
-					() => {},
-				),
-			new Promise<void>((_, reject) => {
-				setTimeout(() => {
-					reject(new Error("worker did not stop after closeTarget"));
-				}, 10_000);
-			}),
-		]);
-		// The worker stays stopped until something wakes it. A person opening
-		// the panel is what does: its first read wakes the worker, whose top
-		// level re-runs with empty memory. The wake comes from a panel tab,
-		// never the fixture page — a navigation there would re-fire
-		// `onCommitted` and defeat the test. The panel's first read also
-		// proves the revived top level ran to completion: the disclaimer only
-		// arrives via a worker round-trip.
-		const wake = await openPanel();
-		await panelText(wake);
-		await wake.close();
-		const current = context.serviceWorkers();
-		expect(current).toHaveLength(1);
-		const next = current[0];
-		if (next !== undefined) {
-			worker = next;
-		}
-		extensionId = new URL(worker.url()).host;
 
 		const first = await pay(500);
 		expect(first.ok).toBe(true);
