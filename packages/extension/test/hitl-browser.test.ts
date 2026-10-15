@@ -139,6 +139,45 @@ async function openPanel(): Promise<Page> {
 }
 
 /**
+ * The debugger-protocol target id of this extension's service worker, or
+ * null when the browser reports none.
+ *
+ * Read from `unknown` like every other boundary value: the protocol answers
+ * with JSON, and a shape change must refuse rather than kill the wrong
+ * target.
+ */
+function workerTargetId(listed: unknown): string | null {
+	if (typeof listed !== "object" || listed === null) {
+		return null;
+	}
+	const infos: unknown = (listed as Record<string, unknown>)["targetInfos"];
+	if (!Array.isArray(infos)) {
+		return null;
+	}
+	const prefix = `chrome-extension://${extensionId}/`;
+	for (const entry of infos) {
+		if (typeof entry !== "object" || entry === null) {
+			continue;
+		}
+		const record = entry as Record<string, unknown>;
+		const targetId: unknown = record["targetId"];
+		const type: unknown = record["type"];
+		const url: unknown = record["url"];
+		if (
+			typeof targetId !== "string" ||
+			typeof type !== "string" ||
+			typeof url !== "string"
+		) {
+			continue;
+		}
+		if (type === "service_worker" && url.startsWith(prefix)) {
+			return targetId;
+		}
+	}
+	return null;
+}
+
+/**
  * Answer a filed invocation the way a person clicking Approve would.
  *
  * Filing is the worker's own job now, so this only answers: the binding came
@@ -334,6 +373,19 @@ describe("consequential confirmation", () => {
 		// validated, so nothing here writes the text being approved.
 		const raised = await pay(900);
 		expect(raised.result?.["requiresConfirmation"]).toBe(true);
+		const binding = String(raised.result?.["pendingApproval"]);
+		// Wait for this invocation's card, not just any render: the panel
+		// re-reads on every change hint, and asserting on the first render
+		// after filing races the refresh under load. Measured on release run
+		// 38681385339, where the file took 25.7s and this read an empty panel.
+		await panel.waitForFunction(
+			(key: unknown) =>
+				[...document.querySelectorAll(".request")].some(
+					(card) => (card as HTMLElement).dataset["key"] === key,
+				),
+			binding,
+			{ timeout: 15_000 },
+		);
 		const cards = await shown(panel);
 		expect(cards.length).toBe(1);
 		expect(cards[0]?.toolName).toBe("payNow");
@@ -425,6 +477,14 @@ describe("consequential confirmation", () => {
 			},
 		);
 		expect(refused).toMatchObject({ ok: false });
+		// Nothing was filed, so the panel converges to empty once the clear
+		// above lands. Wait for that rather than reading the first render,
+		// which can still show a card from before the clear under load.
+		await panel.waitForFunction(
+			() => document.querySelectorAll(".request").length === 0,
+			undefined,
+			{ timeout: 15_000 },
+		);
 		expect(await shown(panel)).toHaveLength(0);
 		await panel.close();
 	});
@@ -515,7 +575,13 @@ describe("consequential confirmation", () => {
 		const panel = await openPanel();
 		await preparePanel(panel);
 		await clearPending();
-		// Nothing new is waiting: the ordinary call raised nothing.
+		// Nothing new is waiting: the ordinary call raised nothing. Wait for
+		// the clear to land rather than reading the first render.
+		await panel.waitForFunction(
+			() => document.querySelectorAll(".request").length === 0,
+			undefined,
+			{ timeout: 15_000 },
+		);
 		expect(await shown(panel)).toHaveLength(0);
 		await panel.close();
 	});
@@ -538,5 +604,69 @@ describe("consequential confirmation", () => {
 		expect(text).toMatch(/no integrity guarantee/i);
 		expect(text).not.toMatch(/tamper.?proof/i);
 		await panel.close();
+	});
+
+	it("re-learns the document after a worker restart with no new navigation", async () => {
+		await clearPending();
+		// A Manifest V3 worker is stopped when idle and revived on demand. The
+		// revival re-runs the worker top level with empty memory: the commit
+		// record is gone, and no navigation follows to re-fire `onCommitted`
+		// for this tab. The worker asks the browser for the frame instead of
+		// refusing a call a person could approve. Release run 38681385339
+		// failed all seven consequential cases this way: a slow start under
+		// load missed the commit, and every call threw "no document identity"
+		// for the rest of the file.
+		// Stopped through the debugger protocol, which is what an idle stop
+		// is: the extension stays enabled and the tabs stay open, so the only
+		// thing lost is the worker's memory. (`chrome.runtime.reload` was
+		// tried first: it leaves the extension mid-reload, and opening the
+		// wake panel then fails with ERR_BLOCKED_BY_CLIENT. The context's
+		// `serviceworker` event does not fire for this revival either, so
+		// the current worker object is re-read from the list instead of
+		// awaited as an event.)
+		const session = await context.newCDPSession(page);
+		const listed: unknown = await session.send("Target.getTargets", {});
+		const targetId = workerTargetId(listed);
+		expect(targetId).not.toBeNull();
+		if (targetId !== null) {
+			await session.send("Target.closeTarget", { targetId });
+		}
+		await session.detach();
+		const death = await worker
+			.evaluate(() => "alive")
+			.then(
+				() => "alive",
+				() => "dead",
+			);
+		// The stop really happened: without it this test would pass against
+		// a worker that still knows the document, proving nothing.
+		expect(death).toBe("dead");
+		// The worker stays stopped until something wakes it. A person opening
+		// the panel is what does: its first read wakes the worker, whose top
+		// level re-runs with empty memory. The wake comes from a panel tab,
+		// never the fixture page — a navigation there would re-fire
+		// `onCommitted` and defeat the test. The panel's first read also
+		// proves the revived top level ran to completion: the disclaimer only
+		// arrives via a worker round-trip.
+		const wake = await openPanel();
+		await panelText(wake);
+		await wake.close();
+		const current = context.serviceWorkers();
+		expect(current).toHaveLength(1);
+		const next = current[0];
+		if (next !== undefined) {
+			worker = next;
+		}
+		extensionId = new URL(worker.url()).host;
+
+		const first = await pay(500);
+		expect(first.ok).toBe(true);
+		expect(first.result?.["requiresConfirmation"]).toBe(true);
+		const binding = String(first.result?.["pendingApproval"]);
+		expect(binding.length).toBeGreaterThan(0);
+		await approveInvocation(binding);
+		const second = await pay(500);
+		expect(second.ok).toBe(true);
+		expect(second.result).toEqual(JSON.stringify({ paid: 500 }));
 	});
 });

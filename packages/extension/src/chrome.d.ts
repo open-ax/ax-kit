@@ -141,7 +141,12 @@ interface AxWebNavigation {
 	getFrame(details: {
 		tabId: number;
 		frameId: number;
-		documentId: string;
+		/**
+		 * Omitted to ask the browser which document the frame holds now,
+		 * rather than to check one already held. The answer is the browser's
+		 * own record, not anything the caller supplied.
+		 */
+		documentId?: string;
 	}): Promise<unknown>;
 }
 
