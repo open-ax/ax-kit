@@ -47,20 +47,58 @@ not reached:
   input-required-result-ignore-extra-params
   input-required-result-validate-input
 
-MEASURED RESULT
+WHAT THE SUITE REPORTED, per scenario
 
-Every scenario above was refused with HTTP 403. This daemon requires
-the x-ax-bearer header and the suite has no way to send one:
-`conformance server --help` offers no header, auth or bearer option.
+Quoted from the suite's own checks.json, not summarised. This is the
+evidence for the finding: every refusal is the bearer gate, not a
+protocol violation.
 
-That is the finding, not a protocol violation and not a defect here.
-The bearer is what stops a web page on the machine from reaching the
-daemon, so it stays. No conformance claim about MCP rests on this run:
-what it establishes is the coverage and the shape of the gap.
-
-Closing it needs the suite to grow a way to send credentials.
-
+  completion-complete
+      FAILURE: Failed: HTTP 403: expected a JSON-RPC result for 'completion/complete', got non-JSON body (content-type text/plain)
+  dns-rebinding-protection
+      FAILURE: Expected HTTP 2xx for valid localhost Host/Origin headers, got 403
+  prompts-get-embedded-resource
+      FAILURE: Failed: HTTP 403: expected a JSON-RPC result for 'prompts/get', got non-JSON body (content-type text/plain)
+  prompts-get-simple
+      FAILURE: Failed: HTTP 403: expected a JSON-RPC result for 'prompts/get', got non-JSON body (content-type text/plain)
+  prompts-get-with-args
+      FAILURE: Failed: HTTP 403: expected a JSON-RPC result for 'prompts/get', got non-JSON body (content-type text/plain)
+  prompts-get-with-image
+      FAILURE: Failed: HTTP 403: expected a JSON-RPC result for 'prompts/get', got non-JSON body (content-type text/plain)
+  prompts-list
+      FAILURE: Failed: HTTP 403: expected a JSON-RPC result for 'prompts/list', got non-JSON body (content-type text/plain)
+  resources-list
+      FAILURE: Failed: HTTP 403: expected a JSON-RPC result for 'resources/list', got non-JSON body (content-type text/plain)
+  resources-read-binary
+      FAILURE: Failed: HTTP 403: expected a JSON-RPC result for 'resources/read', got non-JSON body (content-type text/plain)
+  resources-read-text
+      FAILURE: Failed: HTTP 403: expected a JSON-RPC result for 'resources/read', got non-JSON body (content-type text/plain)
+  resources-templates-read
+      FAILURE: Failed: HTTP 403: expected a JSON-RPC result for 'resources/read', got non-JSON body (content-type text/plain)
+  server-sse-multiple-streams
+      FAILURE: Server rejected some requests. Statuses: 403, 403, 403
+  tools-call-audio
+      FAILURE: Failed: HTTP 403: expected a JSON-RPC result for 'tools/call', got non-JSON body (content-type text/plain)
+  tools-call-embedded-resource
+      FAILURE: Failed: HTTP 403: expected a JSON-RPC result for 'tools/call', got non-JSON body (content-type text/plain)
+  tools-call-error
+      FAILURE: Failed: HTTP 403: expected a JSON-RPC result for 'tools/call', got non-JSON body (content-type text/plain)
+  tools-call-image
+      FAILURE: Failed: HTTP 403: expected a JSON-RPC result for 'tools/call', got non-JSON body (content-type text/plain)
+  tools-call-mixed-content
+      FAILURE: Failed: HTTP 403: expected a JSON-RPC result for 'tools/call', got non-JSON body (content-type text/plain)
+  tools-call-simple-text
+      FAILURE: Failed: HTTP 403: expected a JSON-RPC result for 'tools/call', got non-JSON body (content-type text/plain)
+  tools-call-with-progress
+      FAILURE: Failed: HTTP 403: expected a JSON-RPC result for 'tools/call', got non-JSON body (content-type text/plain)
+  tools-list
+      FAILURE: Failed: HTTP 403: expected a JSON-RPC result for 'tools/list', got non-JSON body (content-type text/plain)
 The daemon under test is the shipped listener with a provider behind
 it, not a live browser. This suite checks the protocol surface an MCP
 client talks to. The page behind that surface is covered by the
 browser suites in this package.
+
+WHY, and why nothing is changed about it, is in the pull request and
+in packages/daemon/test/protocol-conformance.test.ts's header. It is
+not repeated here, because a generated file that restates a conclusion
+keeps restating it after the conclusion stops being true.
