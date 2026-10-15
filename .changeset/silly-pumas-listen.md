@@ -8,12 +8,16 @@ Follow the 15 October 2026 draft.
   every failing target collapsed into `NotFoundError`, so a target that had been
   removed from its navigable was reported as a missing tool - a different fact,
   and one a caller could act on wrongly.
-- `registerTool` re-checks, immediately before writing the tool, that the
-  document is still fully active and that the name is still free. Everything
-  between the opening gate and that write reads a caller-supplied object -
-  the schema's `toJSON`, `title`, `execute`, `annotations`, `signal`,
-  `exposedTo` - and each can run page script. Without the re-checks a
-  registration could silently overwrite one made during its own conversion.
+- `registerTool` re-checks, before writing the tool, that the document is still
+  fully active and that the name is still free. Everything between the opening
+  gate and that write reads a caller-supplied object - the schema's `toJSON`,
+  `title`, `execute`, `annotations`, `signal`, `exposedTo`, and the signal's own
+  `addEventListener` - and each can run page script. Without the re-checks a
+  registration could silently overwrite one made during its own conversion. The
+  re-checks run twice: once where the draft places them, so that a name squatted
+  during serialization reports `InvalidStateError` rather than the abort reason
+  of a signal that same script aborted, and once as the last thing before the
+  write, so nothing caller-controlled runs inside the window they guard.
 - The abort listener is attached before those re-checks rather than after them.
   Signal validation duck-types rather than testing the prototype, so
   `addEventListener` is a method the caller supplied and calling it runs caller

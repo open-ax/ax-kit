@@ -340,6 +340,31 @@ function collectVisibleDocs(top: Document): VisibleDoc[] {
 	return visible;
 }
 
+/**
+ * The draft's post-serialization re-checks: the owning document must still be
+ * fully active, and the name must still be free. Neither is defence against a
+ * hypothetical - `JSON.stringify` runs a `toJSON` that `checkSchemaNode` cannot
+ * see, and everything read after it is a caller getter, so either fact can
+ * change underneath a registration that has already passed the gate.
+ *
+ * Called twice, because the draft's position and this implementation's
+ * stronger one disagree, and each answers a different question. After
+ * serialization, where the draft puts it, so that a squatted name reports
+ * `InvalidStateError` rather than the abort reason of a signal aborted by the
+ * same script. And as the last thing before the write, so that no caller getter
+ * and no caller-supplied `addEventListener` can run inside the window.
+ */
+function recheckRegistration(
+	owner: Document,
+	name: string,
+	state: DocumentState,
+): void {
+	if (!isFullyActive(owner)) {
+		throw invalidState("inactive document");
+	}
+	checkName(name, state.tools);
+}
+
 export class ModelContextImpl extends EventTarget implements ModelContext {
 	#document: Document;
 	#onToolChange: ModelEventHandler = null;
@@ -421,6 +446,12 @@ export class ModelContextImpl extends EventTarget implements ModelContext {
 
 		const schemaJson = serializeInputSchema(input.inputSchema);
 
+		// The draft's post-serialization re-checks, at the draft's position: before
+		// `options.signal` is read, so that a signal aborted by the same script
+		// reports the state rather than the abort reason. See
+		// `recheckRegistration`.
+		recheckRegistration(owner, name, state);
+
 		const rawTitle: unknown = input.title;
 		const title = rawTitle === undefined ? null : toUSVString(rawTitle);
 
@@ -475,14 +506,7 @@ export class ModelContextImpl extends EventTarget implements ModelContext {
 		// can run page script. A check placed anywhere earlier is satisfiable by
 		// script that runs after it, which is the bug rather than a near miss.
 		try {
-			if (!isFullyActive(owner)) {
-				throw invalidState("inactive document");
-			}
-			// `checkName` already owns the duplicate-name rule and its message.
-			// Calling it rather than restating the rule leaves one place that decides
-			// it, and `name` was validated moments ago so only the duplicate branch
-			// can fire here.
-			checkName(name, state.tools);
+			recheckRegistration(owner, name, state);
 		} catch (error) {
 			removeRegAbort?.();
 			throw error;
