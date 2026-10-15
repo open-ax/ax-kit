@@ -452,9 +452,11 @@ export class ModelContextImpl extends EventTarget implements ModelContext {
 		if (!isFullyActive(owner)) {
 			throw invalidState("inactive document");
 		}
-		if (state.tools.has(name)) {
-			throw invalidState(`duplicate tool ${name}`);
-		}
+		// `checkName` already owns the duplicate-name rule and its message.
+		// Calling it rather than restating the rule leaves one place that decides
+		// it, and `name` was validated moments ago so only the duplicate branch
+		// can fire here.
+		checkName(name, state.tools);
 
 		// Attached only once the registration is known to be accepted. A listener
 		// added before this point would outlive a rejection, holding the document,
@@ -569,6 +571,15 @@ export class ModelContextImpl extends EventTarget implements ModelContext {
 
 		if (topDocument(caller) !== topDocument(target)) {
 			throw invalidState("foreign tool target");
+		}
+
+		// Upstream #337, 13 October 2026. A target with no window proxy has been
+		// removed from its navigable, so there is nothing left to dispatch into.
+		// Checked here, before the eligibility re-check below, which collapses a
+		// failed target into `NotFoundError`; collapsing this one would report a
+		// detached target as a missing tool, which is a different fact.
+		if (!isFullyActive(target)) {
+			throw invalidState("detached tool target");
 		}
 
 		// Authority can change after registration: re-check the target's
