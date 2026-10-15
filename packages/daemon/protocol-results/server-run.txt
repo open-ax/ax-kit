@@ -6,68 +6,68 @@ $ echo $?
 1
 
 --- stdout (verbatim) ---
-Running active suite (20 scenarios) against http://127.0.0.1:52670/mcp
+Running active suite (20 scenarios) against http://127.0.0.1:62346/mcp
 
 
 === Running scenario: completion-complete ===
-Running client scenario 'completion-complete' against server: http://127.0.0.1:52670/mcp
+Running client scenario 'completion-complete' against server: http://127.0.0.1:62346/mcp
 
 === Running scenario: tools-list ===
-Running client scenario 'tools-list' against server: http://127.0.0.1:52670/mcp
+Running client scenario 'tools-list' against server: http://127.0.0.1:62346/mcp
 
 === Running scenario: tools-call-simple-text ===
-Running client scenario 'tools-call-simple-text' against server: http://127.0.0.1:52670/mcp
+Running client scenario 'tools-call-simple-text' against server: http://127.0.0.1:62346/mcp
 
 === Running scenario: tools-call-image ===
-Running client scenario 'tools-call-image' against server: http://127.0.0.1:52670/mcp
+Running client scenario 'tools-call-image' against server: http://127.0.0.1:62346/mcp
 
 === Running scenario: tools-call-audio ===
-Running client scenario 'tools-call-audio' against server: http://127.0.0.1:52670/mcp
+Running client scenario 'tools-call-audio' against server: http://127.0.0.1:62346/mcp
 
 === Running scenario: tools-call-embedded-resource ===
-Running client scenario 'tools-call-embedded-resource' against server: http://127.0.0.1:52670/mcp
+Running client scenario 'tools-call-embedded-resource' against server: http://127.0.0.1:62346/mcp
 
 === Running scenario: tools-call-mixed-content ===
-Running client scenario 'tools-call-mixed-content' against server: http://127.0.0.1:52670/mcp
+Running client scenario 'tools-call-mixed-content' against server: http://127.0.0.1:62346/mcp
 
 === Running scenario: tools-call-error ===
-Running client scenario 'tools-call-error' against server: http://127.0.0.1:52670/mcp
+Running client scenario 'tools-call-error' against server: http://127.0.0.1:62346/mcp
 
 === Running scenario: tools-call-with-progress ===
-Running client scenario 'tools-call-with-progress' against server: http://127.0.0.1:52670/mcp
+Running client scenario 'tools-call-with-progress' against server: http://127.0.0.1:62346/mcp
 
 === Running scenario: server-sse-multiple-streams ===
-Running client scenario 'server-sse-multiple-streams' against server: http://127.0.0.1:52670/mcp
+Running client scenario 'server-sse-multiple-streams' against server: http://127.0.0.1:62346/mcp
 
 === Running scenario: resources-list ===
-Running client scenario 'resources-list' against server: http://127.0.0.1:52670/mcp
+Running client scenario 'resources-list' against server: http://127.0.0.1:62346/mcp
 
 === Running scenario: resources-read-text ===
-Running client scenario 'resources-read-text' against server: http://127.0.0.1:52670/mcp
+Running client scenario 'resources-read-text' against server: http://127.0.0.1:62346/mcp
 
 === Running scenario: resources-read-binary ===
-Running client scenario 'resources-read-binary' against server: http://127.0.0.1:52670/mcp
+Running client scenario 'resources-read-binary' against server: http://127.0.0.1:62346/mcp
 
 === Running scenario: resources-templates-read ===
-Running client scenario 'resources-templates-read' against server: http://127.0.0.1:52670/mcp
+Running client scenario 'resources-templates-read' against server: http://127.0.0.1:62346/mcp
 
 === Running scenario: prompts-list ===
-Running client scenario 'prompts-list' against server: http://127.0.0.1:52670/mcp
+Running client scenario 'prompts-list' against server: http://127.0.0.1:62346/mcp
 
 === Running scenario: prompts-get-simple ===
-Running client scenario 'prompts-get-simple' against server: http://127.0.0.1:52670/mcp
+Running client scenario 'prompts-get-simple' against server: http://127.0.0.1:62346/mcp
 
 === Running scenario: prompts-get-with-args ===
-Running client scenario 'prompts-get-with-args' against server: http://127.0.0.1:52670/mcp
+Running client scenario 'prompts-get-with-args' against server: http://127.0.0.1:62346/mcp
 
 === Running scenario: prompts-get-embedded-resource ===
-Running client scenario 'prompts-get-embedded-resource' against server: http://127.0.0.1:52670/mcp
+Running client scenario 'prompts-get-embedded-resource' against server: http://127.0.0.1:62346/mcp
 
 === Running scenario: prompts-get-with-image ===
-Running client scenario 'prompts-get-with-image' against server: http://127.0.0.1:52670/mcp
+Running client scenario 'prompts-get-with-image' against server: http://127.0.0.1:62346/mcp
 
 === Running scenario: dns-rebinding-protection ===
-Running client scenario 'dns-rebinding-protection' against server: http://127.0.0.1:52670/mcp
+Running client scenario 'dns-rebinding-protection' against server: http://127.0.0.1:62346/mcp
 
 
 === SUMMARY ===

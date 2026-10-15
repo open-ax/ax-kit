@@ -47,6 +47,7 @@
  */
 
 import { spawn } from "node:child_process";
+import { readFileSync, rmSync } from "node:fs";
 import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -79,6 +80,38 @@ const SUITE_VERSION = "0.2.0-alpha.12";
 
 /** The MCP revision this daemon implements, and the only one it speaks. */
 const MCP_REVISION = "2026-07-28";
+
+/**
+ * The version actually installed, read rather than restated.
+ *
+ * `SUITE_VERSION` above is the claim; this is the thing the claim is checked
+ * against. Reading the dependency's own manifest is what makes the recorded pin
+ * an assertion rather than a comment — otherwise downgrading or bumping the
+ * dependency silently leaves the archive header stamping the old version over a
+ * run a different suite performed, which is the exact failure the constant
+ * exists to prevent.
+ */
+const INSTALLED_SUITE_VERSION = readInstalledSuiteVersion();
+
+function readInstalledSuiteVersion(): string {
+	// Resolved through the package's own entry point rather than by reaching for
+	// `node_modules` at a fixed depth, so the path does not depend on where this
+	// file sits relative to the workspace root.
+	const manifest = fileURLToPath(
+		import.meta.resolve("@modelcontextprotocol/conformance/package.json"),
+	);
+	const parsed: unknown = JSON.parse(readFileSync(manifest, "utf8"));
+	if (
+		typeof parsed !== "object" ||
+		parsed === null ||
+		typeof (parsed as { version?: unknown }).version !== "string"
+	) {
+		throw new Error(
+			"the conformance suite manifest does not declare a string version",
+		);
+	}
+	return (parsed as { version: string }).version;
+}
 
 /**
  * A provider with one tool, so the suite has something real to list and call.
@@ -136,13 +169,17 @@ function suite(args: string[]): Promise<Run> {
 /** Every server scenario the suite itself declares for this revision. */
 function declaredScenarios(stdout: string): string[] {
 	// The listing has a server section and a client section. Only the server
-	// section is this run's business, and it is cut at the heading rather than
-	// by counting entries. Each line carries the revisions it targets in
-	// brackets, and only the ones naming this revision are in scope.
-	const server = stdout.slice(
-		0,
-		Math.max(stdout.indexOf("Client scenarios"), stdout.length),
-	);
+	// section is this run's business, and it is cut at the heading. Each line
+	// carries the revisions it targets in brackets, and only the ones naming
+	// this revision are in scope.
+	//
+	// The cut is `idx < 0 ? length : idx` and not `Math.max`: `Math.max` picks
+	// the length whenever the heading is present, because the offset is smaller,
+	// which makes the slice a no-op and folds the client scenarios in. That
+	// inflated the recorded denominator from 40 to 75 and listed 35 scenarios a
+	// server run can never execute as coverage gaps.
+	const heading = stdout.indexOf("Client scenarios");
+	const server = stdout.slice(0, heading < 0 ? stdout.length : heading);
 	return [...server.matchAll(/^\s*-\s+(\S+)\s+\[([^\]]*)\]/gm)]
 		.filter((match) => match[2].split(",").includes(MCP_REVISION))
 		.map((match) => match[1]);
@@ -158,8 +195,14 @@ function reachedScenarios(run: Run): ReadonlySet<string> {
 	const seen = new Set<string>();
 	for (const line of `${run.stdout}\n${run.stderr}`.split(/\r?\n/)) {
 		// The suite prints one line per scenario with its verdict, e.g.
-		// `  ✔ tools-list (12ms)` or `  ✗ tools-call-error`.
-		const match = /^\s*[✔✗×✓]\s+([a-z0-9][a-z0-9-]*)/.exec(line);
+		// `✔ tools-list: 2 passed` or `✗ tools_call: 1 passed, 1 failed`.
+		//
+		// The name is captured as `\S+` and not as `[a-z0-9-]+` because scenario
+		// names carry `_` and `/` — `tools_call`, `auth/basic-cimd` — and a
+		// narrower pattern would truncate them to `tools` and `auth`. That would
+		// report a scenario as never reached in the same run that ran it, which
+		// is precisely what happens the day this endpoint stops refusing.
+		const match = /^\s*[✔✗×✓]\s+(\S+?):/.exec(line);
 		if (match !== null) {
 			seen.add(match[1]);
 		}
@@ -170,10 +213,12 @@ function reachedScenarios(run: Run): ReadonlySet<string> {
 let transport: Transport;
 let first: Run;
 let declared: string[];
+let discoveryDir: string;
 
 beforeAll(async () => {
+	discoveryDir = await mkdtemp(join(tmpdir(), "ax-mcp-conformance-"));
 	transport = await startTransport({
-		discoveryDir: await mkdtemp(join(tmpdir(), "ax-mcp-conformance-")),
+		discoveryDir,
 		// A bridge nobody pulls from, so the HTTP surface is exercised without a
 		// browser in the way and the run is the same on every machine.
 		bridge: new PageBridge(),
@@ -197,13 +242,33 @@ beforeAll(async () => {
 
 afterAll(async () => {
 	await transport?.close();
+	// Every other `mkdtemp` user in this package removes its directory; this one
+	// was the exception. On a clean close the directory is already empty, but a
+	// crash mid-run leaves `relay.json`, which carries the bearer.
+	rmSync(discoveryDir, { recursive: true, force: true });
 });
 
 describe(`MCP conformance suite ${SUITE_VERSION}`, () => {
-	it("declares server scenarios, so the run is not vacuous", () => {
-		expect(declared.length).toBeGreaterThan(20);
+	// The recorded pin is a claim; this is what makes it a check. Bump or
+	// downgrade the dependency and this fails instead of leaving the archive
+	// header stamping a version the run did not use.
+	it("is the version that is actually installed", () => {
+		expect(INSTALLED_SUITE_VERSION).toBe(SUITE_VERSION);
+	});
+
+	it("declares server scenarios for this revision, and no others", () => {
+		// An exact count, because the count is what `coverage.txt` publishes as
+		// the denominator. A `toBeGreaterThan` bound lets a parser that folds in
+		// the client section pass while reporting a wrong number — which is what
+		// this assertion replaced.
+		expect(declared.length).toBe(40);
 		expect(declared).toContain("tools-list");
 		expect(declared).toContain("tools-call-simple-text");
+		expect(declared).toContain("server-stateless");
+		// Client-side scenarios cannot appear here; the section cut is what keeps
+		// them out, and this is the assertion that would notice if it stopped.
+		expect(declared).not.toContain("tools_call");
+		expect(declared.some((name) => name.includes("/"))).toBe(false);
 	});
 
 	// The check that makes a green run mean something. Without it, a run that
@@ -215,7 +280,7 @@ describe(`MCP conformance suite ${SUITE_VERSION}`, () => {
 		expect(
 			[...reached],
 			`the suite never reached a tool method; reached: ${[...reached].join(", ")}`,
-		).toEqual(expect.arrayContaining(["tools-list"]));
+		).toEqual(expect.arrayContaining(["tools-list", "tools-call-simple-text"]));
 	});
 
 	it("is reproducible: a second run of the same version agrees", async () => {
