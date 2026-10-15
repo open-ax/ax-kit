@@ -421,23 +421,6 @@ export class ModelContextImpl extends EventTarget implements ModelContext {
 
 		const schemaJson = serializeInputSchema(input.inputSchema);
 
-		// Upstream #337 and #347, 13-15 October 2026. Serializing `inputSchema`
-		// runs `JSON.stringify`, which calls a `toJSON()` method and can therefore
-		// run script. That script can do two things the checks above have already
-		// passed: detach the owning document, and register a tool under this name.
-		//
-		// The schema walk rejects an *enumerable* function value, but a
-		// non-enumerable `toJSON` is invisible to it and still reached by
-		// `JSON.stringify`, so both re-checks below are reachable rather than
-		// defensive. Without them a registration can silently overwrite one made
-		// during its own serialization.
-		if (!isFullyActive(owner)) {
-			throw invalidState("inactive document");
-		}
-		if (state.tools.has(name)) {
-			throw invalidState(`duplicate tool ${name}`);
-		}
-
 		const rawTitle: unknown = input.title;
 		const title = rawTitle === undefined ? null : toUSVString(rawTitle);
 
@@ -481,6 +464,26 @@ export class ModelContextImpl extends EventTarget implements ModelContext {
 			exposedOrigins,
 			cleanup: removeRegAbort,
 		};
+
+		// Upstream #337 and #347, 13-15 October 2026: re-check, immediately before
+		// the write, that the owning document is still fully active and that the
+		// name is still free.
+		//
+		// The placement is the whole point. Everything between the gate at the top
+		// of this method and this point reads a caller-supplied object — the
+		// schema's `toJSON`, `title`, `execute`, `annotations`, `signal`,
+		// `exposedTo` — and each of those can run page script. A check placed
+		// after serialization but before them would still be satisfiable by script
+		// that runs afterwards. Placed here it is the first statement after the
+		// last script-running read, so no caller-supplied code runs between it and
+		// the write it guards.
+		if (!isFullyActive(owner)) {
+			throw invalidState("inactive document");
+		}
+		if (state.tools.has(name)) {
+			throw invalidState(`duplicate tool ${name}`);
+		}
+
 		state.tools.set(name, record);
 
 		notifyToolChange(owner, exposedOrigins);

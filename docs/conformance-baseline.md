@@ -73,13 +73,24 @@ Pinned revision: **`fe52996d4465f23617bce91927bdd58e6ce8f541`**, recorded in
 2026-09-30 — the same change, on the same day, as the previous
 `SPEC_VERSION.commit` `d61d0e6` in the proposal repository.
 
-The suite has not yet caught up to the 9 October draft: no WPT commit names
-the execution-error taxonomy (#339) or the declarative removal (#338), and
-`master` still asserts `UnknownError` where the draft now requires
-`NotFoundError`, `DataError`, `OperationError`, and `AbortError`. The pin
-stays until a suite revision carries the same change; until then, the lag is
-recorded as `upstream-gap` entries in the expected-failure lists, not as a
-reason to hold the implementation to a superseded draft.
+The suite has not caught up to the 15 October draft, and moving it forward is
+now actively unsafe rather than merely premature. Two reasons, both verified
+2026-10-15 and recorded in `docs/adr/0011`:
+
+- No WPT commit names the execution-error taxonomy (#339), the declarative
+  removal (#338), or the post-serialization re-checks (#337, #345, #347), so
+  the lag persists and is recorded as `upstream-gap` entries.
+- WPT `master` (`3a3a022`) is ahead of the draft in one place and behind it in
+  another. It reverts *"Re-check for a duplicate tool name after serializing
+  inputSchema"* (`91d7226`), blaming it for a Chromium build failure, so it no
+  longer tests what #347 added. And `15e7837` *"Introduce the `Tool` interface
+  object"* plus `626f5bf` add tests for a `Tool` interface and a declarative
+  name-collision API that the 15 October draft does not contain.
+
+Adopting either end would make the published conformance number describe a
+specification this implementation does not target. The pin stays until a suite
+revision carries the same change as the draft it would be paired with; until
+then, the lag is recorded rather than papered over.
 
 How to obtain it, so it is not rediscovered:
 
