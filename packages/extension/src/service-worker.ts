@@ -370,6 +370,46 @@ function liveDocument(
 }
 
 /**
+ * Re-learn the browser's document identity for a frame when the commit
+ * record has nothing for it.
+ *
+ * The record is in-memory, so a worker that started after the commit has
+ * nothing in it: a slow start under load, or a revival after an idle stop
+ * with no navigation since to re-fire `onCommitted`. The browser still
+ * knows, so ask it for the frame rather than refusing a call a person could
+ * approve. The answer is the browser's own record — the same source the
+ * commit listener copies — never anything the caller supplied, so the
+ * binding loses nothing by it. A frame the browser will not confirm returns
+ * null, which fails closed at the call site exactly as a cache miss does.
+ */
+async function readFrameDocument(
+	tabId: number,
+	frameId: number,
+): Promise<{ documentId: string; lifecycle: string } | null> {
+	let frame: unknown;
+	try {
+		frame = await chrome.webNavigation.getFrame({ tabId, frameId });
+	} catch {
+		return null;
+	}
+	if (typeof frame !== "object" || frame === null) {
+		return null;
+	}
+	const record = frame as Record<string, unknown>;
+	const { documentId, documentLifecycle } = record;
+	if (typeof documentId !== "string" || documentId.length === 0) {
+		return null;
+	}
+	const seen = {
+		documentId,
+		lifecycle:
+			typeof documentLifecycle === "string" ? documentLifecycle : "active",
+	};
+	documents.set(frameKey(tabId, frameId), seen);
+	return seen;
+}
+
+/**
  * Ask the browser whether these three still name one live document.
  *
  * This is the anti-replay gate, and it is the browser's answer rather than a
@@ -531,7 +571,13 @@ async function handle(request: InjectionRequest): Promise<unknown> {
 		// the request. A caller that named its own `documentId` would be choosing
 		// the target its approval applies to, which is the one thing the binding
 		// exists to prevent.
-		const live = liveDocument(tabId, frameId);
+		//
+		// The record is only a cache: a worker that started after the commit —
+		// measured on release run 38681385339, where a slow start under load
+		// missed it and every consequential call threw for the rest of the
+		// run — re-learns the frame from the browser rather than refusing.
+		const live =
+			liveDocument(tabId, frameId) ?? (await readFrameDocument(tabId, frameId));
 		if (live === null) {
 			throw new TypeError(
 				"no document identity is known for this frame, so nothing can be approved against it",
