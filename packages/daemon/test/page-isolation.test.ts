@@ -145,6 +145,14 @@ beforeAll(async () => {
 		},
 	});
 	fixture = createServer((request, response) => {
+		if (request.url === "/echo-origin") {
+			// What the server received, not what the page claims it sent.
+			// A forged `Origin` is a forbidden header: the browser replaces
+			// it with the page's own before it reaches the wire.
+			response.writeHead(200, { "content-type": "text/plain" });
+			response.end(request.headers.origin ?? "");
+			return;
+		}
 		if (request.url === "/health") {
 			response.writeHead(200, { "content-type": "text/plain" });
 			response.end("ok");
@@ -278,12 +286,11 @@ describe("a page against the daemon listener", () => {
 	});
 
 	it("does not let a page present the extension's origin", async () => {
-		// If the forged `Origin` reached the listener, the gate admits
-		// extension origins and the preflight would pass. It does not pass,
-		// so the header never survived the page: `Origin` is a forbidden
-		// header and a page cannot construct a request carrying anyone's but
-		// its own. Which of the two the ticket allows is recorded here — it is
-		// the second: not something a page can construct at all.
+		// Two halves, deliberately separated. The socket half proves what the
+		// listener does with a presented origin; the page half proves the
+		// forged value never reaches it. `Origin` is a forbidden header: the
+		// browser sends its own, so the rejection below is the preflight never
+		// passing, not the listener seeing the forgery and refusing it.
 		const page = await openPage(
 			`http://${FOREIGN_HOST}:${String(fixturePort)}/`,
 		);
@@ -291,11 +298,46 @@ describe("a page against the daemon listener", () => {
 			if (transport === undefined) {
 				throw new TypeError("transport did not start");
 			}
+			const daemonPort = transport.port;
+			// Listener-level: a genuinely presented extension origin is
+			// admitted, so the gate is not what stops the page.
+			const presented = await fetch(
+				`http://127.0.0.1:${String(daemonPort)}/pull`,
+				{
+					headers: {
+						Origin: EXTENSION_ORIGIN,
+						"x-ax-bearer": transport.bearer,
+					},
+				},
+			);
+			expect(presented.status).toBe(204);
+			await presented.text().catch(() => {});
+			// Listener-level: a foreign origin with the same bearer is refused.
+			const foreign = await fetch(
+				`http://127.0.0.1:${String(daemonPort)}/pull`,
+				{
+					headers: {
+						Origin: `http://${FOREIGN_HOST}:${String(fixturePort)}`,
+						"x-ax-bearer": transport.bearer,
+					},
+				},
+			);
+			expect(foreign.status).toBe(403);
+			await foreign.text().catch(() => {});
 			const outcome = await fetchInPage(page, {
 				bearer: transport.bearer,
 				forgeOrigin: EXTENSION_ORIGIN,
 			});
 			expect(outcome.rejected).toBe(true);
+			// Browser-level: the forged value never left the page.
+			const seen = await page.evaluate(async (forged: string) => {
+				const response = await fetch("/echo-origin", {
+					method: "POST",
+					headers: { Origin: forged },
+				});
+				return await response.text();
+			}, EXTENSION_ORIGIN);
+			expect(seen).not.toBe(EXTENSION_ORIGIN);
 		} finally {
 			await page.close();
 		}
