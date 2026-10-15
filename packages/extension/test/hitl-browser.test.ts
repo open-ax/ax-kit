@@ -632,15 +632,33 @@ describe("consequential confirmation", () => {
 			await session.send("Target.closeTarget", { targetId });
 		}
 		await session.detach();
-		const death = await worker
-			.evaluate(() => "alive")
-			.then(
-				() => "alive",
-				() => "dead",
-			);
 		// The stop really happened: without it this test would pass against
-		// a worker that still knows the document, proving nothing.
-		expect(death).toBe("dead");
+		// a worker that still knows the document, proving nothing. Waited on
+		// the worker's own close event, with the evaluate rejection as the
+		// second signal: on hosted runners an evaluate against the dead
+		// worker pends rather than rejecting, which consumed the whole 30 s
+		// test timeout with no diagnostic. The 10 s bound is a failure
+		// limit, not a wait for state — whichever signal fires first wins,
+		// and a worker that never stops fails here instead of hanging.
+		const stopped = new Promise<void>((resolve) => {
+			worker.once("close", () => resolve());
+		});
+		await Promise.race([
+			stopped,
+			worker
+				.evaluate(() => "alive")
+				.then(
+					() => {
+						throw new Error("worker is still alive after closeTarget");
+					},
+					() => {},
+				),
+			new Promise<void>((_, reject) => {
+				setTimeout(() => {
+					reject(new Error("worker did not stop after closeTarget"));
+				}, 10_000);
+			}),
+		]);
 		// The worker stays stopped until something wakes it. A person opening
 		// the panel is what does: its first read wakes the worker, whose top
 		// level re-runs with empty memory. The wake comes from a panel tab,
