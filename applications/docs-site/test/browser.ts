@@ -234,6 +234,23 @@ describe("the built site", () => {
 			page.on("requestfailed", (request) => {
 				failed.push(request.url());
 			});
+			/**
+			 * Console errors and uncaught page errors, kept for the failure
+			 * message below. A stalled search otherwise reports only that the
+			 * summary never arrived, which cannot tell a backend that failed to
+			 * load from one that was merely slow. Recording these costs nothing
+			 * on a pass.
+			 */
+			const consoleErrors: string[] = [];
+			page.on("console", (message) => {
+				if (message.type() === "error") {
+					consoleErrors.push(message.text());
+				}
+			});
+			const pageErrors: string[] = [];
+			page.on("pageerror", (error) => {
+				pageErrors.push(String(error));
+			});
 
 			await page.goto(`${ORIGIN}/`, { waitUntil: "load" });
 
@@ -265,9 +282,29 @@ describe("the built site", () => {
 			// strong reads as a stronger test than it is: the claim under test is
 			// where a *query* goes, and by the time results are rendered the query
 			// has already been sent.
-			await expect(searchSummary).toContainText(/\d+ results? for/i, {
-				timeout: 15_000,
-			});
+			//
+			// The wait is 30 seconds, not 15. Measured locally the search answers
+			// ~0.4 s after the query is submitted (three consecutive runs), and
+			// the 15 s cliff still timed out twice on CI's shared runners with
+			// the summary stuck at "Searching for polyfill..." — the backend
+			// (pagefind.js import, WASM compile, index fetch) had not answered
+			// yet, not necessarily failed. 30 s is twice the old cliff and ~75x
+			// the local measurement, and it is the longest wait that still fits
+			// the 45 s per-test timeout this suite configures. A genuinely
+			// broken index fails here either way; the poll carries the page's
+			// own errors in its received value so that failure says which of
+			// the two it was.
+			await expect
+				.poll(
+					async () =>
+						[
+							(await searchSummary.textContent()) ?? "",
+							...pageErrors,
+							...consoleErrors,
+						].join("\n"),
+					{ timeout: 30_000 },
+				)
+				.toMatch(/\d+ results? for/i);
 
 			expect(
 				requested.length,
