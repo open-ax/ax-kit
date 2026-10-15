@@ -628,29 +628,30 @@ describe("consequential confirmation", () => {
 		const listed: unknown = await session.send("Target.getTargets", {});
 		const targetId = workerTargetId(listed);
 		expect(targetId).not.toBeNull();
+		// Registered before the close is sent: `closeTarget` acknowledges
+		// the request before destruction completes, so a listener added
+		// after it could miss the event. Three signals, first wins. The
+		// close event is definitive but unreliable in this harness — measured
+		// locally, no event within 10 s of a kill whose evaluate already
+		// rejects — so the rejection stays as the signal that actually
+		// fires here. An "alive" answer proves nothing either way (shutdown
+		// may still be in progress), so it defers to the close event rather
+		// than failing. The 10 s bound is a failure limit, not a wait for
+		// state: without it a pended evaluate consumes the 30 s test
+		// timeout with no diagnostic, as observed on hosted runners.
+		const stopped = new Promise<void>((resolve) => {
+			worker.once("close", () => resolve());
+		});
 		if (targetId !== null) {
 			await session.send("Target.closeTarget", { targetId });
 		}
 		await session.detach();
-		// The stop really happened: without it this test would pass against
-		// a worker that still knows the document, proving nothing. Waited on
-		// the worker's own close event, with the evaluate rejection as the
-		// second signal: on hosted runners an evaluate against the dead
-		// worker pends rather than rejecting, which consumed the whole 30 s
-		// test timeout with no diagnostic. The 10 s bound is a failure
-		// limit, not a wait for state — whichever signal fires first wins,
-		// and a worker that never stops fails here instead of hanging.
-		const stopped = new Promise<void>((resolve) => {
-			worker.once("close", () => resolve());
-		});
 		await Promise.race([
 			stopped,
 			worker
 				.evaluate(() => "alive")
 				.then(
-					() => {
-						throw new Error("worker is still alive after closeTarget");
-					},
+					() => stopped,
 					() => {},
 				),
 			new Promise<void>((_, reject) => {
