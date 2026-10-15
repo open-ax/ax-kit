@@ -21,9 +21,10 @@ change as the conformance baseline and the drift baseline. The draft's
 interface definitions are byte-identical across the range, verified by
 extracting and comparing every IDL block. See `docs/adr/0011`.
 
-The draft also adds re-checks to `registerTool` after `inputSchema`
-serialization, for script that a `toJSON()` method can run. Those were
-implemented too: the schema walk rejects an *enumerable* function value, but a
-non-enumerable `toJSON` is invisible to it and still reached by
-`JSON.stringify`. Without the re-checks, a registration could silently
-overwrite one made during its own serialization. See `docs/adr/0011`.
+The draft also adds re-checks to `registerTool` for script that runs while a
+caller-supplied tool object is being read. Those are implemented too, and
+placed immediately before the tool map is written rather than after the
+`inputSchema` step: `registerTool` reads `title`, `execute`, `annotations`,
+`signal` and `exposedTo` after serializing, and each of those can run page
+script too. Without the re-checks a registration could silently overwrite one
+made during its own conversion. See `docs/adr/0011`.

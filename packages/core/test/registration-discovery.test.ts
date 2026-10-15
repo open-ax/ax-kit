@@ -476,8 +476,62 @@ describe("getTools ordering and isolation", () => {
 		// And the squatter is the one that survives: the late registration must
 		// not have overwritten it.
 		const listed = await mc.getTools();
-		expect(listed.filter((item) => item.name === "reg_squatted")).toHaveLength(
-			1,
+		const survivors = listed.filter((item) => item.name === "reg_squatted");
+		expect(survivors).toHaveLength(1);
+		expect(survivors[0]?.description).toBe("reg_squatted description");
+	});
+
+	// The same attack through an adjacent read. `registerTool` reads
+	// `input.title` *after* serializing the schema, so a getter there runs page
+	// script after the serialization re-check and before the write. A check
+	// placed against serialization alone would miss this entirely, which is why
+	// the re-check sits immediately before the write rather than after the
+	// `inputSchema` step.
+	it("rejects a name taken by a getter read after serialization", async () => {
+		const mc = context();
+		const hostile = {
+			name: "reg_getter",
+			description: "late arrival",
+			get title(): string {
+				void mc.registerTool(tool("reg_getter"));
+				return "t";
+			},
+			execute: async (): Promise<null> => null,
+		};
+		await expect(
+			mc.registerTool(
+				hostile as unknown as Parameters<ModelContext["registerTool"]>[0],
+			),
+		).rejects.toThrowError(
+			expect.objectContaining({ name: "InvalidStateError" }),
+		);
+		const survivors = (await mc.getTools()).filter(
+			(item) => item.name === "reg_getter",
+		);
+		expect(survivors).toHaveLength(1);
+		expect(survivors[0]?.description).toBe("reg_getter description");
+	});
+
+	it("rejects when a getter read after serialization detaches the document", async () => {
+		const host = document.createElement("iframe");
+		document.body.append(host);
+		const framed = host.contentDocument as Document;
+		const framedContext = installModelContext(framed);
+		expect(framedContext).toBeDefined();
+		const hostile = {
+			name: "reg_getter_detach",
+			description: "detaches mid-registration",
+			get execute(): () => Promise<null> {
+				host.remove();
+				return async (): Promise<null> => null;
+			},
+		};
+		await expect(
+			framedContext?.registerTool(
+				hostile as unknown as Parameters<ModelContext["registerTool"]>[0],
+			) ?? Promise.resolve(),
+		).rejects.toThrowError(
+			expect.objectContaining({ name: "InvalidStateError" }),
 		);
 	});
 
