@@ -254,6 +254,22 @@ async function probe(
 	});
 }
 
+/**
+ * Every scenario that failed without reporting HTTP 403, as `dir: message`.
+ *
+ * Shared by the assertion and the archive predicate on purpose. The predicate
+ * exists so the committed reports are only ever rewritten by a run that
+ * reproduced the finding, and an exit code alone cannot say that — a run can
+ * exit `1` with a connection error or an HTTP 500 and still have written
+ * non-empty check files. Spelling the condition twice would let them drift, and
+ * a drifted predicate quietly re-permits exactly what the assertion rejects.
+ */
+function offenders(): string[] {
+	return [...checks]
+		.filter(([, check]) => !/\b403\b/.test(check.message))
+		.map(([dir, check]) => `${dir}: ${check.message}`);
+}
+
 /** Every server scenario the suite itself declares for this revision. */
 function declaredScenarios(stdout: string): string[] {
 	// The listing has a server section and a client section. Only the server
@@ -468,11 +484,8 @@ describe(`MCP conformance suite ${SUITE_VERSION}`, () => {
 	// suite's own output can support.
 	it("observes HTTP 403 in every scenario that failed", () => {
 		expect(checks.size).toBeGreaterThan(0);
-		const offenders = [...checks].filter(
-			([, check]) => !/\b403\b/.test(check.message),
-		);
 		expect(
-			offenders.map(([dir, check]) => `${dir}: ${check.message}`),
+			offenders(),
 			"a scenario failed without reporting HTTP 403; the recorded finding " +
 				"no longer describes this run, so it needs reading before it is " +
 				"published",
@@ -519,13 +532,24 @@ describe(`MCP conformance suite ${SUITE_VERSION}`, () => {
  * Two guards, because the archive is committed evidence and a run that did not
  * measure must not be able to overwrite it. `setupComplete` covers a setup
  * failure, which Vitest still runs this hook for; the pair below covers a run
- * that finished but is not the finding — a suite that suddenly passed, or died
+ * that finished but is not the finding - a suite that suddenly passed, or died
  * before writing any checks. In both cases the assertions fail loudly and the
  * files on disk are left alone. Rewriting the record of what was measured from a
  * broken run is worse than a dirty working tree.
+ *
+ * An exit code alone cannot say a run reproduced the finding: a suite can exit
+ * `1` having written non-empty check files that report a connection error or an
+ * HTTP 500. So `offenders()` is part of the predicate too, and it is the same
+ * call the assertion above makes - spelled once, so the archive cannot be
+ * rewritten by a run the assertion has already rejected.
  */
 afterAll(async () => {
-	if (!setupComplete || first.exitCode !== 1 || checks.size === 0) {
+	if (
+		!setupComplete ||
+		first.exitCode !== 1 ||
+		checks.size === 0 ||
+		offenders().length > 0
+	) {
 		return;
 	}
 	const dir = join(
