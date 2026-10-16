@@ -239,6 +239,10 @@ async function probe(
 		const call = httpRequest(
 			{ host: "127.0.0.1", port, path: "/mcp", method: "POST", headers },
 			(response) => {
+				// `error` on the request does not cover a response stream that
+				// dies mid-body, which would leave this promise pending forever
+				// and hand Vitest a timeout that names nothing.
+				response.on("error", reject);
 				let body = "";
 				response.setEncoding("utf8");
 				response.on("data", (chunk: string) => {
@@ -250,9 +254,35 @@ async function probe(
 			},
 		);
 		call.on("error", reject);
+		// A daemon that accepts the connection and never answers is the case this
+		// exists for. The port is the daemon under test on loopback, so a request
+		// that hangs is a defect to name, not something to wait out.
+		call.setTimeout(PROBE_TIMEOUT_MS, () => {
+			call.destroy(
+				new Error(
+					`probe to the daemon timed out after ${String(PROBE_TIMEOUT_MS)}ms`,
+				),
+			);
+		});
 		call.end('{"jsonrpc":"2.0","id":1,"method":"tools/list"}');
 	});
 }
+
+/**
+ * The shapes the suite's `checks.json` actually uses to report a refusal.
+ *
+ * A bare `\b403\b` would also match a duration, a port number, or a count in any
+ * other failure message, and a message that matched nothing status-shaped would
+ * be excluded from `offenders()` — which would let the archive be rewritten by a
+ * run that never saw a 403 at all. Each alternative below is one shape observed
+ * in a recorded run; verified against all three, and against a timeout
+ * mentioning 403 ms, a port 40301, and a `Statuses: 500, 502` list, none of
+ * which match.
+ */
+const HTTP_403 = /\bHTTP 403\b|\bgot 403\b|\bStatuses:\s*(?:\d{3},\s*)*403\b/;
+
+/** Generous next to a loopback call, and far below the enclosing test timeout. */
+const PROBE_TIMEOUT_MS = 10_000;
 
 /**
  * Every scenario that failed without reporting HTTP 403, as `dir: message`.
@@ -266,7 +296,7 @@ async function probe(
  */
 function offenders(): string[] {
 	return [...checks]
-		.filter(([, check]) => !/\b403\b/.test(check.message))
+		.filter(([, check]) => !HTTP_403.test(check.message))
 		.map(([dir, check]) => `${dir}: ${check.message}`);
 }
 
