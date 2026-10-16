@@ -38,7 +38,7 @@
     schema still carries it; only its delivery moved.
   - The discovery directory resolves on Windows, where neither `XDG_RUNTIME_DIR`
     nor `HOME` is normally set.
-- 88fcd66: Publish the remaining six packages for the first time, so the cohort versions together and the release guard stops refusing.
+- 88fcd66: First public release of @ax-kit/extension.
 
 ### Patch Changes
 
