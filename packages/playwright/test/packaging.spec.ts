@@ -63,5 +63,5 @@ test("records user-visible behavior with its draft date", () => {
 	expect(docs).not.toContain("chaos");
 	const log = changelog();
 	expect(log).toContain("@ax-kit/playwright");
-	expect(log).toContain("2 October 2026");
+	expect(log).toContain("15 October 2026");
 });
