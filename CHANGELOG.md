@@ -6,8 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!--
-This file is the hand-maintained record of what exists before the first
-published release. Manual entries under [Unreleased] are permitted until then.
+This file was the hand-maintained record of what existed before the first
+published release. The first release shipped 2026-10-16; manual entries here
+are no longer permitted.
 
 After the first release this file stops being the source of truth. Changesets
 writes a CHANGELOG.md per package, under packages/<name>/, and never touches
@@ -30,124 +31,18 @@ so `npx` would fetch that instead of the release tool.
 See docs/releasing.md for the full procedure.
 -->
 
-## [Unreleased]
+## First published release — 2026-10-16
 
-### Added
+Per-package changelogs are the source of truth. This file is the index:
 
-- `@ax-kit/core`: `document.modelContext` with tool registration, filtered
-  discovery, invocation, lifecycle events, and unloading cleanup, plus an
-  opt-in `@ax-kit/core/ax` entry with removal, lookup, parsed-result, and
-  change-diff conveniences. `@ax-kit/core/auto` installs the surface on import
-  for server-rendered applications, standing down where the platform already
-  provides one. Pinned draft (`SPEC_VERSION`): Draft Community
-  Group Report, 2 October 2026.
-- `@ax-kit/react`: `useAxTool` (full definition or name plus handler),
-  `AxProvider`, and `isAxSupported` for lifecycle-native tool registration
-  with namespacing and execution middleware.
-- `@ax-kit/vue`: `useAxTool`, `vAxTool`, and `isAxSupported` for
-  composable plus directive tool registration with client mount lifecycle.
-- `@ax-kit/svelte`: `axTool`, `axToolEffect`, and `isAxSupported` for
-  element binding plus rune tool registration with update and destroy
-  teardown.
-- `@ax-kit/react`: `dispatchAxClick` for fallback-wrapped click dispatch
-  against React-managed nodes with native bubbling fallback.
-- `@ax-kit/playwright`: overriding `page` fixture installing the page-side
-  bundle through a single init script before any test navigation, with a
-  runner-realm `page.ax` companion offering `getAvailableTools`,
-  `waitForTool`, `expectTool`, and `executeTool`. Waits ride the change
-  hint with a bounded guard and match by name in code-unit order; execution
-  resolves a fresh handle per call and parses the string result at the
-  boundary. Pinned draft (`SPEC_VERSION`): Draft Community Group Report,
-  2 October 2026.
-- `@ax-kit/extension`: worker-side bridge driving `document.modelContext`
-  from a service worker over injection-only transport with enumerated
-  handlers, side-panel confirmation bound to tab, document, frame, tool
-  name, and argument hash, default-deny manifest posture, and a
-  worker-held audit trail.
-- `@ax-kit/daemon`: stateless MCP `2026-07-28` bridge over byte-clean stdio
-  with mandatory discovery, ephemeral loopback transport plus bearer, and
-  a native-messaging host manifest.
-- `@ax-kit/cli`: experimental `ax-kit audit <url>` command that drives a real
-  headless Chromium, collects the page's contract, scores a fixed set of
-  checks, prints a report naming its own lane, and exits non-zero when a
-  check fails.
-- `@ax-kit/zod`: validation-library to input-schema conversion over the
-  first-party JSON-Schema output with subset caps and boundary stringify.
-- All published packages: `repository`, `homepage`, and `bugs`, so a registry
-  page links back to its source and a scanner that reads those fields can see
-  the package at all. `homepage` points at the repository until a documentation
-  site exists to point at.
-- `@ax-kit/core`, `@ax-kit/react`, `@ax-kit/vue`, `@ax-kit/svelte`,
-  `@ax-kit/playwright`: pinned draft moves to Draft Community Group Report,
-  2 October 2026 (upstream `d61d0e6`).
-- `@ax-kit/cli`: `ax-kit audit` no longer reports an `origin-keyed cluster`
-  finding. The 2 October 2026 draft dropped that precondition, so a site that
-  satisfied it was being told it had failed a requirement that no longer
-  exists. The remaining checks and the report format are unchanged.
+- [@ax-kit/core](packages/core/CHANGELOG.md) — 0.1.0
+- [@ax-kit/cli](packages/cli/CHANGELOG.md) — 0.1.0
+- [@ax-kit/daemon](packages/daemon/CHANGELOG.md) — 0.1.0
+- [@ax-kit/extension](packages/extension/CHANGELOG.md) — 0.1.0
+- [@ax-kit/react](packages/react/CHANGELOG.md) — 0.1.0
+- [@ax-kit/vue](packages/vue/CHANGELOG.md) — 0.1.0
+- [@ax-kit/svelte](packages/svelte/CHANGELOG.md) — 0.1.0
+- [@ax-kit/zod](packages/zod/CHANGELOG.md) — 0.1.0
+- [@ax-kit/playwright](packages/playwright/CHANGELOG.md) — 0.0.1
 
-No published package yet. Entries above describe the in-tree API; versioned
-releases will be cut with Changesets.
-
-### Changed
-
-- The applications' Playwright suites now run in CI. `test:browser` is a
-  Turbo task and a step in the `toolchain` job, so the assertions that only a
-  real browser and a real served response can make — the storefront's
-  `Permissions-Policy` header, the catalogue route's `501`, the structured
-  data, the documentation site's hydrated island and locally built search
-  index — are gates rather than claims. See `docs/adr/0009-application-browser-suites-are-gates.md`.
-
-### Fixed
-
-- The documentation site's `typecheck` was not a check. `astro check` was run
-  without `@astrojs/check` installed, so it offered to install it and exited 0;
-  and with no `tsconfig.json` of its own it resolved the repository root
-  config, whose `include` covers only `packages/*` — so it reported on other
-  packages and never on this site. The site now has a `tsconfig.json`, the
-  checker is a declared devDependency, `typecheck` runs `astro sync` first so a
-  clean checkout has the generated types, and errors in both `.ts`/`.tsx` and
-  `.astro` files fail the run. Five real type errors in `TryIt.tsx` were found
-  this way and are fixed. This is what made the release workflow fail: the
-  missing checker is a hard error on a runner, where nothing can answer the
-  prompt.
-- `applications/docs-site`: `readArguments` declared `| null` in its element
-  type and never returned one, and the log-entry helper used a non-distributive
-  `Omit` over a union, which collapsed the variants to their shared keys. Both
-  rejected valid calls at compile time.
-
-- `@ax-kit/daemon`: the loopback pull seam is typed as the queued envelope
-  rather than `unknown`. An adapter answering "idle" with `undefined` instead
-  of `null` previously reached a client as a `null` body under a `200`, which
-  a client reads as its transport having gone and stops serving on.
-- `@ax-kit/extension`: the moved-approval check is answered by the approval
-  store from the structured keys it holds, rather than by parsing a binding
-  back into parts in the worker. A binding it could not parse previously
-  compared as "no other approval", which is the one answer that lets a
-  consequential call through with the check silently not run.
-
-### Removed
-
-- `@ax-kit/core`: the origin-keyed agent cluster precondition on
-  `document.modelContext`. A page whose `document.domain` has drifted from its
-  host used to have `registerTool`, `getTools` and `executeTool` reject with a
-  `SecurityError` and log a `WebMCP unavailable` warning; the draft removed that
-  requirement, and such a page is now an ordinary page. Restrictions on *which
-  origins may see and invoke a given tool* are a separate mechanism and are
-  unchanged: `exposedTo`, `fromOrigins`, untrustworthy and opaque origin entries
-  all still reject with the errors the draft defines.
-- `@ax-kit/core` / `@ax-kit/cli`: diagnostics and audit plumbing that existed
-  only to report the precondition above.
-
-- `@ax-kit/daemon`: native-messaging and stdio checks that guarded no code
-  path in this package — `windowsRegistryValue`, `checkMessageSize`,
-  `assertWorkerReachable`, `sanitizeRendererPayload`,
-  `HOST_TO_BROWSER_MAX_BYTES`, `BROWSER_TO_HOST_MAX_BYTES`,
-  `assertStdoutClean`, and `isStdinClosed`. The package writes a native-host
-  manifest and hosts nothing, so these were unreachable policy that read as
-  controls already in place. They belong with the host process.
-- `@ax-kit/daemon`: `discoveryFileName()` and `discoveryDirectory()`, both of
-  which had a caller-free equivalent already exported, and
-  `PageBridge.meta()` and `PageBridge.hasPending`, which had no caller at all.
-  `PageBridge` no longer takes a `DaemonInfo`; it existed only to feed
-  `meta()`. The pinned protocol version is now declared once and imported
-  where the discovery file is written.
+The cohort implements WebMCP Draft Community Group Report, 15 October 2026 (`SPEC_VERSION` in `@ax-kit/core`).
