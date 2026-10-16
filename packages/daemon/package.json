@@ -1,6 +1,6 @@
 {
 	"name": "@ax-kit/daemon",
-	"version": "0.0.0",
+	"version": "0.1.0",
 	"description": "Stateless MCP bridge over stdio with local transport and native host",
 	"license": "Apache-2.0",
 	"repository": {

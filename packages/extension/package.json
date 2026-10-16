@@ -1,6 +1,6 @@
 {
 	"name": "@ax-kit/extension",
-	"version": "0.0.0",
+	"version": "0.1.0",
 	"description": "Trusted-tier bridge driving document.modelContext from a service worker",
 	"license": "Apache-2.0",
 	"repository": {

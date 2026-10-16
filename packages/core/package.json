@@ -1,6 +1,6 @@
 {
 	"name": "@ax-kit/core",
-	"version": "0.0.0",
+	"version": "0.1.0",
 	"description": "Correct, tiny, dependency-free WebMCP ModelContext implementation",
 	"license": "Apache-2.0",
 	"repository": {

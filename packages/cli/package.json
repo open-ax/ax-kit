@@ -1,6 +1,6 @@
 {
 	"name": "@ax-kit/cli",
-	"version": "0.0.0",
+	"version": "0.1.0",
 	"description": "Audit a page's document.modelContext contract in a real headless browser",
 	"license": "Apache-2.0",
 	"repository": {

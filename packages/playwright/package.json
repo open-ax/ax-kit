@@ -1,6 +1,6 @@
 {
 	"name": "@ax-kit/playwright",
-	"version": "0.0.0",
+	"version": "0.0.1",
 	"description": "Runner-side companion for driving document.modelContext in tests",
 	"license": "Apache-2.0",
 	"repository": {

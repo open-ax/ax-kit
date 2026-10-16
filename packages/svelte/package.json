@@ -1,6 +1,6 @@
 {
 	"name": "@ax-kit/svelte",
-	"version": "0.0.0",
+	"version": "0.1.0",
 	"description": "Lifecycle-native ModelContext bindings for Svelte",
 	"license": "Apache-2.0",
 	"repository": {
