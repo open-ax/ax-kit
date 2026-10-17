@@ -146,32 +146,48 @@ export function startTransport(options: TransportOptions): Promise<Transport> {
 		server.on("error", onError);
 		server.listen(options.port ?? 0, host, () => {
 			server.off("error", onError);
-			const address = server.address();
-			if (address === null || typeof address === "string") {
-				reject(new TypeError("listener has no port"));
-				return;
+			// Every failure below this line has to become a rejection rather than a
+			// throw. This callback runs after the executor has returned, so nothing
+			// here is inside the promise's own try scope: an uncaught throw exits the
+			// process, and the documented "serve stdio only" fallback in `main.ts`
+			// never runs. Measured: a discovery directory that cannot be created
+			// killed the daemon with code 1 instead of degrading.
+			try {
+				const address = server.address();
+				if (address === null || typeof address === "string") {
+					throw new TypeError("listener has no port");
+				}
+				const discoveryDir = options.discoveryDir;
+				mkdirSync(discoveryDir, { recursive: true });
+				const discoveryPath = join(discoveryDir, DISCOVERY_FILE_NAME);
+				writeFileSync(
+					discoveryPath,
+					serializeDiscoveryFile(
+						createDiscoveryFile({
+							port: address.port,
+							pid: process.pid,
+							token: bearer,
+							version: PROTOCOL_VERSION,
+						}),
+					),
+					{ mode: 0o600 },
+				);
+				resolve({
+					port: address.port,
+					bearer,
+					discoveryPath,
+					close: () => closeTransport(server, discoveryPath),
+				});
+			} catch (error: unknown) {
+				// The listener is already accepting at this point, so it is closed
+				// before the caller is told. `onError` is detached above, and a
+				// `close` on a live server can still emit, so one is attached for the
+				// teardown: an unhandled `error` here would take the process down in
+				// exactly the way this branch exists to prevent.
+				server.on("error", () => {});
+				server.close();
+				reject(error);
 			}
-			const discoveryDir = options.discoveryDir;
-			mkdirSync(discoveryDir, { recursive: true });
-			const discoveryPath = join(discoveryDir, DISCOVERY_FILE_NAME);
-			writeFileSync(
-				discoveryPath,
-				serializeDiscoveryFile(
-					createDiscoveryFile({
-						port: address.port,
-						pid: process.pid,
-						token: bearer,
-						version: PROTOCOL_VERSION,
-					}),
-				),
-				{ mode: 0o600 },
-			);
-			resolve({
-				port: address.port,
-				bearer,
-				discoveryPath,
-				close: () => closeTransport(server, discoveryPath),
-			});
 		});
 	});
 }
@@ -310,9 +326,21 @@ async function handleRequest(
 		// mid-pull; without the abort its waiter would stay eligible for
 		// dispatch, so the next envelope would be written to a socket nobody
 		// will read and the work would be lost rather than re-pulled.
+		//
+		// Gated on the response being unfinished, because `close` alone does not
+		// mean the caller left. Measured on the Node this runs on: a pull that
+		// was answered emits `end` and then `close`, and a pull the caller hung
+		// up on emits `close` with the response unfinished. The abort is also
+		// the only thing that releases a worker from the bridge's attached
+		// count, so reading every ordinary completion as a disappearance would
+		// make the count a count of long-polls again — and a call arriving
+		// between one pull and the next would be refused as unattached while
+		// the worker is sitting right there.
 		const gone = new AbortController();
 		request.on("close", () => {
-			gone.abort();
+			if (!response.writableEnded) {
+				gone.abort();
+			}
 		});
 		const next = await bridge.waitForEnvelope(PULL_HOLD_MS, gone.signal);
 		if (next === null) {
