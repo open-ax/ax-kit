@@ -88,14 +88,18 @@ function isLoopbackIPv4(host: string): boolean {
  * a non-list rejects with `TypeError`.
  */
 export function parseOriginList(entries: unknown, kind: string): string[] {
-	if (!Array.isArray(entries)) {
+	// One shape guard for both rejections. `Array.isArray` and the per-entry
+	// string check answer the same question — is this the allow-list shape? —
+	// so they share one message, and answering it up front means a list is
+	// proved well-formed before any entry is parsed.
+	if (
+		!Array.isArray(entries) ||
+		entries.some((entry) => typeof entry !== "string")
+	) {
 		throw new TypeError(`${kind}: bad origin list`);
 	}
 	const origins: string[] = [];
 	for (const entry of entries) {
-		if (typeof entry !== "string") {
-			throw new TypeError(`${kind}: bad origin list`);
-		}
 		let parsed: URL;
 		try {
 			parsed = new URL(entry);
