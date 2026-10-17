@@ -22,7 +22,7 @@
  *   `tools/call` waiting on a person must not stall the `tools/list` behind it.
  */
 
-import { PageBridge } from "./bridge.js";
+import { PageBridge, BRIDGE_ERRORS } from "./bridge.js";
 import { resolveDiscoveryDir } from "./discovery.js";
 import type { Transport } from "./lifecycle.js";
 import { startTransport } from "./lifecycle.js";
@@ -105,21 +105,37 @@ function runStdioLoop(
 	sink: StdioSink,
 	provider: BridgeProvider,
 	info: DaemonInfo,
+	bridge: PageBridge,
 	onClose: () => void,
 ): void {
 	let buffer = "";
 	// One slot per frame in arrival order, filled in when its answer arrives.
 	const inFlight: Array<{ answer?: JsonRpcResponse }> = [];
 	let nextToWrite = 0;
+	let drained: (() => void) | undefined;
 	const drain = (): void => {
 		for (;;) {
 			const slot = inFlight[nextToWrite];
 			if (slot === undefined || slot.answer === undefined) {
-				return;
+				break;
 			}
 			sink.writeFrame(slot.answer);
 			nextToWrite += 1;
 		}
+		// Everything has been written. The waiter is cleared first so a second
+		// call after this one settles fresh rather than resolving twice.
+		if (nextToWrite === inFlight.length) {
+			const wake = drained;
+			drained = undefined;
+			wake?.();
+		}
+	};
+	/** Resolves once every frame read so far has been written out. */
+	const allWritten = (): Promise<void> => {
+		return new Promise<void>((resolve) => {
+			drained = resolve;
+			drain();
+		});
 	};
 	const stopData = source.onData((chunk: string) => {
 		buffer += chunk;
@@ -149,6 +165,38 @@ function runStdioLoop(
 		}
 	});
 	let stopped = false;
+	/**
+	 * Shut down in the only order that answers everything.
+	 *
+	 * A frame that is still outstanding when the client hangs up has to be
+	 * refused before the output side closes, and refusing it means waiting for
+	 * the refusal to reach a slot and be written. Doing that in order is what
+	 * keeps the shutdown from being a silent truncation: the client's last
+	 * frame is a refusal it can act on rather than a closed pipe it has to
+	 * interpret.
+	 */
+	const shutDown = async (): Promise<void> => {
+		const abandoned = bridge.abandonAll(
+			BRIDGE_ERRORS.outcomeUnknown,
+			"the daemon is shutting down; whether this call ran is unknown",
+		);
+		if (abandoned > 0) {
+			// On stderr as well as on the pipe, because the two readers are not
+			// the same: a client whose pipe is already gone never sees the
+			// frame, and work that may have executed deserves a trace that does
+			// not depend on the reader surviving.
+			sink.warn(
+				`ax-kit daemon: shutting down with ${String(abandoned)} call(s) still unanswered; whether each ran is unknown`,
+			);
+		}
+		// The listener goes before the sink, and it has to go at all: an open
+		// server is a live handle, and a daemon whose client has gone would
+		// otherwise sit there holding a port and a discovery file that points
+		// at it.
+		onClose();
+		await allWritten();
+		sink.close();
+	};
 	const stopEnd = source.onEnd(() => {
 		if (stopped) {
 			return;
@@ -156,13 +204,9 @@ function runStdioLoop(
 		stopped = true;
 		stopData();
 		stopEnd();
-		// The listener is closed before the sink, and it has to be closed at all:
-		// an open server is a live handle, and a daemon whose client has gone
-		// would otherwise sit there holding a port and a discovery file that
-		// points at it. Standard-input close is the only shutdown signal this
-		// process has, so everything it owns has to go with it.
-		onClose();
-		sink.close();
+		// Standard-input close is the only shutdown signal this process has,
+		// so everything it owns has to go with it.
+		void shutDown();
 	});
 }
 
@@ -267,6 +311,7 @@ export function main(): void {
 				provider.callTool(name, args),
 		},
 		info,
+		bridge,
 		() => {
 			closing = true;
 			// Closed and forgotten, so a repeat close is a no-op rather than an

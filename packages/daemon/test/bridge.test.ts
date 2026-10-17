@@ -123,6 +123,87 @@ describe("page bridge pending calls", () => {
 			void call.catch(() => undefined);
 		}
 	});
+
+	it("counts an answered pull as a worker still attached", async () => {
+		// The gap between two pulls is the whole of a worker's round trip
+		// through a page. Counting open polls made the bridge report "no
+		// extension is attached" throughout it, so a call issued right after
+		// another was refused by a daemon with the extension loaded.
+		const bridge = new PageBridge(5_000);
+		const waiting = bridge.waitForEnvelope(1_000);
+		// Caught rather than left open: the call itself is never answered here,
+		// and an unhandled refusal at its deadline would be reported against
+		// whichever test happened to still be running.
+		void bridge.listTools(1).catch(() => undefined);
+		expect(await waiting).not.toBeNull();
+		expect(bridge.clientAttached()).toBe(true);
+	});
+
+	it("counts an expired hold as a worker still attached", async () => {
+		// The same gap, entered from the other side. An idle pull that times
+		// out is answered, not abandoned, and the worker is about to ask again.
+		const bridge = new PageBridge(5_000);
+		expect(await bridge.waitForEnvelope(10)).toBeNull();
+		expect(bridge.clientAttached()).toBe(true);
+	});
+
+	it("releases a worker that walked away mid-pull", async () => {
+		// The other half, and the reason the count exists at all: a culled
+		// worker is a worker that has gone, and a daemon that keeps reporting
+		// it attached would enqueue work nothing will ever drain.
+		const bridge = new PageBridge(5_000);
+		const controller = new AbortController();
+		const held = bridge.waitForEnvelope(60_000, controller.signal);
+		expect(bridge.clientAttached()).toBe(true);
+		controller.abort();
+		expect(await held).toBeNull();
+		expect(bridge.clientAttached()).toBe(false);
+	});
+
+	it("abandons every outstanding call when the daemon is shutting down", async () => {
+		// Shutdown is the one ending the call deadline never gets to: the
+		// process exits first, so an unsettled call leaves the client with a
+		// closed pipe and no idea whether the page ran the tool.
+		const bridge = new PageBridge(60_000);
+		const held = bridge.listTools(1).catch((error: unknown) => error);
+		// Taken, so this one is in flight rather than queued: the page may still
+		// execute it, which is what "outcome unknown" has to mean.
+		const taken = bridge.take();
+		expect(taken).not.toBeNull();
+		expect(
+			bridge.abandonAll(
+				BRIDGE_ERRORS.outcomeUnknown,
+				"the daemon is shutting down; whether this call ran is unknown",
+			),
+		).toBe(1);
+		const outcome = (await held) as BridgeRefusal;
+		expect(outcome).toBeInstanceOf(BridgeRefusal);
+		expect(outcome.code).toBe(BRIDGE_ERRORS.outcomeUnknown);
+		expect(outcome.message).toMatch(/shutting down/);
+		// A late answer for the abandoned id lands on nothing.
+		expect(() =>
+			bridge.deliver(JSON.stringify({ id: taken?.id, result: { tools: [] } })),
+		).not.toThrow();
+	});
+
+	it("takes queued work with the call it belonged to", async () => {
+		// An envelope left in the queue would be handed to whoever reconnects,
+		// and asked to run work its caller was already told did not happen.
+		const bridge = new PageBridge(60_000);
+		const queued = bridge.listTools(1).catch((error: unknown) => error);
+		await new Promise((done) => {
+			setImmediate(done);
+		});
+		expect(bridge.abandonAll(BRIDGE_ERRORS.outcomeUnknown, "gone")).toBe(1);
+		expect(await queued).toBeInstanceOf(BridgeRefusal);
+		expect(bridge.take()).toBeNull();
+	});
+
+	it("reports nothing to abandon when nothing is outstanding", () => {
+		expect(
+			new PageBridge(60_000).abandonAll(BRIDGE_ERRORS.outcomeUnknown, "gone"),
+		).toBe(0);
+	});
 });
 
 /**

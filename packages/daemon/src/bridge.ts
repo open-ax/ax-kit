@@ -176,19 +176,44 @@ export class PageBridge {
 	private readonly settled = new Map<number, PendingCall>();
 	/** Resolvers waiting on a queue that is currently empty. */
 	private waiting: Array<(envelope: Envelope | null) => void> = [];
-	/** Outstanding long-polls. Non-zero means a worker is currently attached. */
+	/**
+	 * Workers that have pulled and have not been seen to leave.
+	 *
+	 * Counted per worker rather than per long-poll, because a poll is not a
+	 * worker: see `clientAttached`.
+	 */
 	private attached = 0;
 
 	constructor(private readonly deadlineMs: number = PENDING_DEADLINE_MS) {}
 
 	/**
-	 * Whether a worker is currently holding a pull open.
+	 * Whether a worker is attached.
 	 *
 	 * This is how "no extension attached" gets answered in bounded time.
 	 * Without it every question would be asked by enqueueing work nothing is
 	 * coming to drain, and the only answer available would be the call deadline
 	 * - so a `tools/list` on an idle machine would hang for a minute to report
 	 * that there is nothing to report.
+	 *
+	 * **The count of open long-polls is not this answer, and answering it with
+	 * one refused working calls.** A worker holds a pull only while it has
+	 * nothing to do. The moment work is dispatched the pull is answered, the
+	 * worker executes in the page, posts `/result`, and asks again — and the
+	 * count is zero for that entire round trip. A call arriving inside the gap
+	 * was refused as "no extension is attached" by a daemon with the extension
+	 * loaded and sitting right in front of it. Measured on this chain through a
+	 * real browser: the second request of every pair failed that way.
+	 *
+	 * It is the same shape as the failure this whole layer exists to make
+	 * impossible, and it is worse, because the message names the wrong
+	 * component. A person reading "no extension is attached" reloads the
+	 * browser; there is nothing there to fix.
+	 *
+	 * So attachment is what it says: a worker has pulled and has not been seen
+	 * to leave. Answering a pull is evidence the worker is there — it is about
+	 * to ask again — so completion leaves the count alone. Only a pull the
+	 * worker walks away from takes it down, and that is the one case the abort
+	 * signal exists for.
 	 */
 	clientAttached(): boolean {
 		return this.attached > 0;
@@ -230,6 +255,13 @@ export class PageBridge {
 	 * work is lost rather than re-pulled, and the caller fails at its deadline
 	 * with an outcome it never had. That is the opposite of the property this
 	 * layer exists to provide.
+	 *
+	 * The abort is also the only path that takes a worker off the attached
+	 * count, which is why the transport must hand over a signal that means
+	 * "this caller left" rather than "this request finished". A signal firing on
+	 * every completed pull would make the count a count of polls again, and
+	 * `clientAttached` would go back to refusing working calls in the gap
+	 * between one pull and the next.
 	 */
 	waitForEnvelope(
 		holdMs: number = PULL_HOLD_MS,
@@ -255,13 +287,23 @@ export class PageBridge {
 				if (at !== -1) {
 					this.waiting.splice(at, 1);
 				}
-				this.attached -= 1;
+				// Deliberately no decrement here. This caller answered, which
+				// means it is there and will ask again; taking it off the count
+				// on the way out is what made `clientAttached` a momentary
+				// sample of a long-poll rather than a statement about a worker.
 				resolve(envelope);
 			};
 			const onWork = (envelope: Envelope | null): void => {
 				finish(envelope);
 			};
 			const onAbort = (): void => {
+				// The one path that means the worker is gone, so the one path
+				// that releases it. Guarded by `settled` for the ordinary case
+				// where the pull was answered first and the socket closed
+				// afterwards: a request completing is not a disappearance.
+				if (!settled) {
+					this.attached -= 1;
+				}
 				finish(null);
 			};
 			const timer = setTimeout(() => {
@@ -309,6 +351,41 @@ export class PageBridge {
 			return;
 		}
 		call.resolve(response.result);
+	}
+
+	/**
+	 * Refuse every call that has not been answered, and report how many.
+	 *
+	 * Called when the daemon is shutting down with work outstanding. Without it
+	 * the only thing that ends such a call is its deadline — and the deadline's
+	 * timer is deliberately not holding the process open, so the process exits
+	 * first and the promise never settles at all. The client is left with a
+	 * closed pipe and no frame, which reads exactly like a crash and tells it
+	 * nothing about whether the tool ran. A page that was mid-execution when the
+	 * daemon went away did the work; the caller has to be able to say so.
+	 *
+	 * The code is the caller of the argument rather than a constant here,
+	 * because the honest code depends on why it is being called, and a
+	 * shutdown is not the same event as a timeout.
+	 *
+	 * Queued work goes with the entry it belongs to, on the same terms the
+	 * deadline uses: an envelope left behind would be handed to a worker that
+	 * reconnects and asked to run work the caller has already been told did not
+	 * happen. An envelope already taken cannot be recalled — the worker may
+	 * still execute it — which is why the message says the outcome is unknown
+	 * rather than saying it did not run.
+	 */
+	abandonAll(code: number, message: string): number {
+		const abandoned = [...this.settled.entries()];
+		this.settled.clear();
+		for (const [id, call] of abandoned) {
+			const queued = this.queue.findIndex((held) => held.id === id);
+			if (queued !== -1) {
+				this.queue.splice(queued, 1);
+			}
+			call.reject(new BridgeRefusal(code, message));
+		}
+		return abandoned.length;
 	}
 
 	private enqueue(request: BridgeRequest): Promise<unknown> {
