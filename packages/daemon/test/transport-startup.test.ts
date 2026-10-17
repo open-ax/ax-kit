@@ -50,9 +50,10 @@ describe("startTransport", () => {
 		).rejects.toThrow();
 	});
 
-	it("rejects rather than throwing when the listener reports no port", async () => {
-		// The other failure already written as a rejection, kept here so both
-		// branches of the callback are covered by the same assertion.
+	it("resolves with the bound port and writes its discovery file", async () => {
+		// The success path, so the rejection above is not the only thing this file
+		// proves: a fix that turned every failure into a rejection without ever
+		// resolving would still pass the first test.
 		const root = mkdtempSync(join(tmpdir(), "ax-kit-discovery-"));
 		const openedHere = await startTransport({ discoveryDir: root });
 		opened.push(openedHere);
