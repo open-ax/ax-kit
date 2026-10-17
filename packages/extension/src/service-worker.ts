@@ -688,6 +688,12 @@ async function handle(request: InjectionRequest): Promise<unknown> {
 			argsJson,
 			definitionVersion,
 			origin: ownerOrigin,
+			// The frame the tool lives in, which is not the owner origin for an
+			// embedded document. `readToolOutcome` requires it and refuses to parse a
+			// reply without it, so omitting it here made the daemon report a failed
+			// call while this panel was standing open asking a person to approve it -
+			// the outcome that teaches every client that asking is an outage.
+			frameOrigin: view.frameOrigin,
 			callerOrigin,
 			// The admitted set is the page's own origin and nothing else, so this is
 			// always empty. It is reported because a caller deciding whether to
