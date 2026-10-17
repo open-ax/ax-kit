@@ -222,10 +222,25 @@ export class PageBridge {
 	/**
 	 * The next queued request for a pulling client, or null when idle.
 	 *
-	 * An envelope whose call has already been refused is discarded rather than
-	 * handed out: the caller has been told it failed, and executing it later
-	 * would run work the client believes did not happen — a purchase it was told
-	 * was not placed.
+	 * An envelope with no live call behind it is discarded and the next one tried:
+	 * the call it belonged to has already settled and been forgotten, so handing
+	 * it out would execute work whose client was told it had failed - a purchase
+	 * it believes was not placed. An envelope that does have a call behind it is
+	 * handed out.
+	 *
+	 * **This removes the envelope from the queue, and that is the delivery
+	 * guarantee.** Once an envelope has been taken, it is not offered again. A
+	 * worker that dies between the take and the answer therefore costs the whole
+	 * call, and the client is told the outcome is *unknown* rather than being
+	 * invited to retry.
+	 *
+	 * That is chosen, not accidental. Re-offering would be at-least-once, and the
+	 * first execution may already have had its effect - for a consequential tool
+	 * that means charging a person twice. An unknown outcome is something a
+	 * person can reconcile against a statement; a duplicated purchase is not
+	 * recoverable by anyone. `waitForEnvelope` below protects the *held* pull, and
+	 * that is a different guarantee: it stops a pull being abandoned before the
+	 * envelope was ever taken.
 	 */
 	take(): Envelope | null {
 		for (;;) {
