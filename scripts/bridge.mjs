@@ -463,10 +463,14 @@ async function run() {
 	// and it removes its own file. A supervisor, a pipeline or a test harness
 	// closes stdin and does not send a signal, so without this the starter is
 	// unstoppable in exactly those contexts.
+	// What the daemon exited with, once it has. Read by `shutdown` so a daemon
+	// that failed while being stopped is not reported as a clean stop: forcing
+	// exit 0 here would discard the code the child's own exit handler recorded.
+	let daemonExitCode = null;
 	const shutdown = (why) => {
 		process.stdout.write(`\nbridge: stopping the daemon (${why})\n`);
 		void stopDaemon().then(() => {
-			process.exit(0);
+			process.exit(daemonExitCode ?? 0);
 		});
 	};
 	for (const signal of ["SIGINT", "SIGTERM"]) {
@@ -484,7 +488,8 @@ async function run() {
 		process.stdout.write(
 			`bridge: the daemon exited (code ${String(code)}, signal ${String(signal)})\n`,
 		);
-		process.exitCode = code === null ? 1 : code;
+		daemonExitCode = code === null ? 1 : code;
+		process.exitCode = daemonExitCode;
 	});
 }
 
