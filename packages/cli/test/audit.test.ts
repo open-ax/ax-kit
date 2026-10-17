@@ -4,8 +4,20 @@
 import { describe, expect, it } from "vitest";
 import { parseAuditTarget } from "../src/args.js";
 import { auditSnapshot, auditUrl } from "../src/audit.js";
-import { formatReport, LANE_STATEMENT } from "../src/output.js";
-import { BUDGETS, countFailures, scoreAudit } from "../src/scoring.js";
+import {
+	createReport,
+	ENFORCEMENT_STATEMENT,
+	formatReport,
+	LANE_STATEMENT,
+} from "../src/output.js";
+import type { AuditCheck } from "../src/scoring.js";
+import {
+	BUDGETS,
+	CHECK_ENFORCEMENT,
+	countFailures,
+	enforcementOf,
+	scoreAudit,
+} from "../src/scoring.js";
 
 function tool(overrides: Record<string, unknown> = {}) {
 	return {
@@ -246,5 +258,110 @@ describe("cli audit", () => {
 			),
 		).rejects.toThrow(TypeError);
 		expect(closed).toEqual(["close"]);
+	});
+
+	it("labels every check it produces as advisory or enforced", () => {
+		// Acceptance 5, first half: the labels exist and the table is
+		// exhaustive. A check that reached a reader unlabelled would leave the
+		// exit code readable as a verdict, which is the thing this closes.
+		const findings = scoreAudit({
+			tools: [
+				tool({
+					name: "x".repeat(BUDGETS.toolName + 1),
+					description: "y".repeat(BUDGETS.toolDescription + 1),
+					hasInputSchema: false,
+					schemaValid: false,
+					consequentialHint: true,
+					readOnlyHint: true,
+					exposedOrigins: ["*"],
+				}),
+			],
+			policyAllowsTools: false,
+		});
+		expect(findings.length).toBeGreaterThan(0);
+		for (const entry of findings) {
+			expect(["advisory", "enforced"]).toContain(entry.enforcement);
+			// The label on the finding is the label in the table, not a copy
+			// that can drift from it.
+			expect(CHECK_ENFORCEMENT[entry.check as AuditCheck]).toBe(
+				entry.enforcement,
+			);
+		}
+		// Every check the scorer names is in the table. Without this, a check
+		// added to the scorer and not to the table would still be counted as
+		// labelled, because `enforcementOf` would have thrown — so this asserts
+		// the other direction: no finding escapes with a label nobody chose.
+		const named = new Set(findings.map((entry) => entry.check));
+		for (const check of named) {
+			expect(enforcementOf(check)).toBeDefined();
+		}
+	});
+
+	it("separates enforced failures from advisory ones in the report", () => {
+		// Acceptance 5, second half: a reader can see which is which without
+		// counting. One enforced failure and one advisory failure on the same
+		// page, because that is the case where the distinction decides whether
+		// the page works.
+		const findings = scoreAudit({
+			tools: [
+				tool({
+					name: "x".repeat(BUDGETS.toolName + 1),
+					hasInputSchema: false,
+					schemaValid: false,
+					// Annotated consequential, so page-level coverage passes and the
+					// only failures left are the one enforced and the one advisory
+					// this test is about.
+					consequentialHint: true,
+					readOnlyHint: false,
+				}),
+			],
+			policyAllowsTools: true,
+		});
+		const report = createReport("https://shop.example", findings);
+		expect(report.enforcedFailures).toBe(1);
+		expect(report.advisoryFailures).toBe(1);
+		expect(report.failures).toBe(2);
+
+		const text = formatReport(report);
+		expect(text).toContain("1 enforced, 1 advisory");
+		expect(text).toContain("fail enforced typed");
+		expect(text).toContain("fail advisory naming-budget");
+		expect(text).toContain(ENFORCEMENT_STATEMENT);
+		expect(text).toContain("not a verdict on what an agent can invoke");
+	});
+
+	it("rejects a finding whose label disagrees with the table", () => {
+		// The labels arrive from outside this package with everything else, so
+		// a mislabelled finding is as hostile as a coerced boolean. Accepting
+		// one would print two different labels for the same check in one
+		// report, which is the failure the labelling exists to prevent.
+		const findings = scoreAudit({
+			tools: [tool()],
+			policyAllowsTools: true,
+		});
+		for (const entry of findings) {
+			const flipped: Record<string, unknown> = {
+				...entry,
+				enforcement: entry.enforcement === "enforced" ? "advisory" : "enforced",
+			};
+			expect(() => createReport("https://shop.example", [flipped])).toThrow(
+				TypeError,
+			);
+		}
+		expect(() =>
+			createReport("https://shop.example", [
+				{ ...findings[0], enforcement: "yes" },
+			]),
+		).toThrow(TypeError);
+		expect(() =>
+			createReport("https://shop.example", [
+				{ ...findings[0], enforcement: 1 },
+			]),
+		).toThrow(TypeError);
+	});
+
+	it("refuses to label a check the table does not carry", () => {
+		expect(() => enforcementOf("cluster")).toThrow(TypeError);
+		expect(() => enforcementOf("readiness")).toThrow(TypeError);
 	});
 });

@@ -227,6 +227,39 @@ describe("audit under real headless Chromium", () => {
 		expect(countFailures(findings)).toBeGreaterThan(0);
 	});
 
+	it("lets a page finish declaring tools before it is scored", async () => {
+		// The regression this file exists for. `slowRegister` declares eight
+		// tools, one per network round trip, so its registrations land across
+		// many task turns rather than all at once.
+		//
+		// The audit used to decide a page was finished from a fixed count of
+		// four task turns. Task turns are the unit page work is scheduled in, so
+		// that count is a count of the page's declarations - and on a machine
+		// slow enough to interleave the audit's drain with the page's pending
+		// work, four turns bought four of eight. The audit then reported a tool
+		// set the page did not have, and "names its lane in the report it
+		// prints" failed on missing content rather than on time, which is why the
+		// symptom looked like a flake in a report assertion.
+		//
+		// The wait now ends when the page's own `toolchange` notifications stop,
+		// so the number of tools observed is a property of the page.
+		const { report, context } = await auditLiveUrlFindings(
+			{ headless: true },
+			`${server.origin}/slowRegister`,
+		);
+		expect(context.tools.map((tool) => tool.name)).toEqual([
+			"tool0",
+			"tool1",
+			"tool2",
+			"tool3",
+			"tool4",
+			"tool5",
+			"tool6",
+			"tool7",
+		]);
+		expect(report).toContain("tool7");
+	}, 60_000);
+
 	it("names its lane in the report it prints", async () => {
 		const report = await auditLiveUrl(
 			{ headless: true },
