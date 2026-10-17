@@ -28,7 +28,14 @@
  * second execution of a tool whose first execution may already have had its
  * effect, and for a consequential tool that means spending the money twice. An
  * unknown outcome is something a person can reconcile; a duplicated purchase is
- * not. `test/worker-death.test.ts` measures this at three points in a call.
+ * not recoverable by anyone.
+ *
+ * The guarantee is pinned on the daemon side, in
+ * `packages/daemon/test/bridge.test.ts` ("does not re-offer an envelope it has
+ * already handed out"). `packages/extension/test/worker-death.test.ts` measures
+ * the *worker* side of a culled call at three points, but against a stand-in
+ * holder rather than a real `PageBridge` — it is evidence about what the worker
+ * does, not about what the daemon promises.
  *
  * **No keepalive timer.** The native port already gives the worker a strong
  * keep-alive; an extra ping would only be a way to be wrong. Reconnection is
