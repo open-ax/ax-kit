@@ -11,10 +11,12 @@
  *
  * Three properties this driver has to hold:
  *
- * - It never sleeps. Readiness is the page's own state: the context appearing,
- *   then the page's declared tool set stopping. Both waits are bounded, and
- *   neither bound decides anything - they decide how long we are willing to
- *   look before believing a page that has said nothing.
+ * - It never sleeps. Both waits are bounded, and neither bound decides
+ *   anything: they decide only how long we are willing to look before believing
+ *   a page that has said nothing. Readiness is the page's own state - the
+ *   context appearing, then the browser reporting that fetching has stopped.
+ *   It is not the page's `toolchange` stream going quiet: a page waiting on a
+ *   socket emits nothing at all, so silence is not a signal.
  * - The browser closes on every path, including a failure during page
  *   creation. A leaked browser outlives the test that made it.
  * - A page with no context is a subject, not an error. It audits as "no tools",
