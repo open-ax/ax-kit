@@ -102,6 +102,19 @@ export function readOptionsDict(options: unknown): Record<string, unknown> {
 	return raw as Record<string, unknown>;
 }
 
+/**
+ * Read one origin allow-list member out of an options dictionary. Absent means
+ * no origins were named, which is an empty list and not a rejection: the draft
+ * starts every definition with empty exposed origins.
+ */
+export function readOriginList(
+	opts: Record<string, unknown>,
+	key: "exposedTo" | "fromOrigins",
+): string[] {
+	const raw: unknown = opts[key];
+	return raw === undefined ? [] : parseOriginList(raw, key);
+}
+
 function readSignal(opts: Record<string, unknown>): AbortSignal | undefined {
 	const raw: unknown = opts.signal;
 	if (raw === undefined) {
@@ -163,25 +176,30 @@ export function handleDocumentUnload(doc: Document): void {
 	}
 }
 
+/**
+ * The document that embeds `doc`, or `null` when there is none.
+ *
+ * Both upward walks need this and both need the same answer to the same
+ * cross-origin question: a frame element whose `ownerDocument` throws is a
+ * document this one cannot reach, so it reads as "no parent" rather than as a
+ * failure. Two walks, one decision — a second copy would be free to answer it
+ * differently, and the difference would show up as an origin or a traversable
+ * comparison that only disagrees across frames.
+ */
+function embeddingDocument(doc: Document): Document | null {
+	try {
+		const frame: Element | null = doc.defaultView?.frameElement ?? null;
+		return frame === null ? null : frame.ownerDocument;
+	} catch {
+		return null;
+	}
+}
+
 function topDocument(doc: Document): Document {
 	let current = doc;
 	for (;;) {
-		let frame: Element | null;
-		try {
-			frame = current.defaultView?.frameElement ?? null;
-		} catch {
-			return current;
-		}
-		if (frame === null) {
-			return current;
-		}
-		let parent: Document;
-		try {
-			parent = frame.ownerDocument;
-		} catch {
-			return current;
-		}
-		if (parent === current) {
+		const parent = embeddingDocument(current);
+		if (parent === null || parent === current) {
 			return current;
 		}
 		current = parent;
@@ -248,15 +266,10 @@ function effectiveOriginOf(doc: Document, parent: string | null): string {
 	if (parent !== null) {
 		return parent;
 	}
-	try {
-		const frame = doc.defaultView?.frameElement ?? null;
-		if (frame !== null) {
-			return effectiveOrigin(frame.ownerDocument);
-		}
-	} catch {
-		// Cross-origin embedders are unobservable: stay opaque.
-	}
-	return "null";
+	// A cross-origin embedder is unobservable: no parent to climb to, so stay
+	// opaque rather than inventing an origin for it.
+	const embedder = embeddingDocument(doc);
+	return embedder === null ? "null" : effectiveOrigin(embedder);
 }
 
 function sameOrigin(firstOrigin: string, secondOrigin: string): boolean {
@@ -277,13 +290,25 @@ function isExposedTo(
 	return exposedOrigins.some((allowed) => allowed === accessingOrigin);
 }
 
-interface TreeEntry {
+interface VisibleDoc {
 	readonly document: Document;
 	readonly origin: string;
+	readonly state: DocumentState;
+	readonly window: Window;
 }
 
-function collectTree(top: Document): TreeEntry[] {
-	const entries: TreeEntry[] = [];
+/**
+ * Every installed, policy-allowed document in the frame tree under `top`.
+ *
+ * One walk, not a tree walk followed by a filter over it. Materialising the
+ * whole tree first meant allocating a `{ document, origin }` record for every
+ * frame, including the ones about to be discarded for having no installed
+ * state, no window, or a denied `tools` policy. Eligibility does not change
+ * what the walk descends into, so filtering as it goes reaches the same set by
+ * a shorter route.
+ */
+function collectVisibleDocs(top: Document): VisibleDoc[] {
+	const visible: VisibleDoc[] = [];
 	const seen = new Set<Document>();
 	const visit = (doc: Document, parentOrigin: string | null): void => {
 		if (seen.has(doc)) {
@@ -291,7 +316,13 @@ function collectTree(top: Document): TreeEntry[] {
 		}
 		seen.add(doc);
 		const origin = effectiveOriginOf(doc, parentOrigin);
-		entries.push({ document: doc, origin });
+		if (isAllowedToUse(doc)) {
+			const state = states.get(doc);
+			const win = doc.defaultView;
+			if (state !== undefined && win !== null) {
+				visible.push({ document: doc, origin, state, window: win });
+			}
+		}
 		let frames: NodeListOf<HTMLIFrameElement>;
 		try {
 			frames = doc.querySelectorAll("iframe");
@@ -311,32 +342,6 @@ function collectTree(top: Document): TreeEntry[] {
 		}
 	};
 	visit(top, null);
-	return entries;
-}
-
-interface VisibleDoc {
-	readonly document: Document;
-	readonly origin: string;
-	readonly state: DocumentState;
-	readonly window: Window;
-}
-
-function collectVisibleDocs(top: Document): VisibleDoc[] {
-	const visible: VisibleDoc[] = [];
-	for (const { document: doc, origin } of collectTree(top)) {
-		if (!isAllowedToUse(doc)) {
-			continue;
-		}
-		const state = states.get(doc);
-		if (state === undefined) {
-			continue;
-		}
-		const win = doc.defaultView;
-		if (win === null) {
-			continue;
-		}
-		visible.push({ document: doc, origin, state, window: win });
-	}
 	return visible;
 }
 
@@ -466,9 +471,7 @@ export class ModelContextImpl extends EventTarget implements ModelContext {
 
 		const signal = readSignal(opts);
 
-		const rawExposed: unknown = opts.exposedTo;
-		const exposedOrigins =
-			rawExposed === undefined ? [] : parseOriginList(rawExposed, "exposedTo");
+		const exposedOrigins = readOriginList(opts, "exposedTo");
 
 		// Attached before the re-checks below, not after. `isAbortSignal` duck-types
 		// rather than testing the prototype, so `addEventListener` is a method this
@@ -536,11 +539,10 @@ export class ModelContextImpl extends EventTarget implements ModelContext {
 		checkCallerGates(requestor);
 
 		const opts = readOptionsDict(options);
-		const rawFrom: unknown = opts.fromOrigins;
-		const fromOrigins =
-			rawFrom === undefined ? [] : parseOriginList(rawFrom, "fromOrigins");
-
-		return collectRegisteredTools(requestor, fromOrigins);
+		return collectRegisteredTools(
+			requestor,
+			readOriginList(opts, "fromOrigins"),
+		);
 	}
 
 	async executeTool(

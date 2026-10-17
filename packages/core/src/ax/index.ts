@@ -8,11 +8,12 @@
  * exposes them, so no conformant path can observe them.
  */
 
-import { parseOriginList, warnDiagnostic } from "../gates.js";
+import { warnDiagnostic } from "../gates.js";
 import {
 	checkCallerGates,
 	collectRegisteredTools,
 	readOptionsDict,
+	readOriginList,
 	unregisterRecord,
 } from "../registry.js";
 import type {
@@ -61,12 +62,10 @@ export async function getTool(
 	checkCallerGates(target);
 	const wanted = String(name);
 	const opts = readOptionsDict(options ?? {});
-	const rawFrom: unknown = opts.fromOrigins;
-	const fromOrigins =
-		rawFrom === undefined ? [] : parseOriginList(rawFrom, "fromOrigins");
-	return collectRegisteredTools(target, fromOrigins).find(
-		(tool) => tool.name === wanted,
-	);
+	return collectRegisteredTools(
+		target,
+		readOriginList(opts, "fromOrigins"),
+	).find((tool) => tool.name === wanted);
 }
 
 /**

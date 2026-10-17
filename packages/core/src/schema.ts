@@ -24,15 +24,31 @@ const DANGEROUS_KEYS: ReadonlySet<string> = new Set([
 	"prototype",
 ]);
 
-const KNOWN_TYPES: ReadonlySet<string> = new Set([
-	"object",
-	"array",
-	"string",
-	"number",
-	"integer",
-	"boolean",
-	"null",
-]);
+/**
+ * The `type` keywords this subset accepts, each paired with the predicate that
+ * decides whether a value satisfies it. One table rather than a keyword list
+ * plus a separate switch, because Registration admits a schema and Execution
+ * validates arguments against it: two lists would be free to disagree about
+ * which types exist, and the disagreement would only surface as a schema that
+ * registers and then never validates.
+ *
+ * A plain object rather than a `Map`, so the table is a literal the minifier
+ * can fold. That makes the registration gate test membership with
+ * `Object.hasOwn` rather than by indexing: `toString` and `constructor` are
+ * inherited keys here, and a schema naming one has to be rejected rather than
+ * silently accepted.
+ */
+const TYPE_CHECKS: Readonly<
+	Record<string, ((value: unknown) => boolean) | undefined>
+> = {
+	object: isRecord,
+	array: Array.isArray,
+	string: (value) => typeof value === "string",
+	number: (value) => typeof value === "number" && Number.isFinite(value),
+	integer: (value) => typeof value === "number" && Number.isInteger(value),
+	boolean: (value) => typeof value === "boolean",
+	null: (value) => value === null,
+};
 
 const SCANNED_KEYWORDS: ReadonlySet<string> = new Set([
 	"type",
@@ -136,7 +152,10 @@ function checkSchemaNode(
 
 		const nodeType: unknown = node.type;
 		if (nodeType !== undefined) {
-			if (typeof nodeType !== "string" || !KNOWN_TYPES.has(nodeType)) {
+			if (
+				typeof nodeType !== "string" ||
+				!Object.hasOwn(TYPE_CHECKS, nodeType)
+			) {
 				throw new TypeError("unsupported type");
 			}
 		}
@@ -268,45 +287,20 @@ function deepEqual(first: unknown, second: unknown): boolean {
 	);
 }
 
+/**
+ * Decide whether `value` satisfies the declared `type`.
+ *
+ * The predicate comes from `TYPE_CHECKS`, the same table that decides which
+ * `type` keywords a schema may name, so a keyword that registers is a keyword
+ * that can be checked. Reading the table by index is safe here and only here:
+ * the `expected` string has already been through the gate that uses
+ * `Object.hasOwn`, so it is an own key and not an inherited one. A stored
+ * schema is still refused if that ever stops being true.
+ */
 function checkValueType(value: unknown, expected: string, path: string): void {
-	switch (expected) {
-		case "object":
-			if (!isRecord(value)) {
-				throw new TypeError(`${path} not an object`);
-			}
-			break;
-		case "array":
-			if (!Array.isArray(value)) {
-				throw new TypeError(`${path} not an array`);
-			}
-			break;
-		case "string":
-			if (typeof value !== "string") {
-				throw new TypeError(`${path} not a string`);
-			}
-			break;
-		case "number":
-			if (typeof value !== "number" || !Number.isFinite(value)) {
-				throw new TypeError(`${path} not a number`);
-			}
-			break;
-		case "integer":
-			if (typeof value !== "number" || !Number.isInteger(value)) {
-				throw new TypeError(`${path} not an integer`);
-			}
-			break;
-		case "boolean":
-			if (typeof value !== "boolean") {
-				throw new TypeError(`${path} not a boolean`);
-			}
-			break;
-		case "null":
-			if (value !== null) {
-				throw new TypeError(`${path} not null`);
-			}
-			break;
-		default:
-			throw new TypeError(`${path} unsupported type`);
+	const accepts = TYPE_CHECKS[expected];
+	if (accepts === undefined || !accepts(value)) {
+		throw new TypeError(`${path} is not ${expected}`);
 	}
 }
 
