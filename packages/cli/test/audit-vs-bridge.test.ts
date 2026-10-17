@@ -35,12 +35,10 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-
+import type { Transport } from "@ax-kit/daemon";
+import { PageBridge, startTransport } from "@ax-kit/daemon";
 import type { BrowserContext, Page, Worker } from "playwright";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-
-import type { Transport } from "../../daemon/dist/index.mjs";
-import { PageBridge, startTransport } from "../../daemon/dist/index.mjs";
 
 import { collectSettled } from "../src/driver.js";
 import type { AuditContextInput } from "../src/scoring.js";

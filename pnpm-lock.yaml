@@ -143,6 +143,9 @@ importers:
         specifier: 1.63.0
         version: 1.63.0
     devDependencies:
+      '@ax-kit/daemon':
+        specifier: workspace:*
+        version: link:../daemon
       '@types/node':
         specifier: ^24.19.0
         version: 24.19.1
@@ -5254,7 +5257,7 @@ snapshots:
       pathe: 2.0.3
       sirv: 3.0.2
       tinyrainbow: 3.1.1
-      vitest: 5.0.2(@types/node@24.19.1)(@vitest/browser-playwright@5.0.2)(@vitest/ui@5.0.2)(happy-dom@20.14.6)(vite@8.3.1(@types/node@24.19.1)(esbuild@0.28.2)(yaml@2.9.1))
+      vitest: 5.0.2(@types/node@24.19.0)(@vitest/browser-playwright@5.0.2)(@vitest/ui@5.0.2)(happy-dom@20.14.6)(vite@8.3.1(@types/node@24.19.0)(esbuild@0.28.2)(yaml@2.9.1))
 
   '@vitest/utils@5.0.2':
     dependencies:
