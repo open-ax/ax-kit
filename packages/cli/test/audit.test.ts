@@ -363,5 +363,10 @@ describe("cli audit", () => {
 	it("refuses to label a check the table does not carry", () => {
 		expect(() => enforcementOf("cluster")).toThrow(TypeError);
 		expect(() => enforcementOf("readiness")).toThrow(TypeError);
+		// Inherited keys are not table entries. Indexing the table with these
+		// returns a function rather than undefined, so without an own-property test
+		// they would be labelled with whatever they inherited instead of refused.
+		expect(() => enforcementOf("constructor")).toThrow(TypeError);
+		expect(() => enforcementOf("toString")).toThrow(TypeError);
 	});
 });

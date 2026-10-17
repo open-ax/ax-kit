@@ -92,7 +92,16 @@ export const CHECK_ENFORCEMENT: Readonly<Record<AuditCheck, Enforcement>> = {
 
 /** The enforcement of one check, refusing a name the table does not carry. */
 export function enforcementOf(check: string): Enforcement {
-	const found = CHECK_ENFORCEMENT[check as AuditCheck];
+	// `Object.hasOwn`, not a `found === undefined` test. The table is a plain object
+	// literal, so `constructor` and `toString` are inherited keys: indexing them
+	// yields a function rather than undefined, and a check name arriving from
+	// outside this package would be labelled with whatever it inherited instead of
+	// being refused. The cast above is only to narrow the key; `hasOwn` is what
+	// decides membership.
+	if (!Object.hasOwn(CHECK_ENFORCEMENT, check)) {
+		throw new TypeError(`unknown audit check: ${check}`);
+	}
+	const found: Enforcement | undefined = CHECK_ENFORCEMENT[check as AuditCheck];
 	if (found === undefined) {
 		throw new TypeError(`unknown audit check: ${check}`);
 	}
