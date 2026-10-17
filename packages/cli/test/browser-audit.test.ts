@@ -241,8 +241,12 @@ describe("audit under real headless Chromium", () => {
 		// prints" failed on missing content rather than on time, which is why the
 		// symptom looked like a flake in a report assertion.
 		//
-		// The wait now ends when the page's own `toolchange` notifications stop,
-		// so the number of tools observed is a property of the page.
+		// The wait now ends when the browser reports the page has stopped
+		// fetching, so the number of tools observed is a property of the page
+		// rather than of how fast this machine delivered its responses. An
+		// earlier attempt ended when the page's own `toolchange` notifications
+		// went quiet and was measured and discarded: a page waiting on a socket
+		// emits nothing at all, so silence is not a signal.
 		const { report, context } = await auditLiveUrlFindings(
 			{ headless: true },
 			`${server.origin}/slowRegister`,

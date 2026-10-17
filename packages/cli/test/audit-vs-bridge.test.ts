@@ -361,17 +361,20 @@ describe("audit and bridge against the same page", () => {
 		]);
 		expect(audited.failing).toContain("typed:totallySafe");
 		expect(audited.failing).toContain("exposure:wildClaim");
-		// The reason the bridge gave names a field the audit never reads.
-		expect(exposed.refusal).not.toBe(
-			audited.failing.find((entry) => entry.startsWith("exposure:wildClaim")),
-		);
+		// The bridge refused, and it refused for a reason the audit never
+		// produces: it names an origin the page could not prove, not a check the
+		// audit ran. Comparing the two strings for inequality would pass whatever
+		// they said, so the claim is two assertions that can each fail.
+		expect(exposed.refusal).not.toBeNull();
+		expect(exposed.refusal).not.toContain("wildClaim");
 	}, 60_000);
 
 	it("cannot tell a page that exposes nothing from a page that exposes no context", async () => {
 		// The second half of acceptance 2. `noContext` never installs a
-		// context; `empty` installs one and registers nothing. The bridge tells
-		// them apart — it looks for `document.modelContext` — and the audit
-		// does not, because both arrive as the same empty snapshot.
+		// context; `empty` installs one and registers nothing. The audit does
+		// not tell them apart, and neither does the bridge: both arrive as the
+		// same empty listing. That the two differ at all is invisible from
+		// outside, which is the finding.
 		const bare = await openFixture("noContext");
 		const installed = await openFixture("empty");
 
@@ -388,9 +391,11 @@ describe("audit and bridge against the same page", () => {
 		const installedExposed = await exposedBy(await tabIdFor(installed));
 		expect(bareExposed.names).toEqual([]);
 		expect(installedExposed.names).toEqual([]);
-		// Both expose nothing, and for the same reason to the bridge: there is
-		// no tool in the listing. The audit cannot tell them apart, and this is
-		// the record of that.
+		// Neither can tell them apart. Both expose nothing, and to the bridge for the
+		// same reason: there is no tool in the listing, whether or not a context
+		// was installed. What the audit cannot see is the difference the test
+		// name is about - `noContext` has no surface at all. Its report is
+		// byte-identical to `empty`'s, and that is the record.
 		expect(bareExposed.refusal).toBeNull();
 		expect(installedExposed.refusal).toBeNull();
 	}, 60_000);
