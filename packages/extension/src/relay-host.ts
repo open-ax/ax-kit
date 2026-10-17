@@ -123,9 +123,14 @@ export function startRelay(dispatch: RelayHandler): RelayHandle {
 	};
 
 	let attempts = 0;
-	let rendezvoused = false;
 
 	const connect = (): void => {
+		// Per connection, not per relay: the broker answers once and exits, so the
+		// disconnect that follows a refusal belongs to *this* port. A single
+		// relay-wide flag cannot tell "the host closed without answering" from
+		// "the host answered that no daemon is running, then closed", and the
+		// second is the case the refusal path exists for.
+		let hostAnswered = false;
 		let port: AxRuntimePort;
 		try {
 			port = chrome.runtime.connectNative(NATIVE_HOST_NAME);
@@ -147,9 +152,10 @@ export function startRelay(dispatch: RelayHandler): RelayHandle {
 				// timer only ever runs from `onStop`. `RelayStop` declared this
 				// variant and nothing produced it.
 				onStop({ kind: "no-daemon", reason: readRefusal(message) });
+				hostAnswered = true;
 				return;
 			}
-			rendezvoused = true;
+			hostAnswered = true;
 			attempts = 0;
 			state.status = "attached";
 			state.reason = "";
@@ -165,7 +171,11 @@ export function startRelay(dispatch: RelayHandler): RelayHandle {
 			//
 			// Deliberately no reconnect either — see `onStop` for why the two
 			// disconnects mean opposite things.
-			if (!rendezvoused) {
+			// A refusal is an answer too: the host did reply, and it said no daemon is
+			// running. Clobbering that with "closed before the host answered" would
+			// be a second, different lie about the same event, and it would erase
+			// the reason the relay is waiting to retry.
+			if (!hostAnswered) {
 				state.status = "detached";
 				state.reason = "the native connection closed before the host answered";
 			}
