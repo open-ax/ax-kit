@@ -199,6 +199,28 @@ describe("page bridge pending calls", () => {
 		expect(bridge.take()).toBeNull();
 	});
 
+	it("does not re-offer an envelope it has already handed out", async () => {
+		// The delivery guarantee, stated as a test rather than as a comment nobody
+		// checks. `take()` shifts the envelope out of the queue, so a second take
+		// must not return it: a worker that dies between the take and the answer
+		// costs the whole call, and the client learns the outcome is unknown rather
+		// than being invited to retry. Re-offering would risk a second execution of
+		// a tool whose first execution may already have taken effect.
+		const bridge = new PageBridge(60_000);
+		const call = bridge.listTools(1).catch((error: unknown) => error);
+		await new Promise((done) => {
+			setImmediate(done);
+		});
+
+		expect(bridge.take()).not.toBeNull();
+		expect(bridge.take()).toBeNull();
+
+		// The call is still owed an answer. Abandoning is how it is closed, and it
+		// closes with the unknown-outcome code rather than a retry invitation.
+		expect(bridge.abandonAll(BRIDGE_ERRORS.outcomeUnknown, "gone")).toBe(1);
+		expect(await call).toBeInstanceOf(BridgeRefusal);
+	});
+
 	it("reports nothing to abandon when nothing is outstanding", () => {
 		expect(
 			new PageBridge(60_000).abandonAll(BRIDGE_ERRORS.outcomeUnknown, "gone"),
