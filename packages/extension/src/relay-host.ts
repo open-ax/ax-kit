@@ -139,8 +139,14 @@ export function startRelay(dispatch: RelayHandler): RelayHandle {
 		port.onMessage.addListener((message: unknown) => {
 			const attachment = readAttachment(message);
 			if (attachment === null) {
-				state.status = "no-daemon";
-				state.reason = readRefusal(message);
+				// Routed through `onStop` rather than setting the state here. This is
+				// the broker saying no daemon is running, which is the *one* failure a
+				// retry can fix - the daemon may simply not have been started yet, or
+				// may have restarted on a new port. Setting the state and returning
+				// left the relay in `no-daemon` permanently, because the reconnect
+				// timer only ever runs from `onStop`. `RelayStop` declared this
+				// variant and nothing produced it.
+				onStop({ kind: "no-daemon", reason: readRefusal(message) });
 				return;
 			}
 			rendezvoused = true;
