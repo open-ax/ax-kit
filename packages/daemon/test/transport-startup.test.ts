@@ -27,9 +27,12 @@ describe("startTransport", () => {
 
 	afterEach(async () => {
 		while (opened.length > 0) {
-			await opened.pop()?.close().catch(() => {
-				// Teardown only. A close failure here is not what this file is about.
-			});
+			await opened
+				.pop()
+				?.close()
+				.catch(() => {
+					// Teardown only. A close failure here is not what this file is about.
+				});
 		}
 	});
 

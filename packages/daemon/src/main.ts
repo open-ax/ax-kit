@@ -22,7 +22,7 @@
  *   `tools/call` waiting on a person must not stall the `tools/list` behind it.
  */
 
-import { PageBridge, BRIDGE_ERRORS } from "./bridge.js";
+import { BRIDGE_ERRORS, PageBridge } from "./bridge.js";
 import { resolveDiscoveryDir } from "./discovery.js";
 import type { Transport } from "./lifecycle.js";
 import { startTransport } from "./lifecycle.js";
