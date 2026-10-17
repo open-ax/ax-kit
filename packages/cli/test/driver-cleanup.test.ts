@@ -22,8 +22,17 @@ interface FakeBrowser {
 
 /** Fails the next `newContext` call, standing in for a context that cannot open. */
 let failContext = false;
-/** Fails the next context wait with something other than a timeout. */
+/**
+ * Fails the next context wait with something other than a timeout.
+ *
+ * The driver has two waits on the way to a snapshot - the context appearing and
+ * the browser reporting that the page has stopped fetching - so the fake fails
+ * both. A timeout on either is the legitimate case: a page with nothing to
+ * declare is a subject.
+ */
 let waitFailure: Error | null = null;
+/** Which of the two waits `waitFailure` applies to. */
+let failingWait: "context" | "network" | null = null;
 
 const launched: FakeBrowser[] = [];
 
@@ -46,7 +55,12 @@ vi.mock("playwright", () => ({
 						newPage: async (): Promise<unknown> => ({
 							goto: async (): Promise<void> => {},
 							waitForFunction: async (): Promise<void> => {
-								if (waitFailure !== null) {
+								if (waitFailure !== null && failingWait === "context") {
+									throw waitFailure;
+								}
+							},
+							waitForLoadState: async (): Promise<void> => {
+								if (waitFailure !== null && failingWait === "network") {
 									throw waitFailure;
 								}
 							},
@@ -75,6 +89,7 @@ const { auditLiveUrl, launchBrowser, launchDrivenBrowser } = await import(
 beforeEach(() => {
 	failContext = false;
 	waitFailure = null;
+	failingWait = null;
 	launched.length = 0;
 });
 
@@ -102,8 +117,16 @@ describe("driver browser cleanup", () => {
 	});
 
 	it("reports a page that never arrived rather than one with no tools", async () => {
-		// A timeout is the legitimate case: a page with no context is a subject.
+		// Both waits on the way to a snapshot carry the same contract, so both
+		// are exercised here. A timeout is the legitimate case on either: a page
+		// with no context, or one still fetching, is a subject and not a failure.
 		waitFailure = new TimeoutError("budget exhausted");
+		failingWait = "context";
+		await expect(
+			auditLiveUrl({ headless: true }, "http://127.0.0.1:1/"),
+		).resolves.toContain("audit");
+
+		failingWait = "network";
 		await expect(
 			auditLiveUrl({ headless: true }, "http://127.0.0.1:1/"),
 		).resolves.toContain("audit");
@@ -112,6 +135,14 @@ describe("driver browser cleanup", () => {
 		// different failure. Scoring it as "no tools to annotate" would point the
 		// reader at the page's declarations instead of the page.
 		waitFailure = new TypeError("Execution context was destroyed");
+		failingWait = "context";
+		await expect(
+			auditLiveUrl({ headless: true }, "http://127.0.0.1:1/"),
+		).rejects.toThrow(/destroyed/);
+
+		// And from the other wait, so a failure that arrives after the page did
+		// is not mistaken for a page that never arrived.
+		failingWait = "network";
 		await expect(
 			auditLiveUrl({ headless: true }, "http://127.0.0.1:1/"),
 		).rejects.toThrow(/destroyed/);

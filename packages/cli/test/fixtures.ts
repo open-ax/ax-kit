@@ -126,6 +126,33 @@ const FIXTURES: Record<string, string> = {
 		globalThis.__fixture = "overlong";
 	`,
 
+	// A page that never installs a context at all. The audit reads this exactly
+	// as it reads `empty` - no tools - because the collector cannot see the
+	// difference between "exposes nothing" and "never exposed anything". The
+	// bridge can: it looks for `document.modelContext` and reports which of the
+	// two it found.
+	noContext: `
+		globalThis.__fixture = "noContext";
+	`,
+
+	// Tools registered one per network round trip. Every registration costs
+	// real task turns, which is how a page that loads its tool definitions
+	// before declaring them behaves. Nothing here sleeps: each gap is a real
+	// `fetch` the fixture server answers.
+	slowRegister: `
+		const mc = globalThis.__install(document);
+		for (let index = 0; index < 8; index += 1) {
+			await fetch("/tick");
+			await mc.registerTool({
+				name: \`tool\${String(index)}\`,
+				description: \`Tool number \${String(index)}.\`,
+				inputSchema: { type: "object", properties: {} },
+				execute: async () => ({ index }),
+			});
+		}
+		globalThis.__fixture = "slowRegister";
+	`,
+
 	// A page whose own claims about its tools are wrong: the core is never
 	// installed, and an impostor context is defined directly on the document.
 	// The core's `installModelContext` deliberately refuses to overwrite an
@@ -194,6 +221,13 @@ main().catch((error) => {
 		if (path === "/core.mjs") {
 			response.writeHead(200, { "content-type": "text/javascript" });
 			response.end(core);
+			return;
+		}
+		// One byte, no delay. It exists so a fixture can spend a real task turn
+		// on a real network round trip rather than on a timer.
+		if (path === "/tick") {
+			response.writeHead(200, { "content-type": "text/plain" });
+			response.end(".");
 			return;
 		}
 		const page = pages[path];

@@ -12,7 +12,9 @@
  * Three properties this driver has to hold:
  *
  * - It never sleeps. Readiness is the page's own state: the context appearing,
- *   then a bounded drain of the core's task-turn notification.
+ *   then the page's declared tool set stopping. Both waits are bounded, and
+ *   neither bound decides anything - they decide how long we are willing to
+ *   look before believing a page that has said nothing.
  * - The browser closes on every path, including a failure during page
  *   creation. A leaked browser outlives the test that made it.
  * - A page with no context is a subject, not an error. It audits as "no tools",
@@ -175,38 +177,63 @@ export async function launchDrivenBrowser(
 }
 
 /**
- * Task turns without timers. One round yields a single MessageChannel turn,
- * flushing queued change notifications ahead of the continuation. The core's
- * own browser tests drain registrations the same way.
+ * How long the audit will keep waiting for a page to stop fetching.
+ *
+ * A bound on a wait, and nothing else. Only the timeout is believed: a page
+ * still fetching when the bound is spent is snapshotted as it stands, which is a
+ * worse answer than waiting and a far better one than holding the command open.
  */
-const SETTLE_TURNS = 4;
+const NETWORK_IDLE_WAIT_MS = 10_000;
 
-async function settleInPage(page: Page): Promise<void> {
-	await page.evaluate(async (turns: number) => {
-		for (let index = 0; index < (turns as number); index += 1) {
-			await new Promise<void>((resolve) => {
-				const channel = new MessageChannel();
-				channel.port1.onmessage = (): void => {
-					channel.port1.close();
-					channel.port2.close();
-					resolve();
-				};
-				channel.port2.postMessage(undefined);
-			});
+/**
+ * Wait for the page to stop fetching, as the browser reports it.
+ *
+ * The old drain counted four task turns, on the reasoning that a turn is how a
+ * page declares itself. It is not. A turn is a task, and a page that fetches
+ * its definitions registers nothing while the fetch is outstanding, so how
+ * many turns a page needs says as much about how fast the machine delivers the
+ * response as about the page. Measured on the fixture in
+ * `test/fixtures.ts` that declares one tool per round trip: four task turns
+ * reported five of the eight tools, sixty-four reported seven, and a windowed
+ * stability check reported six. The tool list tracked the wait, not the page.
+ *
+ * `networkidle` is the browser's own answer to the question that drain was
+ * guessing at - has this page stopped asking for things - and it is derived
+ * from the network events the browser emits rather than from a count chosen
+ * here. Waiting for it costs a fast page a fixed half second and a slow one
+ * longer, and both arrive at the same tool list.
+ *
+ * Neither this nor the `toolchange` notification stream can say when a page has
+ * *finished* declaring tools: a page waiting on a socket emits nothing for as
+ * long as it waits, so silence is not a signal. Two browser-reported signals
+ * are what is actually available - the context appearing, and the fetching
+ * stopping - and this is the second of them.
+ */
+async function waitForFetchingToStop(page: Page): Promise<void> {
+	try {
+		await page.waitForLoadState("networkidle", {
+			timeout: NETWORK_IDLE_WAIT_MS,
+		});
+	} catch (error: unknown) {
+		if (!(error instanceof Error) || error.name !== "TimeoutError") {
+			throw error;
 		}
-	}, SETTLE_TURNS);
+		// Still fetching when the bound is spent: snapshotted as it stands.
+	}
 }
 
 /**
  * Collect from a page that has finished setting itself up.
  *
  * A page registers tools asynchronously, so navigating is not the same as being
- * ready. This waits for the context to exist, then drains a bounded number of
- * task turns. No sleep: the wait ends when the registrations have landed.
+ * ready. This waits for the context to appear and then for the browser to
+ * report that the page has stopped fetching, and only then takes the snapshot.
+ * No sleep: both waits end on something the browser said, and neither timeout
+ * decides anything except how long this is willing to look.
  */
 export async function collectSettled(page: Page): Promise<AuditContextInput> {
 	await waitForContextOrNothing(page);
-	await settleInPage(page);
+	await waitForFetchingToStop(page);
 	return collectContext(new PageAdapter(page));
 }
 
