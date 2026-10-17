@@ -31,7 +31,13 @@ inferred from reading either source.
 Run it:
 
 ```sh
-pnpm --filter @ax-kit/cli exec vitest run test/audit-vs-bridge.test.ts
+# This suite drives the real bridge, so the daemon has to be built first. On a
+# fresh checkout `dist/` is absent and Vitest has no build hook of its own - it
+# resolves `@ax-kit/daemon` through that export and fails before collecting a
+# single test. `--filter=@ax-kit/cli...` builds the cli and everything it
+# depends on, which now includes the daemon.
+pnpm turbo run build --filter=@ax-kit/cli... &&
+	pnpm --filter @ax-kit/cli exec vitest run test/audit-vs-bridge.test.ts
 ```
 
 ## What each side is actually asking
