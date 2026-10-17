@@ -18,8 +18,17 @@
  * exits. Carrying traffic over the native port would tie every in-flight call
  * to the port's lifetime, and the port dies whenever the worker does. The loop
  * runs over loopback instead, so a worker that is culled mid-call costs one
- * abandoned request: the daemon still holds the work, and the next worker
- * re-pulls it.
+ * abandoned request: the call's fate is never decided by the port's lifetime.
+ *
+ * **What a culled worker does not get is a re-offer.** The bridge removes an
+ * envelope from its queue at the moment it hands that envelope to a waiter, so a
+ * call already dispatched is not offered again to the next worker. A client
+ * whose worker died mid-call is told the outcome is unknown, not told to retry.
+ * That is the trade this design makes deliberately: re-offering would risk a
+ * second execution of a tool whose first execution may already have had its
+ * effect, and for a consequential tool that means spending the money twice. An
+ * unknown outcome is something a person can reconcile; a duplicated purchase is
+ * not. `test/worker-death.test.ts` measures this at three points in a call.
  *
  * **No keepalive timer.** The native port already gives the worker a strong
  * keep-alive; an extra ping would only be a way to be wrong. Reconnection is
