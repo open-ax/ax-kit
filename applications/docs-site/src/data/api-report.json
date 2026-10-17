@@ -8,6 +8,11 @@
 			".": {
 				"members": [
 				{
+					"kind": "type",
+					"name": "AuditCheck",
+					"signature": "type AuditCheck = \"typed\" | \"naming-budget\" | \"description-budget\" | \"param-description-budget\" | \"output-budget\" | \"exposure\" | \"consequential-annotated\" | \"read-only-sanity\" | \"consequential-coverage\" | \"policy\""
+				},
+				{
 					"kind": "interface",
 					"name": "AuditContextInput",
 					"signature": "interface AuditContextInput { readonly tools: ReadonlyArray<AuditToolInput>; readonly policyAllowsTools: boolean; }"
@@ -15,7 +20,7 @@
 				{
 					"kind": "interface",
 					"name": "AuditFinding",
-					"signature": "interface AuditFinding { readonly check: string; readonly tool: string | null; readonly pass: boolean; readonly detail: string; }"
+					"signature": "interface AuditFinding { readonly check: string; readonly tool: string | null; readonly pass: boolean; readonly detail: string; readonly enforcement: Enforcement; }"
 				},
 				{
 					"kind": "function",
@@ -30,7 +35,7 @@
 				{
 					"kind": "interface",
 					"name": "AuditReport",
-					"signature": "interface AuditReport { readonly url: string; readonly lane: typeof LANE_STATEMENT; readonly failures: number; readonly total: number; readonly findings: ReadonlyArray<AuditFinding>; }"
+					"signature": "interface AuditReport { readonly url: string; readonly lane: typeof LANE_STATEMENT; readonly failures: number; readonly enforcedFailures: number; readonly advisoryFailures: number; readonly total: number; readonly findings: ReadonlyArray<AuditFinding>; }"
 				},
 				{
 					"kind": "function",
@@ -63,6 +68,11 @@
 					"signature": "export declare const BUDGETS: { readonly toolDescription: 500; readonly paramDescription: 150; readonly toolName: 30; readonly toolOutput: 1536; }"
 				},
 				{
+					"kind": "const",
+					"name": "CHECK_ENFORCEMENT",
+					"signature": "export declare const CHECK_ENFORCEMENT: Readonly<Record<AuditCheck, Enforcement>>"
+				},
+				{
 					"kind": "function",
 					"name": "collectContext",
 					"signature": "export declare function collectContext(page: BrowserPageLike): Promise<AuditContextInput>"
@@ -79,6 +89,11 @@
 				},
 				{
 					"kind": "function",
+					"name": "countFailuresByEnforcement",
+					"signature": "export declare function countFailuresByEnforcement(findings: ReadonlyArray<AuditFinding>): { enforced: number; advisory: number; }"
+				},
+				{
+					"kind": "function",
 					"name": "createReport",
 					"signature": "export declare function createReport(url: unknown, findings: unknown): AuditReport"
 				},
@@ -91,6 +106,21 @@
 					"kind": "interface",
 					"name": "DrivenPage",
 					"signature": "interface DrivenPage extends BrowserPageLike { waitFor<T>(fn: (arg: unknown) => T, arg: unknown, description: string): Promise<Awaited<T>>; }"
+				},
+				{
+					"kind": "type",
+					"name": "Enforcement",
+					"signature": "type Enforcement = \"advisory\" | \"enforced\""
+				},
+				{
+					"kind": "const",
+					"name": "ENFORCEMENT_STATEMENT",
+					"signature": "export declare const ENFORCEMENT_STATEMENT: \"enforced = a failure stops an agent using the page as declared; advisory = quality only, blocks nothing. The exit code counts every finding, so it is not a verdict on what an agent can invoke.\""
+				},
+				{
+					"kind": "function",
+					"name": "enforcementOf",
+					"signature": "export declare function enforcementOf(check: string): Enforcement"
 				},
 				{
 					"kind": "function",
@@ -484,7 +514,7 @@
 				{
 					"kind": "class",
 					"name": "PageBridge",
-					"signature": "export declare class PageBridge { private readonly deadlineMs; private nextId; private readonly queue; private readonly settled; private waiting; private attached; constructor(deadlineMs?: number); clientAttached(): boolean; take(): Envelope | null; waitForEnvelope(holdMs?: number, signal?: AbortSignal): Promise<Envelope | null>; private dispatch; deliver(body: unknown): void; private enqueue; listTools(tabId: number): Promise<ReadonlyArray<Record<string, unknown>>>; activeTab(): Promise<{ tabId: number; origin: string; }>; callTool(name: string, args: Record<string, unknown>, tabId: number, callerOrigin: string): Promise<unknown>; }"
+					"signature": "export declare class PageBridge { private readonly deadlineMs; private nextId; private readonly queue; private readonly settled; private waiting; private attached; constructor(deadlineMs?: number); clientAttached(): boolean; take(): Envelope | null; waitForEnvelope(holdMs?: number, signal?: AbortSignal): Promise<Envelope | null>; private dispatch; deliver(body: unknown): void; abandonAll(code: number, message: string): number; private enqueue; listTools(tabId: number): Promise<ReadonlyArray<Record<string, unknown>>>; activeTab(): Promise<{ tabId: number; origin: string; }>; callTool(name: string, args: Record<string, unknown>, tabId: number, callerOrigin: string): Promise<unknown>; }"
 				},
 				{
 					"kind": "class",

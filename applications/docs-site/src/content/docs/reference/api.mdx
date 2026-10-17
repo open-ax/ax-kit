@@ -38,7 +38,7 @@ second source of truth.
   client entry hook to run an explicit call from. The default entry point never does.
 ## @ax-kit/cli
 
-24 exported names across 1 entry point.
+30 exported names across 1 entry point.
 
 Runtime dependencies: `playwright`.
 
@@ -46,9 +46,9 @@ Runtime dependencies: `playwright`.
 
 | Entry point | Names | Reached by |
 |---|---|---|
-| `.` | 24 | `import type { AuditContextInput } from "@ax-kit/cli"` |
+| `.` | 30 | `import type { AuditCheck } from "@ax-kit/cli"` |
 
-### functions (13)
+### functions (15)
 
 | Name | Entry point |
 |---|---|
@@ -59,18 +59,22 @@ Runtime dependencies: `playwright`.
 | `collectContext` | `.` |
 | `collectSettled` | `.` |
 | `countFailures` | `.` |
+| `countFailuresByEnforcement` | `.` |
 | `createReport` | `.` |
+| `enforcementOf` | `.` |
 | `exitCodeFor` | `.` |
 | `formatReport` | `.` |
 | `launchBrowser` | `.` |
 | `launchDrivenBrowser` | `.` |
 | `scoreAudit` | `.` |
 
-### values (2)
+### values (4)
 
 | Name | Entry point |
 |---|---|
 | `BUDGETS` | `.` |
+| `CHECK_ENFORCEMENT` | `.` |
+| `ENFORCEMENT_STATEMENT` | `.` |
 | `LANE_STATEMENT` | `.` |
 
 ### interfaces (7)
@@ -85,12 +89,14 @@ Runtime dependencies: `playwright`.
 | `DrivenPage` | `.` |
 | `LaunchOptions` | `.` |
 
-### types (2)
+### types (4)
 
 | Name | Entry point |
 |---|---|
+| `AuditCheck` | `.` |
 | `BrowserLike` | `.` |
 | `BrowserPageLike` | `.` |
+| `Enforcement` | `.` |
 
 ## @ax-kit/core
 
