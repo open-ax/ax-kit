@@ -48,9 +48,9 @@
 	},
 	"devDependencies": {
 		"@ax-kit/core": "workspace:*",
-		"@playwright/test": "1.63.0",
+		"@playwright/test": "1.64.1",
 		"@types/node": "^24.19.0",
-		"playwright": "1.63.0",
+		"playwright": "1.64.1",
 		"tsdown": "0.23.1",
 		"typescript": "6.0.3"
 	}
