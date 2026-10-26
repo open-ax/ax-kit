@@ -43,7 +43,7 @@
 		"attw": "attw --pack . --profile node16"
 	},
 	"dependencies": {
-		"zod": "4.6.5"
+		"zod": "4.6.7"
 	},
 	"devDependencies": {
 		"@types/node": "^24.19.0",
