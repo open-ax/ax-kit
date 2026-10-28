@@ -30,8 +30,8 @@ test("pins the runner floor and excludes component entries", () => {
 	const peer = manifest.peerDependencies as Record<string, string>;
 	expect(peer["@playwright/test"]).toBe("^1.63.0");
 	const dev = manifest.devDependencies as Record<string, string>;
-	expect(dev["@playwright/test"]).toBe("1.63.0");
-	expect(dev.playwright).toBe("1.63.0");
+	expect(dev["@playwright/test"]).toBe("1.64.1");
+	expect(dev.playwright).toBe("1.64.1");
 	for (const name of [...Object.keys(peer), ...Object.keys(dev)]) {
 		expect(name).not.toContain("ct-");
 		expect(name).not.toContain("component");
