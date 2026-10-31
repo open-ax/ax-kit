@@ -268,7 +268,7 @@ async function waitForContextOrNothing(page: Page): Promise<void> {
 /** True once a page has installed a context. Serialized into the page. */
 function hasModelContext(): boolean {
 	return (
-		typeof (document as unknown as Record<string, unknown>)["modelContext"] ===
+		typeof (document as unknown as Record<string, unknown>).modelContext ===
 		"object"
 	);
 }

@@ -14,7 +14,7 @@ MCP client ──stdio──▶ daemon ──loopback /pull, /result──▶ ex
 ```
 
 The middle link did not exist in any shipped artifact. `bridge.ts` described the
-design as *"It reads the discovery file for the port and bearer"* — and a
+design as _"It reads the discovery file for the port and bearer"_ — and a
 Manifest V3 service worker has no filesystem. `native-host.ts` said in its own
 header that the host process did not exist. The manifest requested `sidePanel`
 and declared `side_panel.default_path`, and no code called any `chrome.sidePanel`
@@ -37,7 +37,7 @@ exactly as long as the extension's port — and that port dies whenever the work
 does: an extension reload, an update, a disable, a browser restart.
 
 This was verified rather than assumed, and the evidence cuts both ways. An open
-native-messaging port *does* hold the service worker alive longer than the
+native-messaging port _does_ hold the service worker alive longer than the
 usual idle window - the Chromium implementation sets
 `should_have_strong_keepalive(true)` when it opens the channel to a native app.
 But **how much longer is not documented**: the keep-alive is described as helping
@@ -45,7 +45,7 @@ with the five-minute limit without promising the limit is removed, and the
 documented list of APIs exempt from that limit does not name `connectNative`.
 The honest statement is "longer, by an amount nobody promised", not "forever".
 
-What *is* documented is the part that decides the architecture: **Chrome starts
+What _is_ documented is the part that decides the architecture: **Chrome starts
 a native messaging host process and keeps it running until the port is
 destroyed.** The port dies with the worker - an extension reload, an update, a
 disable, a browser restart - and the documented recovery is to call
@@ -90,13 +90,12 @@ from that. A caller can still put a `documentId` in the request; it is ignored.
 as the invalidation trigger, because it is both earlier and document-scoped.
 
 Two limits on that gate, found by a verification pass and worth writing down:
-
 - The documentation does not promise `getFrame` returns `null` on a documentId
   mismatch. Chromium returns an empty result, which is what makes it usable, and
   a malformed id rejects the promise instead. The implementation treats a
   rejection and an empty result the same way - refused - so it fails closed on
   both rather than depending on which one it happens to get.
-- `chrome.scripting.executeScript` *does* return a `documentId` on its
+- `chrome.scripting.executeScript` _does_ return a `documentId` on its
   `InjectionResult` (Chrome 106+), so the identity was available one layer
   further down without the extra permission. `webNavigation` was kept because it
   also supplies the invalidation signal, which the injection result alone does
@@ -123,7 +122,7 @@ visible to every Chrome the user runs, including their real browser, so a test
 cannot be hermetic on Windows without going through real registration.
 
 Measured, not assumed: a manifest written into `<user-data-dir>/NativeMessagingHosts/`
-is *not found* by the browser on Windows even when the file is present and
+is _not found_ by the browser on Windows even when the file is present and
 survives the launch — that is a POSIX mechanism and not one on Windows. The
 `chrome_debug.log` line `Can't find manifest for native messaging host …` is how
 it was identified. The registry key is the working mechanism.
@@ -142,7 +141,7 @@ them was wrong.
 
 `chrome.sidePanel.open()` refuses to run outside a user gesture. Confirmed from
 the Chromium implementation, not only the docs: the error is
-``sidePanel.open() may only be called in response to a user gesture``, and
+`sidePanel.open() may only be called in response to a user gesture`, and
 `openPanelOnActionClick` defaults to false.
 
 A tool call is not a gesture, so the panel cannot simply appear. Instead
@@ -209,7 +208,6 @@ Four facts the documentation either does not state or states in a form that does
 not match the value on the wire. Each one was wrong in this implementation before
 it was measured, and each was invisible to the test suite because every one of
 them had been tested against a hand-built reply.
-
 1. **A `.cmd` shim shifts the caller's origin in `argv`.** The documentation says
    the first argument to the native messaging host is the caller's origin, which
    is true of the process the browser launches. With a `.cmd` that runs the real
@@ -219,7 +217,7 @@ them had been tested against a hand-built reply.
 2. **That origin carries a trailing slash**: `chrome-extension://<id>/`, alongside
    `--parent-window=0`. A pattern anchored without it matches nothing.
 3. **An extension's `fetch` sends no `Origin` at all.** Holding host permissions
-   makes a *privileged* fetch, which the browser exempts from CORS — no
+   makes a _privileged_ fetch, which the browser exempts from CORS — no
    preflight, no `Origin`. The origin gate therefore admits an absent origin and
    lets the bearer authenticate that caller. A page cannot reach the admitted
    state: it holds no host permissions, so its fetch is ordinary CORS and must
@@ -245,7 +243,7 @@ them had been tested against a hand-built reply.
   the revision says servers **MUST** decode it before comparing it to the body. The
   first version of this work deliberately did not decode it, reasoning that
   WebMCP tool names are constrained to `[A-Za-z0-9_.-]` and could never need one.
-  That reasoning was wrong twice over: the revision only *should*-constrains
+  That reasoning was wrong twice over: the revision only _should_-constrains
   tool names to header-safe characters, and `resources/read` carries a URI, which
   routinely is not header-safe. Now decoded, with a test that sends a
   non-ASCII name.

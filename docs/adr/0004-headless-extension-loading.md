@@ -21,11 +21,11 @@ Playwright 1.63.0, Chromium **153.0.8010.12**, Windows, a Manifest V3
 extension with a module service worker, loaded unpacked via
 `--disable-extensions-except` plus `--load-extension`.
 
-| Launch mode | Service worker observed | `worker.evaluate` returned |
-|---|---|---|
-| bundled Chromium, `headless: true` | no — timed out | — |
-| `channel: "chromium"`, `headless: true` | yes | `worker-alive` |
-| bundled Chromium, `headless: false` | yes | `worker-alive` |
+| Launch mode                             | Service worker observed | `worker.evaluate` returned |
+| --------------------------------------- | ----------------------- | -------------------------- |
+| bundled Chromium, `headless: true`      | no — timed out          | —                          |
+| `channel: "chromium"`, `headless: true` | yes                     | `worker-alive`             |
+| bundled Chromium, `headless: false`     | yes                     | `worker-alive`             |
 
 The worker was reachable at a `chrome-extension://` origin and a value set on
 its global by the worker script was read back from the test process. Extension

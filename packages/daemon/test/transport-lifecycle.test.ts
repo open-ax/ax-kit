@@ -337,12 +337,12 @@ describe("local transport", () => {
 		]);
 		const manifest: unknown = JSON.parse(await readFile(manifestPath, "utf8"));
 		const record = manifest as Record<string, unknown>;
-		expect(record["type"]).toBe("stdio");
+		expect(record.type).toBe("stdio");
 		// The path is the binary's own directory, not an assumed one, and it is
 		// a real file the browser could launch.
-		expect(record["path"]).toBe(binary);
-		expect(await stat(String(record["path"]))).toBeDefined();
-		expect(record["allowed_origins"]).toEqual([
+		expect(record.path).toBe(binary);
+		expect(await stat(String(record.path))).toBeDefined();
+		expect(record.allowed_origins).toEqual([
 			"chrome-extension://knldjmfmopnpolahpmmgbagdohdnhkik/",
 		]);
 	});

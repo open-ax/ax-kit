@@ -7,11 +7,11 @@ Status: Accepted
 
 `docs/` had accumulated three unrelated jobs at the same path:
 
-| Path | What it held | Who points at it |
-|---|---|---|
-| `docs/adr/` | decision records | `AGENTS.md` "Where things live" |
+| Path           | What it held                    | Who points at it                  |
+| -------------- | ------------------------------- | --------------------------------- |
+| `docs/adr/`    | decision records                | `AGENTS.md` "Where things live"   |
 | `docs/agents/` | agent and tracker documentation | `AGENTS.md`, and it is local-only |
-| `docs/assets/` | two brand marks | `README.md` |
+| `docs/assets/` | two brand marks                 | `README.md`                       |
 
 A directory that means three things cannot be extended. Adding a documentation
 site into that same path would have made it four, and the next reader would have
@@ -26,12 +26,12 @@ documented home of its own.
 
 **One meaning per directory, and the brand marks get their own root directory.**
 
-| Path | Holds | Rule |
-|---|---|---|
-| `assets/` | repository-level images referenced from `README.md` | brand marks only |
-| `docs/adr/` | decision records | do not rename; documented in `AGENTS.md` |
-| `docs/agents/` | agent and tracker documentation | local-only, not committed; documented in `AGENTS.md` |
-| `docs/` | documentation of record | no site content and no images |
+| Path           | Holds                                               | Rule                                                 |
+| -------------- | --------------------------------------------------- | ---------------------------------------------------- |
+| `assets/`      | repository-level images referenced from `README.md` | brand marks only                                     |
+| `docs/adr/`    | decision records                                    | do not rename; documented in `AGENTS.md`             |
+| `docs/agents/` | agent and tracker documentation                     | local-only, not committed; documented in `AGENTS.md` |
+| `docs/`        | documentation of record                             | no site content and no images                        |
 
 **An application's own assets live inside the application.** A documentation
 site serves its images and downloads from its own `public/` directory under

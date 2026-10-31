@@ -1,6 +1,6 @@
 ---
-"@ax-kit/cli": patch
----
+
+## "@ax-kit/cli": patch
 
 The audit now says which of its checks an agent can act on
 

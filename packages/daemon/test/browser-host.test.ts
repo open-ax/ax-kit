@@ -172,8 +172,8 @@ describe("discovery", () => {
 
 	it("says no rather than guessing when there is no daemon", () => {
 		const answer = serveDiscovery(scratch()) as Record<string, unknown>;
-		expect(answer["ok"]).toBe(false);
-		expect(String(answer["reason"])).toMatch(/no daemon is running/);
+		expect(answer.ok).toBe(false);
+		expect(String(answer.reason)).toMatch(/no daemon is running/);
 	});
 
 	it("distinguishes a broken file from an absent one", () => {
@@ -181,8 +181,8 @@ describe("discovery", () => {
 		// problems, and only a person reading this can tell them apart.
 		const dir = withDiscovery({ port: -1 });
 		const answer = serveDiscovery(dir) as Record<string, unknown>;
-		expect(answer["ok"]).toBe(false);
-		expect(String(answer["reason"])).toMatch(/unreadable/);
+		expect(answer.ok).toBe(false);
+		expect(String(answer.reason)).toMatch(/unreadable/);
 	});
 });
 
@@ -228,7 +228,7 @@ describe("broker process", () => {
 
 		const decoded = decodeMessage(Buffer.concat(chunks));
 		const message = decoded?.message as Record<string, unknown> | undefined;
-		expect(message?.["ok"]).toBe(false);
+		expect(message?.ok).toBe(false);
 	});
 
 	it("closes without answering when the browser says nothing", async () => {

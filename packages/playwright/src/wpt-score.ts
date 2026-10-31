@@ -244,8 +244,8 @@ function parseReason(
 	where: string,
 	causes: Readonly<Record<string, string>>,
 ): Reason {
-	const inline = record["reason"];
-	const reference = record["cause"];
+	const inline = record.reason;
+	const reference = record.cause;
 	if (typeof inline === "string" && inline !== "") {
 		if (reference !== undefined) {
 			return fail(`${where} carries both a reason and a cause reference`);
@@ -269,18 +269,18 @@ function parseExpectedFailure(
 	causes: Readonly<Record<string, string>>,
 ): ExpectedFailure {
 	const record = asRecord(value, where);
-	const kind = asString(record["kind"], `${where}.kind`);
+	const kind = asString(record.kind, `${where}.kind`);
 	if (!KINDS.includes(kind as FailureKind)) {
 		return fail(`${where}.kind is not one of ${KINDS.join(", ")}`);
 	}
-	const subtest = record["subtest"];
+	const subtest = record.subtest;
 	if (subtest !== undefined && typeof subtest !== "string") {
 		return fail(`${where}.subtest is neither absent nor a string`);
 	}
 	const reason = parseReason(record, where, causes);
 	return {
 		...reason,
-		unit: asString(record["unit"], `${where}.unit`),
+		unit: asString(record.unit, `${where}.unit`),
 		subtest,
 		kind: kind as FailureKind,
 	};
@@ -293,20 +293,18 @@ function parseExpectedFailure(
  */
 export function parseExpectedFailureList(value: unknown): ExpectedFailureList {
 	const root = asRecord(value, "root");
-	const pinned = asRecord(root["pinned"], "pinned");
+	const pinned = asRecord(root.pinned, "pinned");
 	const causes: Record<string, string> = {};
-	for (const [name, text] of Object.entries(
-		asRecord(root["causes"], "causes"),
-	)) {
+	for (const [name, text] of Object.entries(asRecord(root.causes, "causes"))) {
 		causes[name] = asString(text, `causes.${name}`);
 	}
 	const browsers: Record<string, BrowserExpectations> = {};
 	for (const [name, entry] of Object.entries(
-		asRecord(root["browsers"], "browsers"),
+		asRecord(root.browsers, "browsers"),
 	)) {
 		const record = asRecord(entry, `browsers.${name}`);
 		const where = `browsers.${name}.expectedFailures`;
-		const expectedFailures = asArray(record["expectedFailures"], where).map(
+		const expectedFailures = asArray(record.expectedFailures, where).map(
 			(item, index) => parseExpectedFailure(item, `${where}[${index}]`, causes),
 		);
 		// One entry per failure. Coverage is keyed on `unit` and `subtest`, so a
@@ -324,22 +322,22 @@ export function parseExpectedFailureList(value: unknown): ExpectedFailureList {
 			seen.add(listedKey);
 		}
 		browsers[name] = {
-			engine: asString(record["engine"], `browsers.${name}.engine`),
-			version: asString(record["version"], `browsers.${name}.version`),
+			engine: asString(record.engine, `browsers.${name}.engine`),
+			version: asString(record.version, `browsers.${name}.version`),
 			expectedFailures,
 		};
 	}
 	return {
-		draft: asString(pinned["draft"], "pinned.draft"),
-		wptRevision: asString(pinned["wptRevision"], "pinned.wptRevision"),
+		draft: asString(pinned.draft, "pinned.draft"),
+		wptRevision: asString(pinned.wptRevision, "pinned.wptRevision"),
 		causes,
-		exclusions: asArray(root["exclusions"], "exclusions").map((item, index) => {
+		exclusions: asArray(root.exclusions, "exclusions").map((item, index) => {
 			const where = `exclusions[${index}]`;
 			const record = asRecord(item, where);
 			const reason = parseReason(record, where, causes);
 			return {
 				...reason,
-				unit: asString(record["unit"], `${where}.unit`),
+				unit: asString(record.unit, `${where}.unit`),
 			};
 		}),
 		browsers,

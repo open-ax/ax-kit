@@ -6,7 +6,6 @@ procedure that was actually executed.
 
 Read this before the first run. It is written for someone who did not write the
 code.
-
 - [Prerequisites](#prerequisites)
 - [Windows](#windows)
 - [macOS](#macos)
@@ -22,12 +21,12 @@ Check these before the commands below. The one-command start checks the first
 two itself and refuses with the command to fix them; the third and fourth it
 cannot check for you.
 
-| # | Prerequisite | How to check | If it is missing |
-|---|---|---|---|
-| 1 | Node `>=24.19.0 <25` | `node --version` | Install Node 24. `.nvmrc` pins `24.21.0`. |
-| 2 | Dependencies installed | `node -e "require.resolve('typescript')"` | `pnpm install` |
-| 3 | A Chromium browser, version 116 or later | launch it | The manifest declares `minimum_chrome_version: 116`. |
-| 4 | The extension's id | see below | The bridge cannot be registered without it. |
+| #   | Prerequisite                             | How to check                              | If it is missing                                     |
+| --- | ---------------------------------------- | ----------------------------------------- | ---------------------------------------------------- |
+| 1   | Node `>=24.19.0 <25`                     | `node --version`                          | Install Node 24. `.nvmrc` pins `24.21.0`.            |
+| 2   | Dependencies installed                   | `node -e "require.resolve('typescript')"` | `pnpm install`                                       |
+| 3   | A Chromium browser, version 116 or later | launch it                                 | The manifest declares `minimum_chrome_version: 116`. |
+| 4   | The extension's id                       | see below                                 | The bridge cannot be registered without it.          |
 
 **The extension id is the one thing you have to find by hand.** Chromium assigns
 it to an unpacked extension and derives it from the load path, so it is not
@@ -68,9 +67,12 @@ needs no configuration:
 
 ```json
 {
-  "mcpServers": {
-    "ax-kit": { "command": "node", "args": ["packages/daemon/bin/ax-kit-daemon.mjs"] }
-  }
+	"mcpServers": {
+		"ax-kit": {
+			"command": "node",
+			"args": ["packages/daemon/bin/ax-kit-daemon.mjs"]
+		}
+	}
 }
 ```
 
@@ -129,18 +131,18 @@ a different name, pass `--manifest-dir` explicitly.
 
 ## Platform differences
 
-| | Windows | macOS | Linux |
-|---|---|---|---|
-| Supported | yes | yes | yes |
-| **Demonstrated end to end** | **yes, 2026-10-17** | no | no |
-| Registration mechanism | a registry key | a file in the profile | a file in the profile |
-| What the registration is scoped to | **per user account** | per browser profile | per browser profile |
-| Visible to other browsers | **yes — every Chrome the user runs** | no | no |
-| Manifest directory | `%LOCALAPPDATA%\ax-kit` (a default; the key may point anywhere) | `~/Library/Application Support/Google/Chrome` | `~/.config/google-chrome` |
-| Discovery file | `%LOCALAPPDATA%\ax-kit\relay.json` | `$XDG_RUNTIME_DIR/ax/relay.json`, else `~/.ax/relay.json` | same as macOS |
-| Launcher the browser runs | a generated `.cmd` beside the broker | the broker script, with its executable bit set | same as macOS |
-| What the starter verified | manifest written, **registry key read back and compared**, listener bound, discovery file parsed | manifest written and on disk at the path the browser reads | manifest written and on disk at the path the browser reads |
-| What was **not** verified | nothing outstanding | no browser was launched; the manifest was constructed, not exercised | no browser was launched; the manifest was constructed, not exercised |
+|                                    | Windows                                                                                          | macOS                                                                | Linux                                                                |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| Supported                          | yes                                                                                              | yes                                                                  | yes                                                                  |
+| **Demonstrated end to end**        | **yes, 2026-10-17**                                                                              | no                                                                   | no                                                                   |
+| Registration mechanism             | a registry key                                                                                   | a file in the profile                                                | a file in the profile                                                |
+| What the registration is scoped to | **per user account**                                                                             | per browser profile                                                  | per browser profile                                                  |
+| Visible to other browsers          | **yes — every Chrome the user runs**                                                             | no                                                                   | no                                                                   |
+| Manifest directory                 | `%LOCALAPPDATA%\ax-kit` (a default; the key may point anywhere)                                  | `~/Library/Application Support/Google/Chrome`                        | `~/.config/google-chrome`                                            |
+| Discovery file                     | `%LOCALAPPDATA%\ax-kit\relay.json`                                                               | `$XDG_RUNTIME_DIR/ax/relay.json`, else `~/.ax/relay.json`            | same as macOS                                                        |
+| Launcher the browser runs          | a generated `.cmd` beside the broker                                                             | the broker script, with its executable bit set                       | same as macOS                                                        |
+| What the starter verified          | manifest written, **registry key read back and compared**, listener bound, discovery file parsed | manifest written and on disk at the path the browser reads           | manifest written and on disk at the path the browser reads           |
+| What was **not** verified          | nothing outstanding                                                                              | no browser was launched; the manifest was constructed, not exercised | no browser was launched; the manifest was constructed, not exercised |
 
 Two rows deserve their own paragraph.
 
@@ -191,14 +193,14 @@ repository.
 Executed 2026-10-17 by someone who had not written any of this code, following
 this document rather than the source.
 
-| | |
-|---|---|
-| Date | 2026-10-17 |
-| Platform | `win32`, x64, Windows 11 Home Single Language, `10.0.26200` |
-| Node | `v24.21.0` |
-| pnpm | `10.15.0` |
-| Browser | **no Chrome or Edge installed on this machine**; the browser half was driven by the Chromium that Playwright ships (`ms-playwright\chromium-1243`) |
-| Extension id | `oafbjfeifmcilaffmieadfenmneeilcj` |
+|              |                                                                                                                                                    |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Date         | 2026-10-17                                                                                                                                         |
+| Platform     | `win32`, x64, Windows 11 Home Single Language, `10.0.26200`                                                                                        |
+| Node         | `v24.21.0`                                                                                                                                         |
+| pnpm         | `10.15.0`                                                                                                                                          |
+| Browser      | **no Chrome or Edge installed on this machine**; the browser half was driven by the Chromium that Playwright ships (`ms-playwright\chromium-1243`) |
+| Extension id | `oafbjfeifmcilaffmieadfenmneeilcj`                                                                                                                 |
 
 ### Commands, and what each printed
 
@@ -301,13 +303,11 @@ manifest, which is what registration means.
 
 ```json
 {
-  "name": "com.openax.axkit",
-  "description": "ax-kit bridge",
-  "path": "<repo>\\packages\\daemon\\bin\\ax-kit-browser-host.mjs.cmd",
-  "type": "stdio",
-  "allowed_origins": [
-    "chrome-extension://oafbjfeifmcilaffmieadfenmneeilcj/"
-  ]
+	"name": "com.openax.axkit",
+	"description": "ax-kit bridge",
+	"path": "<repo>\\packages\\daemon\\bin\\ax-kit-browser-host.mjs.cmd",
+	"type": "stdio",
+	"allowed_origins": ["chrome-extension://oafbjfeifmcilaffmieadfenmneeilcj/"]
 }
 ```
 
@@ -360,8 +360,8 @@ as success.
 **Found by this walk on 2026-10-17 and fixed the same day. Kept here because the
 fix is the evidence that the walk was worth doing.**
 
-`startTransport` documents itself: *"A failure to open it is a warning rather
-than a refusal to start: stdio still works on its own."* `src/main.ts` wraps the
+`startTransport` documents itself: _"A failure to open it is a warning rather
+than a refusal to start: stdio still works on its own."_ `src/main.ts` wraps the
 call in `try`/`catch` on that promise and degrades to stdio-only when it
 rejects.
 
@@ -426,7 +426,6 @@ standard input closed, daemon exited `code 0`, file removed.
 ### 4. Two things the command cannot check, so it says so
 
 It prints them rather than staying quiet:
-
 - **that the extension id is the one your browser assigned.** A manifest
   admitting the wrong origin is a host no browser will run for. Nothing in this
   repository can detect it; a person comparing the id against

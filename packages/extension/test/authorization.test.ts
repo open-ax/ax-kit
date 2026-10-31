@@ -149,7 +149,7 @@ async function invoke(
 	return (await worker.evaluate(
 		async (request: unknown) => {
 			const scope = globalThis as unknown as Record<string, unknown>;
-			const handle = scope["__axHandle"] as (r: unknown) => Promise<unknown>;
+			const handle = scope.__axHandle as (r: unknown) => Promise<unknown>;
 			try {
 				return {
 					ok: true,
@@ -191,7 +191,7 @@ async function approveThroughPanel(
 ): Promise<boolean> {
 	return await worker.evaluate((key: unknown) => {
 		const scope = globalThis as unknown as Record<string, unknown>;
-		const panel = scope["__axPanel"] as (op: string, args: unknown) => unknown;
+		const panel = scope.__axPanel as (op: string, args: unknown) => unknown;
 		const list = panel("list", {}) as {
 			pending?: ReadonlyArray<{ key: string; definitionVersion: string }>;
 		};
@@ -200,15 +200,14 @@ async function approveThroughPanel(
 		);
 		panel("approve", { key, definitionVersion: entry?.definitionVersion });
 		return true;
-	}, String(result["pendingApproval"]));
+	}, String(result.pendingApproval));
 }
 
 /** Change what the page reports for `payNow` without changing the page. */
 async function redefine(changes: Record<string, unknown>): Promise<void> {
 	await shopPage?.evaluate(async (fields: unknown) => {
-		const redefine = (globalThis as unknown as Record<string, unknown>)[
-			"__redefine"
-		] as (patch: Record<string, unknown>) => Promise<void>;
+		const redefine = (globalThis as unknown as Record<string, unknown>)
+			.__redefine as (patch: Record<string, unknown>) => Promise<void>;
 		await redefine(fields as Record<string, unknown>);
 	}, changes);
 }
@@ -217,7 +216,7 @@ async function redefine(changes: Record<string, unknown>): Promise<void> {
 async function clearPending(): Promise<void> {
 	await worker.evaluate(() => {
 		const scope = globalThis as unknown as Record<string, unknown>;
-		const panel = scope["__axPanel"] as (op: string, args: unknown) => unknown;
+		const panel = scope.__axPanel as (op: string, args: unknown) => unknown;
 		const list = panel("list", {}) as {
 			pending?: ReadonlyArray<{ key: string; definitionVersion: string }>;
 		};
@@ -247,8 +246,7 @@ async function openFixture(
 	const unique = `${path}?fixture=${fixtureSeq}`;
 	await fixture.goto(`${origin}${unique}`);
 	await fixture.waitForFunction(
-		() =>
-			(globalThis as unknown as Record<string, unknown>)["__ready"] === true,
+		() => (globalThis as unknown as Record<string, unknown>).__ready === true,
 		undefined,
 		{ timeout: 20_000 },
 	);
@@ -298,8 +296,7 @@ beforeAll(async () => {
 	page = await context.newPage();
 	await page.goto(`${origin}/shop`);
 	await page.waitForFunction(
-		() =>
-			(globalThis as unknown as Record<string, unknown>)["__ready"] === true,
+		() => (globalThis as unknown as Record<string, unknown>).__ready === true,
 		undefined,
 		{ timeout: 20_000 },
 	);
@@ -464,7 +461,7 @@ describe("authorisation outcomes at the real seam", () => {
 			documentId: "doc-1",
 		});
 		expect(first.ok).toBe(true);
-		expect((first.result as Record<string, unknown>)["description"]).toBe(
+		expect((first.result as Record<string, unknown>).description).toBe(
 			"Charge the saved card.",
 		);
 		expect(
@@ -502,9 +499,9 @@ describe("authorisation outcomes at the real seam", () => {
 			documentId: "doc-1",
 		});
 		expect(first.ok).toBe(true);
-		expect(
-			(first.result as Record<string, unknown>)["requiresConfirmation"],
-		).toBe(true);
+		expect((first.result as Record<string, unknown>).requiresConfirmation).toBe(
+			true,
+		);
 		// Approve 400, then ask for 4000. Refused, not executed and not re-prompted.
 		expect(
 			await approveThroughPanel(first.result as Record<string, unknown>),
@@ -567,7 +564,7 @@ describe("authorisation outcomes at the real seam", () => {
 		});
 		expect(first.ok).toBe(true);
 		const result = first.result as Record<string, unknown>;
-		const liveVersion = String(result["definitionVersion"]);
+		const liveVersion = String(result.definitionVersion);
 		expect(liveVersion.length).toBeGreaterThan(0);
 
 		// The person is shown a definition, and a different one is live by the
@@ -612,8 +609,8 @@ describe("authorisation outcomes at the real seam", () => {
 		});
 		expect(first.ok).toBe(true);
 		const shown = first.result as Record<string, unknown>;
-		const binding = String(shown["pendingApproval"]);
-		const staleVersion = String(shown["definitionVersion"]);
+		const binding = String(shown.pendingApproval);
+		const staleVersion = String(shown.definitionVersion);
 		expect(staleVersion.length).toBeGreaterThan(0);
 
 		// The page changes what the tool says while the first card is still
@@ -628,7 +625,7 @@ describe("authorisation outcomes at the real seam", () => {
 			documentId: "doc-1",
 		});
 		const refreshed = second.result as Record<string, unknown>;
-		const liveVersion = String(refreshed["definitionVersion"]);
+		const liveVersion = String(refreshed.definitionVersion);
 		expect(liveVersion).not.toBe(staleVersion);
 
 		// A click on the old card carries the old version and must not approve
@@ -636,10 +633,7 @@ describe("authorisation outcomes at the real seam", () => {
 		const staleDecision = await worker.evaluate(
 			(request: unknown) => {
 				const scope = globalThis as unknown as Record<string, unknown>;
-				const panel = scope["__axPanel"] as (
-					op: string,
-					args: unknown,
-				) => unknown;
+				const panel = scope.__axPanel as (op: string, args: unknown) => unknown;
 				const { key, definitionVersion } = request as {
 					key: unknown;
 					definitionVersion: unknown;
@@ -659,10 +653,7 @@ describe("authorisation outcomes at the real seam", () => {
 		await worker.evaluate(
 			(request: unknown) => {
 				const scope = globalThis as unknown as Record<string, unknown>;
-				const panel = scope["__axPanel"] as (
-					op: string,
-					args: unknown,
-				) => unknown;
+				const panel = scope.__axPanel as (op: string, args: unknown) => unknown;
 				const { key, definitionVersion } = request as {
 					key: unknown;
 					definitionVersion: unknown;
@@ -704,8 +695,7 @@ describe("authorisation outcomes at the real seam", () => {
 		// next. Readiness is the new document's own marker.
 		await shopPage?.goto(`${origin}/shop`);
 		await shopPage?.waitForFunction(
-			() =>
-				(globalThis as unknown as Record<string, unknown>)["__ready"] === true,
+			() => (globalThis as unknown as Record<string, unknown>).__ready === true,
 			undefined,
 			{ timeout: 20_000 },
 		);
@@ -722,7 +712,7 @@ describe("authorisation outcomes at the real seam", () => {
 		expect(afterNavigation.ok).toBe(true);
 		expect(afterNavigation.result).not.toEqual(JSON.stringify({ paid: 700 }));
 		const asked = afterNavigation.result as Record<string, unknown>;
-		expect(asked["requiresConfirmation"]).toBe(true);
+		expect(asked.requiresConfirmation).toBe(true);
 		// The binding is unchanged because the caller still names the same
 		// document; what changed is that the approval behind it is gone, so the
 		// same request no longer resolves to an execution.

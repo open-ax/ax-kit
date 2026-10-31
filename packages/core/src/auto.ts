@@ -71,9 +71,7 @@ export function autoInstallModelContext(): ModelContext | undefined {
 	// `install.ts` so that the root entry does not grow to carry it: an
 	// explicit installer is a caller that has already decided, and only an
 	// automatic one is guessing.
-	if (
-		(doc as unknown as Record<string, unknown>)["modelContext"] !== undefined
-	) {
+	if ((doc as unknown as Record<string, unknown>).modelContext !== undefined) {
 		return undefined;
 	}
 	try {
@@ -102,9 +100,7 @@ export function autoInstallModelContext(): ModelContext | undefined {
  * `installModelContext`, which has no way to tell the two apart.
  */
 function ambientDocument(): Document | undefined {
-	const candidate = (globalThis as unknown as Record<string, unknown>)[
-		"document"
-	];
+	const candidate = (globalThis as unknown as Record<string, unknown>).document;
 	if (typeof candidate !== "object" || candidate === null) {
 		return undefined;
 	}

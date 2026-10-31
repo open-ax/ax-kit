@@ -27,24 +27,27 @@ Requires React 18 or 19 as a peer. Zero runtime dependencies.
 import { AxProvider, useAxTool } from "@ax-kit/react";
 
 function CartTools({ total }: { total: number }) {
-  useAxTool({
-    name: "viewCart",
-    description: "Return the current cart contents.",
-    execute: async () => ({ total }),
-  });
-  useAxTool("proceedToCheckout", async () => ({ ok: true }), {
-    description: "Start checkout.",
-    annotations: { consequentialHint: true },
-  });
-  return null;
+	useAxTool({
+		name: "viewCart",
+		description: "Return the current cart contents.",
+		execute: async () => ({ total }),
+	});
+	useAxTool("proceedToCheckout", async () => ({ ok: true }), {
+		description: "Start checkout.",
+		annotations: { consequentialHint: true },
+	});
+	return null;
 }
 
 export function Page({ total }: { total: number }) {
-  return (
-    <AxProvider namespace="cart." middleware={async (next, args, opts) => next(args, opts)}>
-      <CartTools total={total} />
-    </AxProvider>
-  );
+	return (
+		<AxProvider
+			namespace="cart."
+			middleware={async (next, args, opts) => next(args, opts)}
+		>
+			<CartTools total={total} />
+		</AxProvider>
+	);
 }
 ```
 

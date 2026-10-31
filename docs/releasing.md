@@ -2,7 +2,6 @@
 
 How a version gets made and published. Read this before your first release; it
 is written for someone who did not write the code.
-
 - [What gets released](#what-gets-released)
 - [Recording a change](#recording-a-change)
 - [Making a release](#making-a-release)
@@ -17,17 +16,17 @@ Nine packages, versioned **independently**. `@ax-kit/tsconfig` is private and is
 never published. There is no fixed or linked versioning, so a change to one
 adapter does not bump the other eight.
 
-| Package | Notes |
-|---|---|
-| `@ax-kit/core` | the polyfill; zero runtime dependencies; carries the size gate |
-| `@ax-kit/cli` | ships the `ax-kit` binary |
-| `@ax-kit/daemon` | ships the `ax-kit-daemon` binary |
-| `@ax-kit/extension` | trusted-tier bridge |
-| `@ax-kit/playwright` | peer-depends on `@playwright/test` |
-| `@ax-kit/react` | peer-depends on `react` |
-| `@ax-kit/svelte` | peer-depends on `svelte` |
-| `@ax-kit/vue` | peer-depends on `vue` |
-| `@ax-kit/zod` | the only package with a runtime dependency |
+| Package              | Notes                                                          |
+| -------------------- | -------------------------------------------------------------- |
+| `@ax-kit/core`       | the polyfill; zero runtime dependencies; carries the size gate |
+| `@ax-kit/cli`        | ships the `ax-kit` binary                                      |
+| `@ax-kit/daemon`     | ships the `ax-kit-daemon` binary                               |
+| `@ax-kit/extension`  | trusted-tier bridge                                            |
+| `@ax-kit/playwright` | peer-depends on `@playwright/test`                             |
+| `@ax-kit/react`      | peer-depends on `react`                                        |
+| `@ax-kit/svelte`     | peer-depends on `svelte`                                       |
+| `@ax-kit/vue`        | peer-depends on `vue`                                          |
+| `@ax-kit/zod`        | the only package with a runtime dependency                     |
 
 `@ax-kit/core` is a **devDependency** of the four adapters and is bundled into
 their output — a built adapter contains no runtime import of it. That is why
@@ -118,7 +117,7 @@ and it refuses:
 
 Continuous integration is not affected: the cache directory is gitignored, so a
 fresh checkout has no cache and the task always runs. This matters locally when
-you *tighten* the budget, because that is exactly when you want to see it fail.
+you _tighten_ the budget, because that is exactly when you want to see it fail.
 Use `--force` after changing a limit.
 
 `changeset version` rewrites the package manifests, the lockfile, and adds a
@@ -132,11 +131,11 @@ Publishing needs registry credentials and is **not reversible**. Do not run
 The two halves are also available separately, and the release workflow uses the
 second one:
 
-| Command | Does |
-|---|---|
-| `pnpm release` | version, then publish. The one-shot for a human. |
-| `pnpm release:version` | `changeset version` alone |
-| `pnpm release:publish` | `changeset publish` alone |
+| Command                | Does                                             |
+| ---------------------- | ------------------------------------------------ |
+| `pnpm release`         | version, then publish. The one-shot for a human. |
+| `pnpm release:version` | `changeset version` alone                        |
+| `pnpm release:publish` | `changeset publish` alone                        |
 
 ## Publishing without a long-lived secret
 
@@ -149,9 +148,8 @@ The workflow asks for one elevated permission, `id-token: write`, plus
 provenance, and it cannot write to this repository.
 
 Three things about it are load-bearing and are easy to get wrong:
-
 - **The workflow filename is part of the binding.** The trusted publisher names
-  this repository *and* `release.yml`. Renaming the file breaks publishing with
+  this repository _and_ `release.yml`. Renaming the file breaks publishing with
   an error that does not mention file names. Change the trusted publisher in the
   same commit.
 - **Staged publishing is the usual first-run surprise.** A newly created trusted
@@ -171,7 +169,6 @@ publish it either, because the workflow authenticates as a trusted publisher tha
 does not exist yet. Something has to create the package on the registry first.
 
 For each of the nine packages:
-
 1. Add a changeset for **every** package that needs its first publication, not
    only the ones this change happens to touch. `changeset version` bumps a
    package only when a changeset names it, so a package nobody wrote one for
@@ -227,7 +224,6 @@ This cannot be done from the repository; it needs an account with access to the
 section is about the packages that exist. For **each** of the nine packages —
 `@ax-kit/cli`, `core`, `daemon`, `extension`, `playwright`, `react`, `svelte`,
 `vue`, `zod`:
-
 1. Create a trusted publisher on the package, configured for **GitHub Actions**.
 2. Set the organization to `open-ax` and the repository to `ax-kit`.
 3. Set the workflow filename to `release.yml`.
@@ -245,7 +241,6 @@ verifiable from the published artifact. Nothing in this repository asserts it.
 
 A gate that reports a problem and blocks nothing is worse than no gate, because
 it reads as coverage. Two checks were audited for this:
-
 - **`publint` runs with `--strict`.** Without it, `publint` prints warnings and
   exits 0. A malformed `repository.url` — the field publishing authentication
   binds to — was reported and the build stayed green. `--strict` promotes every
@@ -254,7 +249,7 @@ it reads as coverage. Two checks were audited for this:
   `strict`, which also analyses legacy `node10` resolution. These packages use
   subpath `exports`, and `node10` cannot resolve subpaths at all, so under
   `strict` every subpath entry reports `NoResolution`. The `node10` rows shown
-  under `node16` are marked *ignored* because the packages do not claim that
+  under `node16` are marked _ignored_ because the packages do not claim that
   resolution mode, not because a real finding was suppressed. `node16` does
   block: a broken `exports` types path fails it.
 

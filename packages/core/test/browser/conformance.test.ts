@@ -32,9 +32,8 @@ function errorName(error: unknown): string {
 }
 
 function context(): ModelContext {
-	const installed = (document as unknown as Record<string, unknown>)[
-		"modelContext"
-	] as ModelContext | undefined;
+	const installed = (document as unknown as Record<string, unknown>)
+		.modelContext as ModelContext | undefined;
 	if (installed === undefined) {
 		throw new Error("document.modelContext is not installed");
 	}
@@ -75,9 +74,8 @@ describe("browser global", () => {
 	it("runs in a secure context with one hardened instance", () => {
 		expect(window.isSecureContext).toBe(true);
 		expect(context()).toBe(
-			(document as unknown as Record<string, unknown>)[
-				"modelContext"
-			] as ModelContext,
+			(document as unknown as Record<string, unknown>)
+				.modelContext as ModelContext,
 		);
 		const descriptor = Object.getOwnPropertyDescriptor(
 			document,
@@ -89,12 +87,12 @@ describe("browser global", () => {
 
 	it("exposes no stale-shape alias", () => {
 		const scope = globalThis as unknown as Record<string, unknown>;
-		expect(scope["modelContext"]).toBeUndefined();
+		expect(scope.modelContext).toBeUndefined();
 		expect(
-			(window as unknown as Record<string, unknown>)["modelContext"],
+			(window as unknown as Record<string, unknown>).modelContext,
 		).toBeUndefined();
 		expect(
-			(navigator as unknown as Record<string, unknown>)["modelContext"],
+			(navigator as unknown as Record<string, unknown>).modelContext,
 		).toBeUndefined();
 	});
 });

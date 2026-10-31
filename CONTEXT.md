@@ -27,11 +27,11 @@ describing its arguments, and a callback that performs the work. A tool is the
 unit an agent selects and calls.
 
 **Registration** **[spec]**
-Adding a tool to a `ModelContext`. Registration controls *availability* — whether
+Adding a tool to a `ModelContext`. Registration controls _availability_ — whether
 the tool can be discovered and called at all.
 
 **Execution** **[spec]**
-Invoking a registered tool with arguments. Execution controls *one invocation*.
+Invoking a registered tool with arguments. Execution controls _one invocation_.
 Registration and execution have separate lifetimes and separate cancellation,
 and conflating them is a bug.
 
@@ -44,7 +44,7 @@ crosses. Attacker-supplied schema content is untrusted input like any other.
 A tool whose effect a person would want to approve first — spending money,
 irreversibly changing state, sending a message. Annotated so that a consumer
 can require human confirmation before invoking it. Consequential is a property
-of the *declared intent*, not a permission the tool itself enforces.
+of the _declared intent_, not a permission the tool itself enforces.
 
 **Exposed to** **[spec]**
 The origin or origins allowed to see and invoke a tool. Definitions start with
@@ -99,11 +99,11 @@ wins. Order is an optimisation; it is never a control.
 - **"Server"** for anything in this project. The page is not a server, and
   calling it one invites reasoning about a trust boundary that is not there.
 - **"Action"** as a synonym for tool. It is the same thing; pick one. This
-  project says *tool*.
+  project says _tool_.
 - **"Polyfill"** for the whole package. The polyfill is one part of it. The
   registry, the validation, and the event dispatch are not polyfills and have
   their own failure modes.
-- **"Safe"** as a security conclusion on its own. Say safe *against what*. A
+- **"Safe"** as a security conclusion on its own. Say safe _against what_. A
   typed surface narrows what an agent can reach; it does not make untrusted
   content safe to read.
 

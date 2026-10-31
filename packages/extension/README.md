@@ -123,7 +123,7 @@ definition widen itself with `exposedTo`, and the registered-tool listing this
 package reads does not carry that set, so the worker has none to honour.
 
 This is a policy, not an authorisation boundary, and the difference is worth
-stating. The *caller origin* still arrives in the request, so a caller names its
+stating. The _caller origin_ still arrives in the request, so a caller names its
 own identity here. What removing the caller-supplied allow-list buys is that the
 set of origins admitted is no longer something a caller chooses. The manifest
 denies external connections, so the callers that can reach the worker are this

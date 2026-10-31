@@ -1,4 +1,5 @@
 ---
+
 draft: false
 title: "Reporting a vulnerability"
 description: "A private route to report a security problem and what happens to the report."
@@ -27,11 +28,11 @@ GET /.well-known/security.txt
 
 ## What to include
 
-| | |
-|---|---|
-| What an attacker can do | The capability, not the category |
-| The version | The published version, or the commit |
-| A reproduction | The smallest thing that shows it |
+|                           |                                           |
+| ------------------------- | ----------------------------------------- |
+| What an attacker can do   | The capability, not the category          |
+| The version               | The published version, or the commit      |
+| A reproduction            | The smallest thing that shows it          |
 | What you expected instead | Usually more useful than the reproduction |
 
 The last one is the row people skip. "I called `executeTool` with a tool
@@ -40,12 +41,12 @@ registered by another origin and it ran" tells a maintainer where to look;
 
 ## What happens next
 
-| Stage | What to expect |
-|---|---|
-| Acknowledgement | Within a few days |
-| Assessment | Whether it is a real issue and what it affects |
-| Fix | A fix, or an explanation of why the behaviour is correct |
-| Credit | Named in the advisory unless you ask otherwise |
+| Stage           | What to expect                                           |
+| --------------- | -------------------------------------------------------- |
+| Acknowledgement | Within a few days                                        |
+| Assessment      | Whether it is a real issue and what it affects           |
+| Fix             | A fix, or an explanation of why the behaviour is correct |
+| Credit          | Named in the advisory unless you ask otherwise           |
 
 Before the first published release the project's stated posture is best-effort:
 security fixes only, no backports to older versions. That is the right posture

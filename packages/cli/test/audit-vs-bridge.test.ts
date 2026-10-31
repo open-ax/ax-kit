@@ -69,17 +69,14 @@ async function openFixture(name: string): Promise<Page> {
 	await page.waitForFunction(
 		(expected: unknown) => {
 			const scope = globalThis as unknown as Record<string, unknown>;
-			return (
-				scope["__fixture"] === expected || scope["__fixtureError"] !== undefined
-			);
+			return scope.__fixture === expected || scope.__fixtureError !== undefined;
 		},
 		name,
 		{ timeout: 30_000 },
 	);
 	const failure = await page.evaluate(
 		() =>
-			(globalThis as unknown as Record<string, unknown>)["__fixtureError"] ??
-			null,
+			(globalThis as unknown as Record<string, unknown>).__fixtureError ?? null,
 	);
 	if (typeof failure === "string") {
 		throw new Error(`fixture ${name} failed: ${failure}`);
@@ -135,7 +132,7 @@ function startWorkerBridge(): void {
 		.evaluate(
 			async (endpoint: unknown) => {
 				const scope = globalThis as unknown as Record<string, unknown>;
-				const handle = scope["__axHandle"] as (
+				const handle = scope.__axHandle as (
 					request: unknown,
 				) => Promise<unknown>;
 				if (typeof handle !== "function") {
@@ -269,7 +266,7 @@ async function exposedBy(
 		const listed = await bridge.listTools(tabId);
 		return {
 			names: listed
-				.map((entry) => entry["name"])
+				.map((entry) => entry.name)
 				.filter((name): name is string => typeof name === "string"),
 			refusal: null,
 		};
@@ -303,8 +300,8 @@ describe("audit and bridge against the same page", () => {
 		// Same origin, seen independently: the audit read the document's own
 		// `location`, and the bridge read the frame's origin inside the page.
 		const listed = await bridge.listTools(tabId);
-		const cart = listed.find((entry) => entry["name"] === "viewCart");
-		expect(cart?.["frameOrigin"]).toBe(server.origin);
+		const cart = listed.find((entry) => entry.name === "viewCart");
+		expect(cart?.frameOrigin).toBe(server.origin);
 	}, 60_000);
 
 	it("agrees that an annotated page is invokable, and says which call asks", async () => {

@@ -619,9 +619,9 @@ afterAll(async () => {
 		join(dir, "coverage.txt"),
 		[
 			`suite:    @modelcontextprotocol/conformance ${SUITE_VERSION}`,
-			"declared: " + String(declared.length),
-			"reached:  " + String(reached.size),
-			"exit:     " + String(first.exitCode),
+			`declared: ${String(declared.length)}`,
+			`reached:  ${String(reached.size)}`,
+			`exit:     ${String(first.exitCode)}`,
 			"",
 			"reached scenarios:",
 			...[...reached].sort().map((name) => `  ${name}`),

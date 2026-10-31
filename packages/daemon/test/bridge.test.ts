@@ -69,7 +69,7 @@ describe("page bridge pending calls", () => {
 
 		// The abandoned call is gone, not waiting to be executed against the page.
 		const envelope = bridge.take();
-		expect(envelope?.request.args["tabId"]).toBe(2);
+		expect(envelope?.request.args.tabId).toBe(2);
 		expect(bridge.take()).toBeNull();
 
 		bridge.deliver(JSON.stringify({ id: envelope?.id, result: { tools: [] } }));
@@ -295,7 +295,7 @@ describe("bridge client over the real transport", () => {
 		);
 
 		const serving = client.serve(async (request) => ({
-			tools: [{ name: request.handler, tabId: request.args["tabId"] }],
+			tools: [{ name: request.handler, tabId: request.args.tabId }],
 		}));
 		await idle;
 		await expect(bridge.listTools(7)).resolves.toEqual([

@@ -123,8 +123,8 @@ export function readToolOutcome(value: unknown): ToolOutcome {
 	// The Trusted tier signals "a person is being asked" with this flag, and it
 	// is the only field that distinguishes that reply from a result. It is read
 	// first so a confirmation is never mistaken for anything else.
-	if (isRecord(value) && value["requiresConfirmation"] !== undefined) {
-		if (value["requiresConfirmation"] !== true) {
+	if (isRecord(value) && value.requiresConfirmation !== undefined) {
+		if (value.requiresConfirmation !== true) {
 			// Present but not `true` is a shape the Trusted tier does not produce.
 			// Reading it as a result would execute the branch that files a
 			// confirmation with a body the person was never shown.

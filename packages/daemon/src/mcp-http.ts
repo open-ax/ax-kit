@@ -107,7 +107,7 @@ function readId(value: unknown): string | number | null {
 
 /** The `name` or `uri` the request identifies, or null when it has neither. */
 function readTarget(record: Record<string, unknown>): string | null {
-	const params = record["params"];
+	const params = record.params;
 	if (typeof params !== "object" || params === null) {
 		return null;
 	}
@@ -230,8 +230,8 @@ export async function handleMcpRequest(
 		return true;
 	}
 	const record = parsed as Record<string, unknown>;
-	const id = readId(record["id"]);
-	const method = record["method"];
+	const id = readId(record.id);
+	const method = record.method;
 	if (typeof method !== "string") {
 		refuse(response, 400, null, -32600, "invalid request");
 		return true;

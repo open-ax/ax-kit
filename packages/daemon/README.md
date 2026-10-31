@@ -12,7 +12,7 @@ side of the bridge.
 ## The page bridge
 
 The daemon reaches an extension over the loopback listener. A browser cannot
-open a TCP socket, so the extension dials *out*: it pulls a request, executes it
+open a TCP socket, so the extension dials _out_: it pulls a request, executes it
 in the Trusted tier, and posts the result back.
 
 A service worker also has no filesystem, so it cannot read the discovery file to
@@ -38,14 +38,19 @@ import { PageBridge, PageBridgeProvider, startTransport } from "@ax-kit/daemon";
 
 const bridge = new PageBridge();
 const transport = await startTransport({
-  discoveryDir,
-  bridge,
-  provider: new PageBridgeProvider(bridge),
-  info,
+	discoveryDir,
+	bridge,
+	provider: new PageBridgeProvider(bridge),
+	info,
 });
 
 const tools = await bridge.listTools(tabId);
-const result = await bridge.callTool("viewCart", { detailed: true }, tabId, origin);
+const result = await bridge.callTool(
+	"viewCart",
+	{ detailed: true },
+	tabId,
+	origin,
+);
 ```
 
 A refusal arrives as a `BridgeRefusal` carrying the worker's own error code, so
@@ -144,11 +149,11 @@ To consume the policy helpers directly, import them:
 
 ```ts
 import {
-  createDaemonInfo,
-  dispatchRequest,
-  emptyBridgeProvider,
-  parseFrame,
-  serializeFrame,
+	createDaemonInfo,
+	dispatchRequest,
+	emptyBridgeProvider,
+	parseFrame,
+	serializeFrame,
 } from "@ax-kit/daemon";
 
 const info = createDaemonInfo();
@@ -166,7 +171,6 @@ node packages/daemon/bin/ax-kit-daemon.mjs
 ```
 
 Rules enforced by this package and its tests:
-
 - No handshake and no session header. Every request carries its own
   version and capabilities in `_meta`; mismatches return the version
   error. Discovery (`server/discover`) is mandatory to implement and

@@ -81,11 +81,11 @@ export function readAttachment(value: unknown): Attachment | null {
 		return null;
 	}
 	const record = value as Record<string, unknown>;
-	if (record["ok"] !== true) {
+	if (record.ok !== true) {
 		return null;
 	}
-	const port = record["port"];
-	const token = record["token"];
+	const port = record.port;
+	const token = record.token;
 	if (
 		typeof port !== "number" ||
 		!Number.isInteger(port) ||
@@ -104,7 +104,7 @@ export function readRefusal(value: unknown): string {
 	if (typeof value !== "object" || value === null) {
 		return "the bridge refused the connection";
 	}
-	const reason = (value as Record<string, unknown>)["reason"];
+	const reason = (value as Record<string, unknown>).reason;
 	return typeof reason === "string" && reason.length > 0
 		? reason
 		: "the bridge refused the connection";
@@ -237,8 +237,8 @@ function readEnvelope(value: unknown): {
 		return null;
 	}
 	const record = value as Record<string, unknown>;
-	const id = record["id"];
-	const request = record["request"];
+	const id = record.id;
+	const request = record.request;
 	if (
 		typeof id !== "number" ||
 		typeof request !== "object" ||
@@ -247,14 +247,14 @@ function readEnvelope(value: unknown): {
 		return null;
 	}
 	const inner = request as Record<string, unknown>;
-	if (typeof inner["handler"] !== "string") {
+	if (typeof inner.handler !== "string") {
 		return null;
 	}
-	const args = inner["args"];
+	const args = inner.args;
 	return {
 		id,
 		request: {
-			handler: inner["handler"],
+			handler: inner.handler,
 			args:
 				typeof args === "object" && args !== null && !Array.isArray(args)
 					? (args as Record<string, unknown>)

@@ -57,15 +57,15 @@ describe("native host registration", () => {
 		const manifest = JSON.parse(
 			readFileSync(result.manifestPath, "utf8"),
 		) as Record<string, unknown>;
-		expect(manifest["name"]).toBe(HOST_NAME);
-		expect(manifest["type"]).toBe("stdio");
+		expect(manifest.name).toBe(HOST_NAME);
+		expect(manifest.type).toBe("stdio");
 		// The one field that decides whether Chrome will run this at all. An
 		// empty list, or a wildcard, would be a host process any installed
 		// extension could launch.
-		expect(manifest["allowed_origins"]).toEqual([
+		expect(manifest.allowed_origins).toEqual([
 			`chrome-extension://${EXTENSION}/`,
 		]);
-		expect(manifest["path"]).toBe(broker);
+		expect(manifest.path).toBe(broker);
 		// No key exists off Windows; the directory is the whole registration.
 		expect(result.registryKey).toBeNull();
 	});

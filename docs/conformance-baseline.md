@@ -18,7 +18,7 @@ Pinned draft: WebMCP Draft Community Group Report, 15 October 2026
   Chromium install (`pnpm exec playwright install chromium`).
 - Official layer (WPT `/webmcp`): the specification's own suite, run against the
   built bundle on every engine this project claims results for. Scored as zero
-  *unexpected* failures against a per-browser expected-failure list. Run with
+  _unexpected_ failures against a per-browser expected-failure list. Run with
   `pnpm test:conformance`; see [Official layer](#official-layer-wpt-webmcp)
   below. This is separate from `pnpm test` because it takes minutes rather than
   seconds and needs all three engines installed
@@ -69,22 +69,21 @@ and prose.
 
 Pinned revision: **`fe52996d4465f23617bce91927bdd58e6ce8f541`**, recorded in
 `WPT_SHA` in `packages/playwright/src/wpt.ts`. That WPT commit is
-*"[WebMCP] Remove origin-keyed agent cluster requirement"*, committed
+_"[WebMCP] Remove origin-keyed agent cluster requirement"_, committed
 2026-09-30 — the same change, on the same day, as the previous
 `SPEC_VERSION.commit` `d61d0e6` in the proposal repository.
 
 The suite has not caught up to the 15 October draft, and moving it forward is
 now actively unsafe rather than merely premature. Two reasons, both verified
 2026-10-15 and recorded in `docs/adr/0011`:
-
 - No WPT commit names the execution-error taxonomy (#339), the declarative
   removal (#338), or the post-serialization re-checks (#337, #345, #347), so
   the lag persists and is recorded as `upstream-gap` entries.
 - WPT `master` (`3a3a022`) is ahead of the draft in one place and behind it in
-  another. It reverts *"Re-check for a duplicate tool name after serializing
-  inputSchema"* (`91d7226`), blaming it for a Chromium build failure, so it no
-  longer tests what #347 added. And `15e7837` *"Introduce the `Tool` interface
-  object"* plus `626f5bf` add tests for a `Tool` interface and a declarative
+  another. It reverts _"Re-check for a duplicate tool name after serializing
+  inputSchema"_ (`91d7226`), blaming it for a Chromium build failure, so it no
+  longer tests what #347 added. And `15e7837` _"Introduce the `Tool` interface
+  object"_ plus `626f5bf` add tests for a `Tool` interface and a declarative
   name-collision API that the 15 October draft does not contain.
 
 Adopting either end would make the published conformance number describe a
@@ -138,11 +137,11 @@ is edited, wrapped or reordered.
 Every runnable file in the pinned revision, on every engine this project claims,
 against the built bundle:
 
-| Engine | Build | Units run | Files passing | Subtests passing | Expected failures |
-|---|---|---|---|---|---|
-| Chromium | 153.0.8010.12 | 48 | 19 | 59 | 83 |
-| Firefox | 155.0 | 48 | 19 | 59 | 83 |
-| WebKit | 26.6 | 48 | 19 | 59 | 83 |
+| Engine   | Build         | Units run | Files passing | Subtests passing | Expected failures |
+| -------- | ------------- | --------- | ------------- | ---------------- | ----------------- |
+| Chromium | 153.0.8010.12 | 48        | 19            | 59               | 83                |
+| Firefox  | 155.0         | 48        | 19            | 59               | 83                |
+| WebKit   | 26.6          | 48        | 19            | 59               | 83                |
 
 72 files are runnable at this revision. 24 are excluded with a written reason
 and 48 are run. The three lists are separate and each carries its own engine and
@@ -233,15 +232,14 @@ Four kinds, because "the proposal contradicts itself" and "we do not do this
 yet" call for different responses and a list that cannot tell them apart is a
 list nobody can act on:
 
-| Kind | Meaning |
-|---|---|
-| `upstream-gap` | The draft has no text, or the upstream assertion contradicts the text that exists. The fix belongs in the proposal. |
-| `known-gap` | The draft describes it and this implementation does not do it. A real divergence, listed so it is visible. |
-| `accepted-deviation` | The implementation deliberately differs, or cannot differ, and the difference is recorded as a decision. |
-| `runner-limitation` | The harness cannot express the test here. Unused at present. |
+| Kind                 | Meaning                                                                                                             |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `upstream-gap`       | The draft has no text, or the upstream assertion contradicts the text that exists. The fix belongs in the proposal. |
+| `known-gap`          | The draft describes it and this implementation does not do it. A real divergence, listed so it is visible.          |
+| `accepted-deviation` | The implementation deliberately differs, or cannot differ, and the difference is recorded as a decision.            |
+| `runner-limitation`  | The harness cannot express the test here. Unused at present.                                                        |
 
 Five rules govern the list, and each is a check rather than a convention:
-
 - A failure with no entry is **unexpected** and fails the run.
 - A listed failure that **starts passing** is reported, not removed. The list has
   gone stale and someone has to decide whether the entry or the implementation
@@ -249,7 +247,7 @@ Five rules govern the list, and each is a check rather than a convention:
 - The engine build is recorded and **asserted**. A different browser build can
   produce different results, so the response to a Playwright upgrade is to
   re-derive the list, not to accept a run it was never written for.
-- An entry with **no subtest** covers a failure of its unit *as a unit*, which is
+- An entry with **no subtest** covers a failure of its unit _as a unit_, which is
   what a file that never reported has. It does not cover a named subtest: if such
   a file starts completing and reporting, it has a different expectation, and the
   run says so rather than absorbing the new failure behind the old entry.

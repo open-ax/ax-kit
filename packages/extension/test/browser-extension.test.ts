@@ -131,8 +131,7 @@ async function openFixture(path: string): Promise<Fixture> {
 	await page.goto(`${origin}${path}`);
 	await page
 		.waitForFunction(
-			() =>
-				(globalThis as unknown as Record<string, unknown>)["__ready"] === true,
+			() => (globalThis as unknown as Record<string, unknown>).__ready === true,
 			undefined,
 			{ timeout: 20_000 },
 		)
@@ -212,7 +211,7 @@ async function call(
 	return (await worker.evaluate(
 		async (request: unknown) => {
 			const scope = globalThis as unknown as Record<string, unknown>;
-			const handle = scope["__axHandle"] as
+			const handle = scope.__axHandle as
 				| ((r: unknown) => Promise<unknown>)
 				| undefined;
 			if (typeof handle !== "function") {
@@ -241,8 +240,8 @@ async function listTools(
 		fixture.tabId = tabId;
 	}
 	const reply = await call("listTools", { tabId, frameId: 0 });
-	expect(reply["ok"]).toBe(true);
-	const result = reply["result"] as { tools: Array<Record<string, unknown>> };
+	expect(reply.ok).toBe(true);
+	const result = reply.result as { tools: Array<Record<string, unknown>> };
 	return result.tools;
 }
 
@@ -283,15 +282,15 @@ describe("emitted manifest", () => {
 		const doc = parsed as Record<string, unknown>;
 		// The assertions run against what is emitted, not a hand-written
 		// equivalent of it.
-		expect(doc["incognito"]).toBe("not_allowed");
-		expect(doc["externally_connectable"]).toEqual({ ids: [], matches: [] });
-		expect(doc["background"]).toEqual({
+		expect(doc.incognito).toBe("not_allowed");
+		expect(doc.externally_connectable).toEqual({ ids: [], matches: [] });
+		expect(doc.background).toEqual({
 			service_worker: "sw.js",
 			type: "module",
 		});
 		// The posture function that produced it agrees with what is on disk.
 		const held = assertManifestPosture(defaultManifestPosture());
-		expect(doc["host_permissions"]).toEqual(held.hostMatches);
+		expect(doc.host_permissions).toEqual(held.hostMatches);
 		// A permission the worker never reads is not requested. `tabs` would grant
 		// URL and title across every tab, which `<all_urls>` already covers for
 		// the tabs this extension addresses, and `storage` is not read at all.
@@ -299,7 +298,7 @@ describe("emitted manifest", () => {
 		// ones we expect" assertion would let a permission nobody justified
 		// accumulate unnoticed, and every entry here is something a reviewer has
 		// to be able to notice.
-		expect(doc["permissions"]).toEqual([
+		expect(doc.permissions).toEqual([
 			"scripting",
 			"sidePanel",
 			"nativeMessaging",
@@ -367,24 +366,24 @@ describe("extension loaded in real Chromium", () => {
 	it("enumerates a real page's registered tools through Main-world injection", async () => {
 		const fixture = await openTabbed("/tools");
 		const tools = await listTools(fixture);
-		expect(tools.map((tool) => tool["name"]).sort()).toEqual([
+		expect(tools.map((tool) => tool.name).sort()).toEqual([
 			"placeOrder",
 			"viewCart",
 		]);
-		const viewCart = tools.find((tool) => tool["name"] === "viewCart");
-		expect(viewCart?.["description"]).toBe("Show the cart.");
+		const viewCart = tools.find((tool) => tool.name === "viewCart");
+		expect(viewCart?.description).toBe("Show the cart.");
 		// Origins are read from the live document, not asserted as constants.
-		expect(viewCart?.["frameOrigin"]).toBe(new URL(fixture.url).origin);
-		expect(viewCart?.["origin"]).toBe(new URL(fixture.url).origin);
+		expect(viewCart?.frameOrigin).toBe(new URL(fixture.url).origin);
+		expect(viewCart?.origin).toBe(new URL(fixture.url).origin);
 	});
 
 	it("reports annotations from the page's own tool definitions", async () => {
 		const fixture = await openTabbed("/tools");
 		const tools = await listTools(fixture);
-		const order = tools.find((tool) => tool["name"] === "placeOrder");
-		const cart = tools.find((tool) => tool["name"] === "viewCart");
-		expect(order?.["consequentialHint"]).toBe(true);
-		expect(cart?.["consequentialHint"]).toBe(false);
+		const order = tools.find((tool) => tool.name === "placeOrder");
+		const cart = tools.find((tool) => tool.name === "viewCart");
+		expect(order?.consequentialHint).toBe(true);
+		expect(cart?.consequentialHint).toBe(false);
 	});
 
 	it("treats a page with no tools as a quiet no-op", async () => {
@@ -397,8 +396,8 @@ describe("extension loaded in real Chromium", () => {
 
 	it("refuses an unknown handler instead of dispatching it", async () => {
 		const reply = await call("dispatch", { tabId: 1 });
-		expect(reply["ok"]).toBe(false);
-		expect(String(reply["error"])).toContain("unknown handler");
+		expect(reply.ok).toBe(false);
+		expect(String(reply.error)).toContain("unknown handler");
 	});
 
 	it("refuses inherited property names, which `in` would have accepted", async () => {
@@ -411,15 +410,15 @@ describe("extension loaded in real Chromium", () => {
 		// Each of these is on `Object.prototype`. None is in the map.
 		for (const name of ["toString", "constructor", "hasOwnProperty"]) {
 			const reply = await call("dispatch", { tabId: 1, handler: name });
-			expect(reply["ok"], name).toBe(false);
-			expect(String(reply["error"]), name).toContain("unknown handler");
+			expect(reply.ok, name).toBe(false);
+			expect(String(reply.error), name).toContain("unknown handler");
 		}
 	});
 
 	it("refuses a malformed request rather than reaching the page", async () => {
 		const reply = await call("listTools", { tabId: "not-a-number" });
-		expect(reply["ok"]).toBe(false);
-		expect(String(reply["error"])).toContain("bad tabId");
+		expect(reply.ok).toBe(false);
+		expect(String(reply.error)).toContain("bad tabId");
 	});
 
 	it("leaves no page-visible channel and no mutable page global", async () => {
@@ -427,8 +426,8 @@ describe("extension loaded in real Chromium", () => {
 		const observed = await fixture.page.evaluate(() => {
 			const scope = globalThis as unknown as Record<string, unknown>;
 			return {
-				axHandle: typeof scope["__axHandle"],
-				axApprovals: typeof scope["__axApprovals"],
+				axHandle: typeof scope.__axHandle,
+				axApprovals: typeof scope.__axApprovals,
 				axKeys: Object.keys(scope).filter((key) => key.startsWith("__ax")),
 			};
 		});
@@ -447,7 +446,7 @@ describe("extension loaded in real Chromium", () => {
 			callerOrigin: new URL(fixture.url).origin,
 			documentId: "doc-1",
 		});
-		expect(reply["ok"]).toBe(false);
-		expect(String(reply["error"])).toContain("tool not found");
+		expect(reply.ok).toBe(false);
+		expect(String(reply.error)).toContain("tool not found");
 	});
 });
