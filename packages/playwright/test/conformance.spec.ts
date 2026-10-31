@@ -141,11 +141,10 @@ async function runSuiteFile(
 		// non-configurable by design, so it cannot be replaced; breaking the
 		// method on its prototype is the honest way to simulate a divergence.
 		await page.addInitScript(() => {
-			const surface = (document as unknown as Record<string, unknown>)[
-				"modelContext"
-			];
+			const surface = (document as unknown as Record<string, unknown>)
+				.modelContext;
 			const proto = Object.getPrototypeOf(surface) as Record<string, unknown>;
-			proto["registerTool"] = async (): Promise<never> => {
+			proto.registerTool = async (): Promise<never> => {
 				throw new TypeError("deliberate break for the conformance runner");
 			};
 		});

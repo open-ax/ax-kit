@@ -9,6 +9,14 @@ export default defineConfig({
 					name: "dom",
 					environment: "happy-dom",
 					include: ["test/*.test.ts", "test/*.test.tsx"],
+					environmentOptions: {
+						happyDOM: {
+							settings: {
+								enableIframePageLoading: true,
+								enableCSSFileLoading: true,
+							},
+						},
+					},
 				},
 			},
 			{

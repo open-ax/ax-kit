@@ -41,7 +41,7 @@ import {
  */
 async function listToolsInPage(_arg: unknown): Promise<unknown> {
 	const doc = document as unknown as Record<string, unknown>;
-	const surface = doc["modelContext"] as { getTools?: unknown } | undefined;
+	const surface = doc.modelContext as { getTools?: unknown } | undefined;
 	if (
 		typeof surface !== "object" ||
 		surface === null ||
@@ -62,13 +62,13 @@ async function listToolsInPage(_arg: unknown): Promise<unknown> {
 			continue;
 		}
 		const record = entry as Record<string, unknown>;
-		const annotations = record["annotations"] as
+		const annotations = record.annotations as
 			| Record<string, unknown>
 			| undefined;
 		const origin =
-			typeof record["origin"] === "string" ? (record["origin"] as string) : "";
+			typeof record.origin === "string" ? (record.origin as string) : "";
 		const frameOrigin = String(location.origin);
-		const schema = record["inputSchema"];
+		const schema = record.inputSchema;
 		const schemaJson =
 			typeof schema === "object" && schema !== null
 				? JSON.stringify(schema)
@@ -80,7 +80,7 @@ async function listToolsInPage(_arg: unknown): Promise<unknown> {
 		// closed rather than admitting keys.
 		const props =
 			typeof schema === "object" && schema !== null && !Array.isArray(schema)
-				? (schema as Record<string, unknown>)["properties"]
+				? (schema as Record<string, unknown>).properties
 				: undefined;
 		const declaredKeys =
 			typeof props === "object" && props !== null && !Array.isArray(props)
@@ -92,19 +92,19 @@ async function listToolsInPage(_arg: unknown): Promise<unknown> {
 		// alone would let a page change what it says the tool does, or what
 		// consequence it carries, and keep the approval given to the old words.
 		const definitionVersion = JSON.stringify([
-			record["name"],
-			record["description"],
-			annotations?.["consequentialHint"] === true,
-			annotations?.["readOnlyHint"] === true,
+			record.name,
+			record.description,
+			annotations?.consequentialHint === true,
+			annotations?.readOnlyHint === true,
 			schemaJson,
 		]);
 		tools.push({
-			name: record["name"],
-			description: record["description"],
+			name: record.name,
+			description: record.description,
 			origin,
 			frameOrigin,
-			consequentialHint: annotations?.["consequentialHint"] === true,
-			readOnlyHint: annotations?.["readOnlyHint"] === true,
+			consequentialHint: annotations?.consequentialHint === true,
+			readOnlyHint: annotations?.readOnlyHint === true,
 			definitionVersion,
 			// The keys the page says it accepts. The worker minimises arguments
 			// against these rather than against whatever the caller sent.
@@ -125,7 +125,7 @@ async function listToolsInPage(_arg: unknown): Promise<unknown> {
 async function getToolInPage(arg: unknown): Promise<unknown> {
 	const wanted = (arg as { name?: unknown } | null)?.name;
 	const doc = document as unknown as Record<string, unknown>;
-	const surface = doc["modelContext"] as { getTools?: unknown } | undefined;
+	const surface = doc.modelContext as { getTools?: unknown } | undefined;
 	if (
 		typeof surface !== "object" ||
 		surface === null ||
@@ -144,15 +144,15 @@ async function getToolInPage(arg: unknown): Promise<unknown> {
 			continue;
 		}
 		const record = entry as Record<string, unknown>;
-		if (record["name"] !== wanted) {
+		if (record.name !== wanted) {
 			continue;
 		}
-		const annotations = record["annotations"] as
+		const annotations = record.annotations as
 			| Record<string, unknown>
 			| undefined;
 		const origin =
-			typeof record["origin"] === "string" ? (record["origin"] as string) : "";
-		const schema = record["inputSchema"];
+			typeof record.origin === "string" ? (record.origin as string) : "";
+		const schema = record.inputSchema;
 		const schemaJson =
 			typeof schema === "object" && schema !== null
 				? JSON.stringify(schema)
@@ -161,27 +161,27 @@ async function getToolInPage(arg: unknown): Promise<unknown> {
 		// is serialized alone and cannot reach a module-level helper.
 		const props =
 			typeof schema === "object" && schema !== null && !Array.isArray(schema)
-				? (schema as Record<string, unknown>)["properties"]
+				? (schema as Record<string, unknown>).properties
 				: undefined;
 		const declaredKeys =
 			typeof props === "object" && props !== null && !Array.isArray(props)
 				? Object.keys(props as Record<string, unknown>)
 				: [];
 		return {
-			name: record["name"],
-			description: record["description"],
+			name: record.name,
+			description: record.description,
 			origin,
 			frameOrigin: String(location.origin),
-			consequentialHint: annotations?.["consequentialHint"] === true,
-			readOnlyHint: annotations?.["readOnlyHint"] === true,
+			consequentialHint: annotations?.consequentialHint === true,
+			readOnlyHint: annotations?.readOnlyHint === true,
 			// The same value the listing projection builds, from the same fields.
 			// Two projections of one tool that disagreed here would let an approval
 			// be checked against a version the person was never shown.
 			definitionVersion: JSON.stringify([
-				record["name"],
-				record["description"],
-				annotations?.["consequentialHint"] === true,
-				annotations?.["readOnlyHint"] === true,
+				record.name,
+				record.description,
+				annotations?.consequentialHint === true,
+				annotations?.readOnlyHint === true,
 				schemaJson,
 			]),
 			declaredKeys,
@@ -214,7 +214,7 @@ async function executeToolInPage(arg: unknown): Promise<unknown> {
 		definitionVersion?: unknown;
 	} | null;
 	const doc = document as unknown as Record<string, unknown>;
-	const surface = doc["modelContext"] as
+	const surface = doc.modelContext as
 		| { getTools?: unknown; executeTool?: unknown }
 		| undefined;
 	if (
@@ -236,7 +236,7 @@ async function executeToolInPage(arg: unknown): Promise<unknown> {
 		(entry) =>
 			typeof entry === "object" &&
 			entry !== null &&
-			(entry as Record<string, unknown>)["name"] === wanted,
+			(entry as Record<string, unknown>).name === wanted,
 	);
 	if (tool === undefined) {
 		// Absent at the moment of the request is a typed error, not a retry loop.
@@ -246,15 +246,15 @@ async function executeToolInPage(arg: unknown): Promise<unknown> {
 		// Inlined for the same reason as the two projections above: this function
 		// is serialized alone and cannot reach a module-level helper.
 		const record = tool as Record<string, unknown>;
-		const annotations = record["annotations"] as
+		const annotations = record.annotations as
 			| Record<string, unknown>
 			| undefined;
-		const schema = record["inputSchema"];
+		const schema = record.inputSchema;
 		const live = JSON.stringify([
-			record["name"],
-			record["description"],
-			annotations?.["consequentialHint"] === true,
-			annotations?.["readOnlyHint"] === true,
+			record.name,
+			record.description,
+			annotations?.consequentialHint === true,
+			annotations?.readOnlyHint === true,
 			typeof schema === "object" && schema !== null
 				? JSON.stringify(schema)
 				: "{}",
@@ -481,7 +481,7 @@ function readToolViews(payload: unknown): FrameToolView[] {
 	if (typeof payload !== "object" || payload === null) {
 		return [];
 	}
-	const tools = (payload as Record<string, unknown>)["tools"];
+	const tools = (payload as Record<string, unknown>).tools;
 	if (!Array.isArray(tools)) {
 		return [];
 	}
@@ -504,8 +504,8 @@ function readToolViews(payload: unknown): FrameToolView[] {
 async function handle(request: InjectionRequest): Promise<unknown> {
 	const handler = assertHandlerName(request.handler);
 	const args = (request.args ?? {}) as Record<string, unknown>;
-	const tabId = args["tabId"];
-	const frameId = args["frameId"] ?? 0;
+	const tabId = args.tabId;
+	const frameId = args.frameId ?? 0;
 	if (typeof tabId !== "number" || !Number.isInteger(tabId) || tabId < 0) {
 		throw new TypeError("bad tabId");
 	}
@@ -521,7 +521,7 @@ async function handle(request: InjectionRequest): Promise<unknown> {
 		return { tools: views };
 	}
 	if (handler === "getTool") {
-		const name = args["name"];
+		const name = args.name;
 		if (typeof name !== "string") {
 			throw new TypeError("bad tool name");
 		}
@@ -529,11 +529,11 @@ async function handle(request: InjectionRequest): Promise<unknown> {
 			tools: [await inject(tabId, frameId, "getTool", { name })],
 		}).filter((view) => view.name === name);
 	}
-	const name = args["name"];
+	const name = args.name;
 	if (typeof name !== "string") {
 		throw new TypeError("bad tool name");
 	}
-	const callArgs = args["args"] ?? {};
+	const callArgs = args.args ?? {};
 	const views = readToolViews({
 		tools: [await inject(tabId, frameId, "getTool", { name })],
 	});
@@ -542,7 +542,7 @@ async function handle(request: InjectionRequest): Promise<unknown> {
 		throw new TypeError("tool not found");
 	}
 	const ownerOrigin = view.origin;
-	const callerOrigin = args["callerOrigin"];
+	const callerOrigin = args.callerOrigin;
 	if (typeof callerOrigin !== "string") {
 		throw new TypeError("bad caller origin");
 	}
@@ -926,19 +926,19 @@ function panel(op: unknown, args: unknown): unknown {
 	// the card must match the pending version or the decision is stale: the
 	// person saw old words and must see the new ones before answering. A
 	// missing entry falls through so an unknown approval keeps its own error.
-	const shownVersion = record["definitionVersion"];
+	const shownVersion = record.definitionVersion;
 	if (typeof shownVersion !== "string") {
 		throw new TypeError("approval changed");
 	}
-	const liveVersion = approvals.pendingDefinitionVersion(record["key"]);
+	const liveVersion = approvals.pendingDefinitionVersion(record.key);
 	if (liveVersion !== undefined && liveVersion !== shownVersion) {
 		throw new TypeError("approval changed");
 	}
 	if (op === "approve") {
-		approveApproval(record["key"]);
+		approveApproval(record.key);
 		return { ok: true };
 	}
-	rejectApproval(record["key"]);
+	rejectApproval(record.key);
 	return { ok: true };
 }
 
@@ -1014,10 +1014,10 @@ chrome.runtime.onMessage.addListener(
 		// The panel's operations are a separate, closed set. They are not
 		// reachable by naming an injection handler, and an injection handler is
 		// not reachable by naming a panel operation.
-		const panelOp = record["panel"];
+		const panelOp = record.panel;
 		if (typeof panelOp === "string") {
 			try {
-				sendResponse({ ok: true, result: panel(panelOp, record["args"]) });
+				sendResponse({ ok: true, result: panel(panelOp, record.args) });
 			} catch (error: unknown) {
 				sendResponse({
 					ok: false,
@@ -1028,7 +1028,7 @@ chrome.runtime.onMessage.addListener(
 		}
 		let request: InjectionRequest;
 		try {
-			request = createInjectionRequest(record["handler"], record["args"]);
+			request = createInjectionRequest(record.handler, record.args);
 		} catch (error: unknown) {
 			sendResponse({
 				ok: false,

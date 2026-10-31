@@ -1,4 +1,5 @@
 ---
+
 draft: false
 title: "Threat model"
 description: "What this library can reach, what an agent can do through it, what a page author is exposed to and what it deliberately does not defend against."
@@ -20,11 +21,11 @@ already reach, because it runs inside the page's own realm.
 
 ## What the library can reach
 
-| | |
-|---|---|
-| The document it was installed on | Registers tools, enumerates them, invokes them |
-| Tools registered by page code | Only those and only while the registration signal is live |
-| Anything else | Nothing |
+|                                  |                                                           |
+| -------------------------------- | --------------------------------------------------------- |
+| The document it was installed on | Registers tools, enumerates them, invokes them            |
+| Tools registered by page code    | Only those and only while the registration signal is live |
+| Anything else                    | Nothing                                                   |
 
 The registry is a `WeakMap` held inside the installed script, keyed by document.
 It is not shared with any other document, so a parent frame and a child frame
@@ -37,12 +38,11 @@ a frame cannot see a parent's tools.
 An agent that can call `document.modelContext.executeTool` can do whatever the
 **page's own handlers** do. The library does not widen that and does not narrow
 it.
-
 - Arguments an agent sends are `unknown` to the library. They are checked before
   any handler sees them: `executeTool` validates them against the declared
   `inputSchema` and rejects with `DataError` on a violation. The specification
   declares `inputSchema` but implements no checking against it, so that step is
-  this library's. It is a *structural* check - types, required members, enums -
+  this library's. It is a _structural_ check - types, required members, enums -
   and the handler still owns every semantic rule the schema cannot express.
 - A handler that throws rejects the caller with `OperationError`, so a readable
   message from a handler reaches the log and not the agent.
@@ -67,8 +67,8 @@ that constrains a caller's handling of a result.
 
 **An agent can invoke any registered tool.** The `tools` Permissions Policy
 feature gates whether the surface exists at all for a document; it does not gate
-individual tools. Per-tool restriction is `exposedTo`, which limits *which
-origins* may see and invoke a tool, not *who*.
+individual tools. Per-tool restriction is `exposedTo`, which limits _which
+origins_ may see and invoke a tool, not _who_.
 
 **Anything the page already exposes to same-origin script, it now also exposes
 to an agent.** If a same-origin third-party script could call your handler, an
@@ -78,13 +78,13 @@ default exposure is same-origin and not "anything present".
 
 ## What this library deliberately does not defend against
 
-| Not defended | Why |
-|---|---|
-| A malicious tool handler | The handler is page code. The library runs in its realm and cannot constrain it. |
-| A compromised page origin | Same-origin script already has the page. A tool surface adds discovery, not capability. |
-| An agent that ignores `consequentialHint` | The annotation is a declaration. Nothing in the draft makes it enforceable. Inventing enforcement would be a name the proposal does not define. |
-| Cross-document tool discovery | Not implemented and not attempted. Tools do not cross document boundaries in this implementation. |
-| Prompt injection through tool results | A property of the agent, not of the transport. The library hands results over; what an agent does with them is outside its reach. |
+| Not defended                                  | Why                                                                                                                                                       |
+| --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A malicious tool handler                      | The handler is page code. The library runs in its realm and cannot constrain it.                                                                          |
+| A compromised page origin                     | Same-origin script already has the page. A tool surface adds discovery, not capability.                                                                   |
+| An agent that ignores `consequentialHint`     | The annotation is a declaration. Nothing in the draft makes it enforceable. Inventing enforcement would be a name the proposal does not define.           |
+| Cross-document tool discovery                 | Not implemented and not attempted. Tools do not cross document boundaries in this implementation.                                                         |
+| Prompt injection through tool results         | A property of the agent, not of the transport. The library hands results over; what an agent does with them is outside its reach.                         |
 | A browser that misenforces Permissions Policy | The library reads the policy where observable and assumes allowed where not. [Errors → preconditions](/reference/errors/) describes that limit precisely. |
 
 ## Isolation, stated precisely
@@ -92,7 +92,6 @@ default exposure is same-origin and not "anything present".
 The library does **not** use a separate world, an isolated realm, or a sandbox of
 any kind. It runs in the page's own realm and defines an own, non-writable,
 non-configurable data property on the document instance.
-
 - **Why an own property, not a prototype accessor.** The draft's IDL reads
   `partial interface Document { readonly attribute ModelContext modelContext }`,
   which is an accessor on `Document.prototype`. An own property on the instance is

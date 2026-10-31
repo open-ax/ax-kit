@@ -159,9 +159,9 @@ describe("relay loop", () => {
 
 		expect(posted).toHaveLength(1);
 		const frame = JSON.parse(posted[0]) as Record<string, unknown>;
-		expect(frame["id"]).toBe(9);
-		expect(frame["result"]).toBeUndefined();
-		expect((frame["error"] as Record<string, unknown>)["message"]).toMatch(
+		expect(frame.id).toBe(9);
+		expect(frame.result).toBeUndefined();
+		expect((frame.error as Record<string, unknown>).message).toMatch(
 			/tool not found/,
 		);
 	});

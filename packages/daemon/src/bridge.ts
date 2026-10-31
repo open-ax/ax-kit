@@ -483,7 +483,7 @@ export class PageBridge {
 		if (typeof result !== "object" || result === null) {
 			throw new BridgeRefusal(BRIDGE_ERRORS.badRequest, "bad tool listing");
 		}
-		const tools = (result as Record<string, unknown>)["tools"];
+		const tools = (result as Record<string, unknown>).tools;
 		if (!Array.isArray(tools)) {
 			throw new BridgeRefusal(BRIDGE_ERRORS.badRequest, "bad tool listing");
 		}
@@ -516,8 +516,8 @@ export class PageBridge {
 			throw new BridgeRefusal(BRIDGE_ERRORS.badRequest, "bad active tab");
 		}
 		const record = result as Record<string, unknown>;
-		const tabId = record["tabId"];
-		const origin = record["origin"];
+		const tabId = record.tabId;
+		const origin = record.origin;
 		if (
 			typeof tabId !== "number" ||
 			!Number.isInteger(tabId) ||
@@ -575,22 +575,22 @@ export function readEnvelope(value: unknown): Envelope | null {
 		throw new TypeError("bad envelope");
 	}
 	const record = value as Record<string, unknown>;
-	if (typeof record["id"] !== "number") {
+	if (typeof record.id !== "number") {
 		throw new TypeError("bad envelope id");
 	}
-	const request = record["request"];
+	const request = record.request;
 	if (typeof request !== "object" || request === null) {
 		throw new TypeError("bad envelope request");
 	}
 	const inner = request as Record<string, unknown>;
-	if (typeof inner["handler"] !== "string") {
+	if (typeof inner.handler !== "string") {
 		throw new TypeError("bad envelope handler");
 	}
-	const args = inner["args"];
+	const args = inner.args;
 	return {
-		id: record["id"],
+		id: record.id,
 		request: {
-			handler: inner["handler"],
+			handler: inner.handler,
 			args:
 				typeof args === "object" && args !== null
 					? (args as Record<string, unknown>)
@@ -614,24 +614,24 @@ export function readResponse(value: unknown): JsonRpcResponse {
 		throw new TypeError("bad response");
 	}
 	const record = parsed as Record<string, unknown>;
-	if (typeof record["id"] !== "number") {
+	if (typeof record.id !== "number") {
 		throw new TypeError("bad response id");
 	}
-	const error = record["error"];
+	const error = record.error;
 	if (error === undefined) {
-		return { jsonrpc: "2.0", id: record["id"], result: record["result"] };
+		return { jsonrpc: "2.0", id: record.id, result: record.result };
 	}
 	if (typeof error !== "object" || error === null) {
 		throw new TypeError("bad error");
 	}
 	const err = error as Record<string, unknown>;
-	if (typeof err["code"] !== "number" || typeof err["message"] !== "string") {
+	if (typeof err.code !== "number" || typeof err.message !== "string") {
 		throw new TypeError("bad error");
 	}
 	return {
 		jsonrpc: "2.0",
-		id: record["id"],
-		error: { code: err["code"], message: err["message"] },
+		id: record.id,
+		error: { code: err.code, message: err.message },
 	};
 }
 

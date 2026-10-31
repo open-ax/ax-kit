@@ -228,7 +228,7 @@ interface ContentsEntry {
  * stays unauthenticated rather than silently publishing a token to the suite.
  */
 function contentsHeaders(): Record<string, string> {
-	const token = process.env["GITHUB_TOKEN"];
+	const token = process.env.GITHUB_TOKEN;
 	return token === undefined || token === ""
 		? { accept: "application/vnd.github+json" }
 		: {

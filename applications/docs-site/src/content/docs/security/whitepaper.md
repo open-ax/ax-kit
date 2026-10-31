@@ -1,4 +1,5 @@
 ---
+
 draft: false
 title: "Security whitepaper"
 description: "Every claim traced to a public primary source and every divergence from the current draft stated rather than omitted."
@@ -22,14 +23,14 @@ Source: [W3C Permissions Policy](https://www.w3.org/TR/permissions-policy-1/) ·
 [MDN `Permissions-Policy`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Permissions-Policy)
 
 **What this implementation does.** Reads `document.permissionsPolicy` where the
-API is present and refuses where the feature is *observed* to be denied. Where the
+API is present and refuses where the feature is _observed_ to be denied. Where the
 API is absent, it assumes allowed and lets the browser enforce denial.
 
 **The limit, stated rather than omitted.** `allowsFeature()` reports `false` for
 an unknown feature as well as a denied one, so the two are indistinguishable
 through that call alone. This implementation consults the feature list first and
 treats `false` as a denial only when the list actually names `tools`. Outside an
-origin trial, Chromium logs *"Origin trial controlled feature not enabled"* for
+origin trial, Chromium logs _"Origin trial controlled feature not enabled"_ for
 the feature and then reports it as **absent rather than denied**, which is why
 the default is to assume allowed. Where the browser denies the feature itself, the
 surface is useless anyway, because the platform enforces it independently of any
@@ -58,7 +59,7 @@ descendants". Each document that evaluates the bundle holds its own registry, so
 Source: [MDN Same-origin policy](https://developer.mozilla.org/en-US/docs/Web/Security/Same-origin_policy)
 
 This is recorded as the largest known gap in
-[conformance](/reference/conformance/). It is a *narrowing* divergence: a frame
+[conformance](/reference/conformance/). It is a _narrowing_ divergence: a frame
 sees fewer tools than the specification grants, never more.
 
 ### JSON serialization of tool results
@@ -80,13 +81,13 @@ encodes, which follows the draft. The upstream test is listed as an
 Stated here because a library that behaves differently from the specification, in
 a way it can defend, is more useful to an adopter than one that hides it.
 
-| Divergence | Direction | Why |
-|---|---|---|
-| Tools do not cross document boundaries | Narrowing | Each document's registry is its own. Largest known gap; causes most expected failures. |
-| `ModelContext`, `ToolActivatedEvent`, `ToolCancelEvent` are not global constructors | Narrowing | The behaviour the event tests assert is implemented; the named interface objects are not exposed. |
-| `modelContext` is an own property, not a `Document.prototype` accessor | Narrowing | An own property is not reachable from a document the bundle never ran against. |
-| `SecurityError` on non-origin-keyed agent cluster | **Removed** | Upstream PR #330 removed the requirement on 2026-09-30; this implementation follows the 15 October 2026 draft. |
-| Arguments are checked against `inputSchema` before the handler runs | Narrowing | The draft declares `inputSchema` and implements no checking against it. This library validates first and rejects with `DataError`, so an agent cannot reach a handler with arguments the schema forbids. |
+| Divergence                                                                          | Direction   | Why                                                                                                                                                                                                      |
+| ----------------------------------------------------------------------------------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tools do not cross document boundaries                                              | Narrowing   | Each document's registry is its own. Largest known gap; causes most expected failures.                                                                                                                   |
+| `ModelContext`, `ToolActivatedEvent`, `ToolCancelEvent` are not global constructors | Narrowing   | The behaviour the event tests assert is implemented; the named interface objects are not exposed.                                                                                                        |
+| `modelContext` is an own property, not a `Document.prototype` accessor              | Narrowing   | An own property is not reachable from a document the bundle never ran against.                                                                                                                           |
+| `SecurityError` on non-origin-keyed agent cluster                                   | **Removed** | Upstream PR #330 removed the requirement on 2026-09-30; this implementation follows the 15 October 2026 draft.                                                                                           |
+| Arguments are checked against `inputSchema` before the handler runs                 | Narrowing   | The draft declares `inputSchema` and implements no checking against it. This library validates first and rejects with `DataError`, so an agent cannot reach a handler with arguments the schema forbids. |
 
 ## What the library does not do
 

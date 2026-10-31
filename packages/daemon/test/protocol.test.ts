@@ -86,17 +86,17 @@ describe("stateless protocol", () => {
 			)
 		).result as Record<string, unknown>;
 		for (const result of [discovered, listed]) {
-			expect(typeof result["ttlMs"]).toBe("number");
-			expect(["public", "private"]).toContain(result["cacheScope"]);
+			expect(typeof result.ttlMs).toBe("number");
+			expect(["public", "private"]).toContain(result.cacheScope);
 		}
 		// The scopes differ for a reason: the daemon's own identity is the same
 		// for everyone, while a tool listing describes one person's page.
-		expect(discovered["cacheScope"]).toBe("public");
-		expect(listed["cacheScope"]).toBe("private");
+		expect(discovered.cacheScope).toBe("public");
+		expect(listed.cacheScope).toBe("private");
 		// Zero means consider-this-stale-immediately. The tools on the page the
 		// person is looking at change under them; claiming otherwise would be the
 		// kind of cache that serves yesterday's storefront.
-		expect(listed["ttlMs"]).toBe(0);
+		expect(listed.ttlMs).toBe(0);
 	});
 
 	it("does not put cache fields on a call, which does not extend CacheableResult", async () => {
@@ -115,8 +115,8 @@ describe("stateless protocol", () => {
 				INFO,
 			)
 		).result as Record<string, unknown>;
-		expect(called["ttlMs"]).toBeUndefined();
-		expect(called["cacheScope"]).toBeUndefined();
+		expect(called.ttlMs).toBeUndefined();
+		expect(called.cacheScope).toBeUndefined();
 	});
 	it("lists tools with a completion marker and no session header", async () => {
 		const response = await dispatchRequest(
@@ -306,7 +306,7 @@ describe("stateless protocol", () => {
 			string,
 			Record<string, unknown>
 		>;
-		const elicitation = requests["axConfirmation"];
+		const elicitation = requests.axConfirmation;
 		expect(elicitation?.method).toBe("elicitation/create");
 		expect(result.requestState).toBe('["tab-1","doc-1",0,"payNow","abc"]');
 	});

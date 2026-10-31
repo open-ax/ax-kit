@@ -130,7 +130,7 @@ async function nextFrame(
 				}
 				try {
 					const parsed = JSON.parse(line) as Record<string, unknown>;
-					if (parsed["id"] === id) {
+					if (parsed.id === id) {
 						return parsed;
 					}
 				} catch {
@@ -176,9 +176,7 @@ async function launchBrowser(): Promise<void> {
 async function relayStatus(): Promise<string> {
 	return await worker!.evaluate(() => {
 		const scope = globalThis as unknown as Record<string, unknown>;
-		const relay = scope["__axRelay"] as
-			| { state: { status: string } }
-			| undefined;
+		const relay = scope.__axRelay as { state: { status: string } } | undefined;
 		return relay === undefined ? "absent" : relay.state.status;
 	});
 }
@@ -247,7 +245,7 @@ beforeAll(async () => {
 	// would be a different claim about timing.
 	await tab.waitForFunction(() => {
 		const scope = globalThis as unknown as Record<string, unknown>;
-		return scope["__ready"] === true;
+		return scope.__ready === true;
 	});
 }, 240_000);
 
@@ -260,7 +258,7 @@ afterAll(async () => {
 	}
 	spawnSync("reg.exe", ["delete", REG_KEY, "/f"], { windowsHide: true });
 	daemon?.kill();
-	await context?.close();
+	await context!.close();
 	await new Promise<void>((done) => {
 		if (page === undefined) {
 			done();
@@ -305,12 +303,12 @@ WINDOWS_ONLY(
 
 		it("enumerates the page's real tools through the whole bridge", async () => {
 			const response = await call(1, "tools/list", { _meta: meta() });
-			const result = response["result"] as Record<string, unknown>;
-			expect(result["resultType"]).toBe("complete");
-			const tools = result["tools"] as ReadonlyArray<Record<string, unknown>>;
-			expect(tools.map((tool) => tool["name"])).toEqual(["viewCart"]);
+			const result = response.result as Record<string, unknown>;
+			expect(result.resultType).toBe("complete");
+			const tools = result.tools as ReadonlyArray<Record<string, unknown>>;
+			expect(tools.map((tool) => tool.name)).toEqual(["viewCart"]);
 			// The description is the page's own, not a fixture the test wrote.
-			expect(tools[0]?.["description"]).toBe("Show the cart.");
+			expect(tools[0]?.description).toBe("Show the cart.");
 		}, 60_000);
 
 		it("executes a tool and returns the page's real value", async () => {
@@ -319,12 +317,12 @@ WINDOWS_ONLY(
 				name: "viewCart",
 				arguments: { detailed: true },
 			});
-			const result = response["result"] as Record<string, unknown>;
-			expect(result["resultType"]).toBe("complete");
-			expect(result["isError"]).toBeUndefined();
+			const result = response.result as Record<string, unknown>;
+			expect(result.resultType).toBe("complete");
+			expect(result.isError).toBeUndefined();
 			// The page's execute callback ran. This is its value, parsed.
 			const payload = JSON.parse(
-				String((result["content"] as ReadonlyArray<{ text: string }>)[0]?.text),
+				String((result.content as ReadonlyArray<{ text: string }>)[0]?.text),
 			) as Record<string, unknown>;
 			expect(payload).toEqual({ items: 3, received: { detailed: true } });
 		}, 60_000);

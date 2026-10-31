@@ -125,7 +125,7 @@ function startWorkerBridge(): void {
 		.evaluate(
 			async (endpoint: unknown) => {
 				const scope = globalThis as unknown as Record<string, unknown>;
-				const handle = scope["__axHandle"] as (r: unknown) => Promise<unknown>;
+				const handle = scope.__axHandle as (r: unknown) => Promise<unknown>;
 				if (typeof handle !== "function") {
 					throw new Error("worker handle missing");
 				}
@@ -216,8 +216,7 @@ beforeAll(async () => {
 	page = await context.newPage();
 	await page.goto(`${origin}/shop`);
 	await page.waitForFunction(
-		() =>
-			(globalThis as unknown as Record<string, unknown>)["__ready"] === true,
+		() => (globalThis as unknown as Record<string, unknown>).__ready === true,
 		undefined,
 		{ timeout: 20_000 },
 	);
@@ -298,14 +297,14 @@ async function respond(
 describe("tool execution end to end", () => {
 	it("discovers a real page's tools through the whole bridge", async () => {
 		const tools = await bridge.listTools(tabId);
-		expect(tools.map((tool) => tool["name"]).sort()).toEqual([
+		expect(tools.map((tool) => tool.name).sort()).toEqual([
 			"payNow",
 			"viewCart",
 		]);
 		// Discovery reflected what the page actually registered, not a fixture.
-		const cart = tools.find((tool) => tool["name"] === "viewCart");
-		expect(cart?.["description"]).toBe("Show the cart.");
-		expect(cart?.["frameOrigin"]).toBe(origin);
+		const cart = tools.find((tool) => tool.name === "viewCart");
+		expect(cart?.description).toBe("Show the cart.");
+		expect(cart?.frameOrigin).toBe(origin);
 	});
 
 	it("executes a tool and returns its real parsed result", async () => {

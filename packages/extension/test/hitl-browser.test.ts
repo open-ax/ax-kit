@@ -102,7 +102,7 @@ async function invoke(
 	return (await worker.evaluate(
 		async (request: unknown) => {
 			const scope = globalThis as unknown as Record<string, unknown>;
-			const handle = scope["__axHandle"] as (r: unknown) => Promise<unknown>;
+			const handle = scope.__axHandle as (r: unknown) => Promise<unknown>;
 			try {
 				return {
 					ok: true,
@@ -148,7 +148,7 @@ async function openPanel(): Promise<Page> {
 async function approveInvocation(binding: string): Promise<void> {
 	await worker.evaluate((key: unknown) => {
 		const scope = globalThis as unknown as Record<string, unknown>;
-		const panel = scope["__axPanel"] as (op: string, args: unknown) => unknown;
+		const panel = scope.__axPanel as (op: string, args: unknown) => unknown;
 		const list = panel("list", {}) as {
 			pending?: ReadonlyArray<{ key: string; definitionVersion: string }>;
 		};
@@ -169,7 +169,7 @@ async function approveInvocation(binding: string): Promise<void> {
 async function clearPending(): Promise<void> {
 	await worker.evaluate(() => {
 		const scope = globalThis as unknown as Record<string, unknown>;
-		const panel = scope["__axPanel"] as (op: string, args: unknown) => unknown;
+		const panel = scope.__axPanel as (op: string, args: unknown) => unknown;
 		const list = panel("list", {}) as {
 			pending?: ReadonlyArray<{ key: string; definitionVersion: string }>;
 		};
@@ -189,7 +189,7 @@ async function preparePanel(panel: Page): Promise<void> {
 		// same message from the page is what a click does, and the worker's
 		// gesture gate is what makes it a gesture.
 		const scope = globalThis as unknown as Record<string, unknown>;
-		scope["__request"] = async (op: string, args: unknown): Promise<unknown> =>
+		scope.__request = async (op: string, args: unknown): Promise<unknown> =>
 			await chrome.runtime.sendMessage({ panel: op, args });
 	});
 }
@@ -217,9 +217,8 @@ async function shown(panel: Page): Promise<ReadonlyArray<ShownRequest>> {
 	);
 	return (await panel.evaluate(() =>
 		[...document.querySelectorAll(".request")].map((card) => ({
-			key: (card as HTMLElement).dataset["key"] ?? "",
-			definitionVersion:
-				(card as HTMLElement).dataset["definitionVersion"] ?? "",
+			key: (card as HTMLElement).dataset.key ?? "",
+			definitionVersion: (card as HTMLElement).dataset.definitionVersion ?? "",
 			origin:
 				card.querySelector("[data-field='declared origin']")?.textContent ?? "",
 			frameOrigin:
@@ -270,8 +269,7 @@ beforeAll(async () => {
 	page = await context.newPage();
 	await page.goto(`${origin}/shop`);
 	await page.waitForFunction(
-		() =>
-			(globalThis as unknown as Record<string, unknown>)["__ready"] === true,
+		() => (globalThis as unknown as Record<string, unknown>).__ready === true,
 		undefined,
 		{ timeout: 20_000 },
 	);
@@ -315,15 +313,15 @@ describe("consequential confirmation", () => {
 		// The invocation did not run. It returned what a person needs in order
 		// to decide, and nothing was charged.
 		expect(first.ok).toBe(true);
-		expect(first.result?.["requiresConfirmation"]).toBe(true);
-		const binding = String(first.result?.["pendingApproval"]);
+		expect(first.result?.requiresConfirmation).toBe(true);
+		const binding = String(first.result?.pendingApproval);
 		expect(binding.length).toBeGreaterThan(0);
 		expect(first.result).not.toEqual(JSON.stringify({ paid: 500 }));
 
 		// Repeating the same call still does not run it: nothing has been
 		// approved, so a caller cannot get a second chance by asking again.
 		const again = await pay(500);
-		expect(again.result?.["requiresConfirmation"]).toBe(true);
+		expect(again.result?.requiresConfirmation).toBe(true);
 		expect(again.result).not.toEqual(JSON.stringify({ paid: 500 }));
 	});
 	it("shows the tool, its description, and the arguments being approved", async () => {
@@ -333,8 +331,8 @@ describe("consequential confirmation", () => {
 		// The card the person reads is raised by the worker from the tool it
 		// validated, so nothing here writes the text being approved.
 		const raised = await pay(900);
-		expect(raised.result?.["requiresConfirmation"]).toBe(true);
-		const binding = String(raised.result?.["pendingApproval"]);
+		expect(raised.result?.requiresConfirmation).toBe(true);
+		const binding = String(raised.result?.pendingApproval);
 		// Wait for this invocation's card, not just any render: the panel
 		// re-reads on every change hint, and asserting on the first render
 		// after filing races the refresh under load. Measured on release run
@@ -342,7 +340,7 @@ describe("consequential confirmation", () => {
 		await panel.waitForFunction(
 			(key: unknown) =>
 				[...document.querySelectorAll(".request")].some(
-					(card) => (card as HTMLElement).dataset["key"] === key,
+					(card) => (card as HTMLElement).dataset.key === key,
 				),
 			binding,
 			{ timeout: 15_000 },
@@ -364,14 +362,14 @@ describe("consequential confirmation", () => {
 		await preparePanel(panel);
 		await clearPending();
 		const raised = await pay(750);
-		const binding = String(raised.result?.["pendingApproval"]);
+		const binding = String(raised.result?.pendingApproval);
 		// Wait for the card this invocation filed before removing its entry:
 		// the panel renders on `pendingChanged`, so clicking before it appears
 		// races the refresh and can wait out the test timeout instead.
 		await panel.waitForFunction(
 			(key: unknown) =>
 				[...document.querySelectorAll(".request")].some(
-					(card) => (card as HTMLElement).dataset["key"] === key,
+					(card) => (card as HTMLElement).dataset.key === key,
 				),
 			binding,
 			{ timeout: 15_000 },
@@ -384,9 +382,8 @@ describe("consequential confirmation", () => {
 		// a restarted worker looks like from here. The browser stops an idle
 		// Manifest V3 worker, so this is an ordinary outcome, not a contrived one.
 		await worker.evaluate((key: unknown) => {
-			const store = (globalThis as unknown as Record<string, unknown>)[
-				"__axApprovals"
-			] as { rejectApproval(value: unknown): void };
+			const store = (globalThis as unknown as Record<string, unknown>)
+				.__axApprovals as { rejectApproval(value: unknown): void };
 			store.rejectApproval(key);
 		}, binding);
 
@@ -413,7 +410,7 @@ describe("consequential confirmation", () => {
 		const refused = await panel.evaluate(
 			async (approval: unknown) => {
 				const scope = globalThis as unknown as Record<string, unknown>;
-				const run = scope["__request"] as (
+				const run = scope.__request as (
 					op: string,
 					args: unknown,
 				) => Promise<unknown>;
@@ -452,7 +449,7 @@ describe("consequential confirmation", () => {
 
 	it("executes once the exact invocation is approved", async () => {
 		const first = await pay(1200);
-		const binding = String(first.result?.["pendingApproval"]);
+		const binding = String(first.result?.pendingApproval);
 		await approveInvocation(binding);
 
 		const second = await pay(1200);
@@ -464,7 +461,7 @@ describe("consequential confirmation", () => {
 
 	it("refuses rather than re-prompting when the binding has moved", async () => {
 		const first = await pay(700);
-		await approveInvocation(String(first.result?.["pendingApproval"]));
+		await approveInvocation(String(first.result?.pendingApproval));
 
 		// The person approved 700. The caller now asks for 900.
 		const moved = await pay(900);
@@ -475,12 +472,12 @@ describe("consequential confirmation", () => {
 
 	it("consumes an approval so it cannot be replayed", async () => {
 		const first = await pay(1500);
-		await approveInvocation(String(first.result?.["pendingApproval"]));
+		await approveInvocation(String(first.result?.pendingApproval));
 		const used = await pay(1500);
 		expect(used.result).toEqual(JSON.stringify({ paid: 1500 }));
 		// The same approval a second time does not run again.
 		const replayed = await pay(1500);
-		expect(replayed.result?.["requiresConfirmation"]).toBe(true);
+		expect(replayed.result?.requiresConfirmation).toBe(true);
 	});
 
 	it("binds an approval to the browser's document, not one the caller names", async () => {
@@ -502,7 +499,7 @@ describe("consequential confirmation", () => {
 			documentId: "caller-supplied-document",
 		});
 		expect(filed.ok).toBe(true);
-		const binding = String(filed.result?.["pendingApproval"]);
+		const binding = String(filed.result?.pendingApproval);
 		expect(binding.length).toBeGreaterThan(0);
 		expect(binding).not.toContain("caller-supplied-document");
 		// The key is the JSON array of the five binding parts, in order, so this
@@ -530,7 +527,7 @@ describe("consequential confirmation", () => {
 			documentId: "doc-1",
 		});
 		expect(plain.ok).toBe(true);
-		expect(plain.result?.["requiresConfirmation"]).toBeUndefined();
+		expect(plain.result?.requiresConfirmation).toBeUndefined();
 		expect(plain.result).toEqual(JSON.stringify({ ok: true }));
 
 		const panel = await openPanel();
@@ -585,13 +582,13 @@ describe("consequential confirmation", () => {
 		// fallback reads.
 		await worker.evaluate(() => {
 			const scope = globalThis as unknown as Record<string, unknown>;
-			(scope["__axTestForgetDocuments"] as () => void)();
+			(scope.__axTestForgetDocuments as () => void)();
 		});
 
 		const first = await pay(500);
 		expect(first.ok).toBe(true);
-		expect(first.result?.["requiresConfirmation"]).toBe(true);
-		const binding = String(first.result?.["pendingApproval"]);
+		expect(first.result?.requiresConfirmation).toBe(true);
+		const binding = String(first.result?.pendingApproval);
 		expect(binding.length).toBeGreaterThan(0);
 		await approveInvocation(binding);
 		const second = await pay(500);

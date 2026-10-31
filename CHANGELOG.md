@@ -34,7 +34,6 @@ See docs/releasing.md for the full procedure.
 ## First published release — 2026-10-16
 
 Per-package changelogs are the source of truth. This file is the index:
-
 - [@ax-kit/core](packages/core/CHANGELOG.md) — 0.1.0
 - [@ax-kit/cli](packages/cli/CHANGELOG.md) — 0.1.0
 - [@ax-kit/daemon](packages/daemon/CHANGELOG.md) — 0.1.0

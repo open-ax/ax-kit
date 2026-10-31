@@ -5,7 +5,7 @@ Status: Accepted
 
 ## Context
 
-Both applications carry a Playwright suite that runs against the *built output*
+Both applications carry a Playwright suite that runs against the _built output_
 in a real browser: `applications/docs-site/test/browser.ts` and
 `applications/demo-store/test/browser.ts`. Each has a `playwright.config.ts`, a
 `test:browser` script, and a `test-results/.last-run.json` recording a passing
@@ -22,13 +22,13 @@ any machine, including a developer's.
 That left a specific set of claims resting on nothing that ran. The ones a unit
 test cannot make are exactly the ones these applications are described by:
 
-| Claim | Made where | Only checked by |
-|---|---|---|
-| `Permissions-Policy: tools=(self)` on a real served response | `demo-store/README.md`, `next.config.ts` | unwired browser suite |
-| `/api/catalog` answers `501`, not an empty `200` | `demo-store/README.md` | unwired browser suite |
-| structured data is valid and in the first byte of the response | — | unwired browser suite |
-| the site runs the polyfill in the reader's browser | `docs-site/package.json` description | unwired browser suite |
-| the search index is built locally, so a query never leaves the machine | `docs-site/README.md` | **nothing at all** |
+| Claim                                                                  | Made where                               | Only checked by       |
+| ---------------------------------------------------------------------- | ---------------------------------------- | --------------------- |
+| `Permissions-Policy: tools=(self)` on a real served response           | `demo-store/README.md`, `next.config.ts` | unwired browser suite |
+| `/api/catalog` answers `501`, not an empty `200`                       | `demo-store/README.md`                   | unwired browser suite |
+| structured data is valid and in the first byte of the response         | —                                        | unwired browser suite |
+| the site runs the polyfill in the reader's browser                     | `docs-site/package.json` description     | unwired browser suite |
+| the search index is built locally, so a query never leaves the machine | `docs-site/README.md`                    | **nothing at all**    |
 
 The last row is the sharper problem, and it is a different defect from the
 unwiring. `docs-site/test/browser.ts` documented, in its own header comment, an
@@ -38,8 +38,8 @@ test suite describing a guarantee it does not contain is worse than a missing
 test, because a reader auditing the file concludes the guarantee is held.
 
 `ci.yml` states the principle this repository holds itself to, in the comment
-above the conformance job: *"A detector whose output nobody must close does not
-make anything true."* That is a description of an unwired suite.
+above the conformance job: _"A detector whose output nobody must close does not
+make anything true."_ That is a description of an unwired suite.
 
 ## Decision
 
@@ -82,8 +82,8 @@ destination.
 
 It does not claim the gate has been observed failing in a merge-blocking
 position. It has been observed passing, repeatedly, and its negative controls
-have been observed failing. ADR 0006 set a standard — *"the gate is proven, not
-asserted"* — and the honest reading is that this gate is proven to fail when its
+have been observed failing. ADR 0006 set a standard — _"the gate is proven, not
+asserted"_ — and the honest reading is that this gate is proven to fail when its
 subject is broken, and not yet proven to fail a pull request in anger.
 
 Every run behind this decision was on Windows. The workflow is `ubuntu-latest`.

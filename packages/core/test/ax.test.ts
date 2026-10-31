@@ -16,9 +16,8 @@ import { installModelContext } from "../src/index.js";
 installModelContext(document);
 
 function context(): ModelContext {
-	const installed = (document as unknown as Record<string, unknown>)[
-		"modelContext"
-	] as ModelContext | undefined;
+	const installed = (document as unknown as Record<string, unknown>)
+		.modelContext as ModelContext | undefined;
 	if (installed === undefined) {
 		throw new Error("document.modelContext is not installed");
 	}

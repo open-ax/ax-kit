@@ -61,17 +61,14 @@ async function auditFixture(name: string): Promise<AuditContextInput> {
 	await page.waitFor(
 		(expected: unknown) => {
 			const scope = globalThis as unknown as Record<string, unknown>;
-			return (
-				scope["__fixture"] === expected || scope["__fixtureError"] !== undefined
-			);
+			return scope.__fixture === expected || scope.__fixtureError !== undefined;
 		},
 		name,
 		`fixture ${name} never completed`,
 	);
 	const failure = await page.evaluate(
 		() =>
-			(globalThis as unknown as Record<string, unknown>)["__fixtureError"] ??
-			null,
+			(globalThis as unknown as Record<string, unknown>).__fixtureError ?? null,
 	);
 	if (typeof failure === "string") {
 		throw new Error(`fixture ${name} failed: ${failure}`);

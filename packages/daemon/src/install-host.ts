@@ -56,7 +56,7 @@ export function defaultManifestDir(
 		return join(home, "Library", "Application Support", "Google", "Chrome");
 	}
 	if (platform === "win32") {
-		const local = env["LOCALAPPDATA"];
+		const local = env.LOCALAPPDATA;
 		if (typeof local === "string" && local.length > 0) {
 			return join(local, "ax-kit");
 		}
@@ -105,7 +105,7 @@ export function launcherFor(
 	}
 	// `COMSPEC` is set on Windows and absent elsewhere; the literal fallback is
 	// the documented default when a process has a stripped environment.
-	const cmd = process.env["COMSPEC"] ?? "cmd.exe";
+	const cmd = process.env.COMSPEC ?? "cmd.exe";
 	// `cmd.exe` consumes the first quoted token as the program and the rest as
 	// one argument string, so a path containing a quote cannot be quoted safely.
 	if (absolute.includes('"')) {

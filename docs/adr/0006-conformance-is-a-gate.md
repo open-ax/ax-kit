@@ -19,12 +19,12 @@ day it landed.
 
 Four dates matter, and they are not the same interval:
 
-| Event | Date |
-|---|---|
-| Upstream removed the precondition | 2026-09-30 |
-| `spec-drift` opened #10 | 2026-09-30T12:31Z |
-| The code was corrected (`351bf41`) | 2026-10-04 |
-| The written triage landed | 2026-10-07 |
+| Event                              | Date              |
+| ---------------------------------- | ----------------- |
+| Upstream removed the precondition  | 2026-09-30        |
+| `spec-drift` opened #10            | 2026-09-30T12:31Z |
+| The code was corrected (`351bf41`) | 2026-10-04        |
+| The written triage landed          | 2026-10-07        |
 
 So the detection was immediate, the code was wrong for **four days**, and the
 issue stayed open without a written answer for **seven days** — which is the
@@ -35,7 +35,7 @@ who looked and enforced by nothing.
 
 The suite itself was never the problem. `pnpm test:conformance` exists, it
 runs the proposal's suite against the built bundle on all three engines, and it
-scores zero *unexpected* failures against a per-engine expected-failure list.
+scores zero _unexpected_ failures against a per-engine expected-failure list.
 On 2026-10-07 it passes: 48 units run, 24 excluded with reasons, 22 files
 passing, 64 subtests passing, 78 expected failures, and no failure without an
 entry.
@@ -56,7 +56,7 @@ failure cannot be merged around.
 The check names are the jobs' configured `name` values — `Repository guard`,
 `Toolchain`, `Conformance suite` — because that is what GitHub uses as a status
 check's context. An earlier version of this paragraph named them
-`guard / Repository guard` and so on, which is the *display* form the settings UI
+`guard / Repository guard` and so on, which is the _display_ form the settings UI
 shows and not the value a required-check configuration matches on. Every pull
 request reported the three required checks as expected-and-missing, and no run
 could satisfy them.
@@ -67,7 +67,7 @@ The scheduled job is unchanged. It watches upstream and opens an issue, because
 detection is a different job from enforcement and the detector is genuinely good
 at detection — it caught the change the same day it happened.
 
-What changes is what a *detected* drift now costs. The suite job runs the pinned
+What changes is what a _detected_ drift now costs. The suite job runs the pinned
 revision of the proposal's suite, so a change to the published document does not
 by itself turn it red: the pin and the suite revision move deliberately, in a
 reviewed change, and that change is where the judgement about the new draft gets
@@ -75,14 +75,13 @@ made. What turns red is the moment somebody has updated the code to a new draft
 without updating the expected-failure list — which is the failure that actually
 happened here, and which the detector alone would not have caught.
 
-So the gate does not enforce *triage*. It enforces that a change to behaviour
+So the gate does not enforce _triage_. It enforces that a change to behaviour
 was accompanied by a re-derived baseline. Triage still depends on a person
 answering the question the issue asks, and this decision does not change that;
 it makes the consequence of a half-finished triage show up as a red build
 rather than as a line in an issue list.
 
 Three things are deliberately absent, and their absence is the decision:
-
 - No `continue-on-error`.
 - No allow-failure condition.
 - No skip flag reachable from a pull request.

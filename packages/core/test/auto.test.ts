@@ -26,7 +26,7 @@ const GLOBAL = globalThis as unknown as Record<string, unknown>;
  * surface is only there if some earlier case in this file installed it.
  */
 function freshDocument(): { doc: Document; restore: () => void } {
-	const real = GLOBAL["document"] as Document | undefined;
+	const real = GLOBAL.document as Document | undefined;
 	const realDescriptor =
 		real === undefined
 			? undefined
@@ -55,10 +55,10 @@ function freshDocument(): { doc: Document; restore: () => void } {
  * no `document` at all, is the same code path rather than a special case.
  */
 function withDocument(doc: Document): () => void {
-	const real = GLOBAL["document"];
-	GLOBAL["document"] = doc;
+	const real = GLOBAL.document;
+	GLOBAL.document = doc;
 	return () => {
-		GLOBAL["document"] = real;
+		GLOBAL.document = real;
 	};
 }
 
@@ -68,15 +68,15 @@ describe("autoInstallModelContext without a document", () => {
 
 	beforeEach(() => {
 		had = "document" in GLOBAL;
-		saved = GLOBAL["document"];
-		delete GLOBAL["document"];
+		saved = GLOBAL.document;
+		delete GLOBAL.document;
 	});
 
 	afterEach(() => {
 		if (had) {
-			GLOBAL["document"] = saved;
+			GLOBAL.document = saved;
 		} else {
-			delete GLOBAL["document"];
+			delete GLOBAL.document;
 		}
 	});
 
@@ -92,13 +92,13 @@ describe("autoInstallModelContext without a document", () => {
 		// successfully against a plain object, producing a surface that silently
 		// does nothing. Refusing it is not observable from inside
 		// installModelContext, so it is observable here instead.
-		GLOBAL["document"] = {};
+		GLOBAL.document = {};
 		expect(autoInstallModelContext()).toBeUndefined();
 
-		GLOBAL["document"] = { location: undefined };
+		GLOBAL.document = { location: undefined };
 		expect(autoInstallModelContext()).toBeUndefined();
 
-		GLOBAL["document"] = "not an object";
+		GLOBAL.document = "not an object";
 		expect(autoInstallModelContext()).toBeUndefined();
 	});
 
@@ -106,7 +106,7 @@ describe("autoInstallModelContext without a document", () => {
 		// A document-shaped object with a location is accepted as a document, so
 		// this reaches installModelContext rather than the type guard. It must
 		// still not throw out of an import-time call.
-		GLOBAL["document"] = { location: { href: "https://example.test/" } };
+		GLOBAL.document = { location: { href: "https://example.test/" } };
 		expect(() => autoInstallModelContext()).not.toThrow();
 	});
 
@@ -115,7 +115,7 @@ describe("autoInstallModelContext without a document", () => {
 		// refused case is reached with a document whose URL cannot be trusted. A
 		// refusal must be reported, not thrown, because this runs at import time
 		// in an application that has no way to catch it usefully.
-		GLOBAL["document"] = {
+		GLOBAL.document = {
 			location: { href: "http://insecure.example.test/page" },
 		};
 		expect(autoInstallModelContext()).toBeUndefined();
@@ -129,7 +129,7 @@ describe("autoInstallModelContext in a document", () => {
 		try {
 			const context = autoInstallModelContext();
 			expect(context).toBeDefined();
-			expect((doc as unknown as Record<string, unknown>)["modelContext"]).toBe(
+			expect((doc as unknown as Record<string, unknown>).modelContext).toBe(
 				context,
 			);
 		} finally {
@@ -147,7 +147,7 @@ describe("autoInstallModelContext in a document", () => {
 			// The second call stands down rather than replacing, so the surface a
 			// caller already holds stays valid.
 			expect(autoInstallModelContext()).toBeUndefined();
-			expect((doc as unknown as Record<string, unknown>)["modelContext"]).toBe(
+			expect((doc as unknown as Record<string, unknown>).modelContext).toBe(
 				first,
 			);
 		} finally {
@@ -163,7 +163,7 @@ describe("autoInstallModelContext in a document", () => {
 			const explicit = installModelContext(doc);
 			expect(explicit).toBeDefined();
 			expect(autoInstallModelContext()).toBeUndefined();
-			expect((doc as unknown as Record<string, unknown>)["modelContext"]).toBe(
+			expect((doc as unknown as Record<string, unknown>).modelContext).toBe(
 				explicit,
 			);
 		} finally {
@@ -188,9 +188,7 @@ describe("autoInstallModelContext in a document", () => {
 		const put = withDocument(doc);
 		try {
 			expect(autoInstallModelContext()).toBeUndefined();
-			expect((holder["modelContext"] as { native?: boolean }).native).toBe(
-				true,
-			);
+			expect((holder.modelContext as { native?: boolean }).native).toBe(true);
 		} finally {
 			put();
 			restore();

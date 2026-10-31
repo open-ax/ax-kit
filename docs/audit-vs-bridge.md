@@ -42,13 +42,13 @@ pnpm turbo run build --filter=@ax-kit/cli... &&
 
 ## What each side is actually asking
 
-| | audit | bridge |
-|---|---|---|
-| Subject | the in-page contract | one invocation at a time |
-| Decides | quality of what the page declares | whether a specific call may run |
-| Knows about the browser | no | yes — it is in one |
-| Sees `exposedTo` | no, and the listing does not carry it | no, and says so in a comment |
-| Failure means | the page is scored poorly | nobody was asked, or the page was refused |
+|                         | audit                                 | bridge                                    |
+| ----------------------- | ------------------------------------- | ----------------------------------------- |
+| Subject                 | the in-page contract                  | one invocation at a time                  |
+| Decides                 | quality of what the page declares     | whether a specific call may run           |
+| Knows about the browser | no                                    | yes — it is in one                        |
+| Sees `exposedTo`        | no, and the listing does not carry it | no, and says so in a comment              |
+| Failure means           | the page is scored poorly             | nobody was asked, or the page was refused |
 
 ## The disagreements
 
@@ -57,10 +57,9 @@ in the test file by the name given here.
 
 ### 1. `typed` fails on a tool the bridge runs with no arguments at all
 
-*Direction: the bridge exposes it, the audit penalises it.*
+_Direction: the bridge exposes it, the audit penalises it._
 
 The `untyped` fixture registers `bareTool` with no `inputSchema`.
-
 - audit: `typed` fails — "missing or invalid input schema".
 - bridge: `tools/list` returns `bareTool`. The worker's boundary check
   (`validateFrameTool`) requires a name, a description, an origin and a
@@ -77,11 +76,10 @@ is the one per-tool check whose failure means the tool cannot honour a call.
 
 ### 2. Four character budgets that nothing enforces
 
-*Direction: cosmetic.*
+_Direction: cosmetic._
 
 The `overlong` fixture registers a tool with a 38-character name and a
 600-character description.
-
 - audit: `naming-budget` fails (38/30) and `description-budget` fails (600/500).
 - bridge: `tools/list` returns the tool. `validateFrameTool` requires
   `description.length > 0` and says nothing at all about length.
@@ -89,13 +87,12 @@ The `overlong` fixture registers a tool with a 38-character name and a
 The budgets are quoted from platform guidance. They are real advice and they are
 not enforced by the bridge, the core, or the platform. **Advisory.**
 
-### 3. `read-only-sanity` fails on a tool the bridge protects *more* than asked
+### 3. `read-only-sanity` fails on a tool the bridge protects _more_ than asked
 
-*Direction: cosmetic, and in the safe direction.*
+_Direction: cosmetic, and in the safe direction._
 
 The `inverted` fixture registers `refundOrder` with both `readOnlyHint: true`
 and `consequentialHint: true`.
-
 - audit: `read-only-sanity` fails — "read-only and consequential together is
   inverted".
 - bridge: the tool is listed, and an invocation takes the confirmation path,
@@ -103,21 +100,20 @@ and `consequentialHint: true`.
   branch. The person is asked.
 
 The audit is correct that the page asserts two contradictory things about its
-own consequence. The consequence for an agent is that the tool is *harder* to
+own consequence. The consequence for an agent is that the tool is _harder_ to
 reach, not easier. **Labelled `enforced`** anyway, because the annotation the
 audit grades is the same one the bridge branches on — a page that disagrees with
 itself here is disagreeing with the control, not merely with a style guide.
 
 ### 4. `exposure` passes on a page that registered four origins
 
-*Direction: the audit passes a check it never got the data for. This is a
-defect in the audit, and it is the sharpest one found.*
+_Direction: the audit passes a check it never got the data for. This is a
+defect in the audit, and it is the sharpest one found._
 
 The `overBroad` fixture registers one tool with
 `exposedTo: ["http://127.0.0.1:1", "http://localhost:2", "http://127.0.0.1:3",
 "http://127.0.0.1:4"]`. The core accepts all four as potentially trustworthy and
 stores them.
-
 - audit: `exposure` **passes**, detail "exposure narrow".
 - bridge: `tools/list` returns `wideTool`.
 
@@ -143,13 +139,12 @@ the place this record was written from. Until one of them happens, a page told
 
 ### 5. A destructive tool the audit passes, which the bridge runs unattended
 
-*Direction: the audit approves of a tool the bridge will not ask anyone about.
-The audit's defect, per the rule that says so.*
+_Direction: the audit approves of a tool the bridge will not ask anyone about.
+The audit's defect, per the rule that says so._
 
 The `noConsequential` fixture registers `deleteEverything` — "Delete every
 record for this account. Irreversible." — with an empty schema and no
 annotations.
-
 - audit: every per-tool check **passes**. The only failure is
   `consequential-coverage: site` — "0/1 consequential annotated" — a score over
   the page, not a property of the tool.
@@ -170,11 +165,10 @@ says a tool does against what it says the tool will do.
 
 ### 6. A page the audit scores and the bridge will not describe
 
-*Direction: the bridge refuses; the audit keeps grading.*
+_Direction: the bridge refuses; the audit keeps grading._
 
 The `forged` fixture installs no context and defines an impostor on the
 document with two entries, neither of which carries an `origin`.
-
 - audit: reads both entries and produces findings — `typed: totallySafe` fails
   ("missing or invalid input schema", because the entry claims the string
   `"not-a-schema"`), `exposure: wildClaim` fails ("exposure over-broad:
@@ -189,10 +183,9 @@ names a field — `origin` — that the audit never reads.
 
 ### 7. "No tools" and "no context" are the same report
 
-*Direction: the audit cannot distinguish two different pages.*
+_Direction: the audit cannot distinguish two different pages._
 
 `noContext` installs nothing. `empty` installs a context and registers nothing.
-
 - audit: identical. `tools: []` for both, and both report
   `consequential-coverage: site` with the detail "no tools to annotate".
 - bridge: both list nothing, for the same reason — `listToolsInPage` finds no
@@ -210,13 +203,12 @@ no context. Measured at 5.2 s for that one page in the suite.
 ## The ones that agree
 
 Recorded so the record is not only the failures.
-
 - **`clean`.** Two typed tools, one consequential. Audit: no findings. Bridge:
   both listed; `viewCart` executes and returns its own value; `placeOrder`
   answers `requiresConfirmation: true` and executes nothing.
 - **`empty` and `noContext`.** Both list nothing. Both fail
   `consequential-coverage`. The disagreement between them is #7, not the answer.
-- **A tool the audit approves of and the bridge *does* refuse**: only
+- **A tool the audit approves of and the bridge _does_ refuse**: only
   `placeOrder`, and the bridge does not refuse it — it asks. Every refusal
   observed in this comparison (`noSuchTool`, a mislabelled origin) is a refusal
   of something the audit never scored.
@@ -228,18 +220,18 @@ every line plus a count in the summary. The classification is the table in
 `packages/cli/src/scoring.ts`, and every entry in it is one of the observations
 above:
 
-| check | label | observation |
-|---|---|---|
-| `typed` | enforced | #1 — arguments cannot survive to the page |
-| `read-only-sanity` | enforced | #3 — the bridge branches on this annotation |
-| `policy` | enforced | the platform's own gate; nothing is exposed when it denies |
-| `naming-budget` | advisory | #2 |
-| `description-budget` | advisory | #2 |
-| `param-description-budget` | advisory | #2 |
-| `output-budget` | advisory | #2 |
-| `exposure` | advisory | #2, #4 — and #4 says the check cannot fail at all |
-| `consequential-coverage` | advisory | #5 — a page score, not a gate |
-| `consequential-annotated` | advisory | cannot fail by construction |
+| check                      | label    | observation                                                |
+| -------------------------- | -------- | ---------------------------------------------------------- |
+| `typed`                    | enforced | #1 — arguments cannot survive to the page                  |
+| `read-only-sanity`         | enforced | #3 — the bridge branches on this annotation                |
+| `policy`                   | enforced | the platform's own gate; nothing is exposed when it denies |
+| `naming-budget`            | advisory | #2                                                         |
+| `description-budget`       | advisory | #2                                                         |
+| `param-description-budget` | advisory | #2                                                         |
+| `output-budget`            | advisory | #2                                                         |
+| `exposure`                 | advisory | #2, #4 — and #4 says the check cannot fail at all          |
+| `consequential-coverage`   | advisory | #5 — a page score, not a gate                              |
+| `consequential-annotated`  | advisory | cannot fail by construction                                |
 
 The exit code still counts every finding, advisory included. That is
 deliberate and it is stated in the report on every run: the code is a verdict on
@@ -255,7 +247,7 @@ audit before and after a bridge call the audit has no opinion about and getting
 byte-identical findings.
 
 This document is not a site verdict. It says nothing about whether a page's
-tools are *safe*, only about which of the audit's complaints the bridge acts on.
+tools are _safe_, only about which of the audit's complaints the bridge acts on.
 Four of the seven observations are cases where the audit is right and the bridge
 is indifferent; that is not the bridge being wrong. A character budget is advice
 and the bridge declines to enforce advice.

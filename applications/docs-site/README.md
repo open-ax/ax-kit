@@ -2,7 +2,7 @@
 
 Static documentation that **runs the polyfill in the reader's browser**. For a
 library that modifies a global in someone else's page, the only meaningful
-question — *does this work, in my browser, on my page* — is answered by running
+question — _does this work, in my browser, on my page_ — is answered by running
 it, and installation is exactly the step that deters evaluation.
 
 ```sh
@@ -14,12 +14,12 @@ pnpm --filter @ax-kit/docs-site test:browser    # built output, real browser, ru
 
 `build` runs four things in order, and the last two can fail it:
 
-| Step | Fails on |
-|---|---|
-| `generate-llms.mjs` | — |
-| `astro build` | A page that will not compile |
-| `verify-reference.mjs` | A public signature changed without the reference changing |
-| `verify-links.mjs` | A broken internal link, a malformed `security.txt`, a `llms.json` entry the build did not produce |
+| Step                   | Fails on                                                                                          |
+| ---------------------- | ------------------------------------------------------------------------------------------------- |
+| `generate-llms.mjs`    | —                                                                                                 |
+| `astro build`          | A page that will not compile                                                                      |
+| `verify-reference.mjs` | A public signature changed without the reference changing                                         |
+| `verify-links.mjs`     | A broken internal link, a malformed `security.txt`, a `llms.json` entry the build did not produce |
 
 ## Three things this site does that a template does not
 
@@ -55,7 +55,7 @@ by counting the generated HTML rather than by reading the log.
 
 **An island's JavaScript is not in a `<script src>`.** It is fetched at runtime by
 the `astro-island` custom element, so a page with a working island and a page with
-no island carry the *same* script tags. "Pages with no interactive example load no
+no island carry the _same_ script tags. "Pages with no interactive example load no
 framework runtime" is asserted by looking for `<astro-island` in the served HTML.
 
 **`astro preview` is a daemon.** It registers an instance, refuses to start a

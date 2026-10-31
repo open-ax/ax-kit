@@ -71,8 +71,8 @@ the pure scorer stays separately importable:
 import { auditLiveUrlFindings, exitCodeFor } from "@ax-kit/cli";
 
 const { report, context } = await auditLiveUrlFindings(
-  { headless: true },
-  "https://shop.example",
+	{ headless: true },
+	"https://shop.example",
 );
 process.stdout.write(report);
 process.exitCode = exitCodeFor(context);

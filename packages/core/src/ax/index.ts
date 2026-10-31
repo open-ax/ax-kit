@@ -29,9 +29,7 @@ export interface ToolChangeDiff {
 }
 
 function defaultDocument(): Document {
-	const candidate = (globalThis as unknown as Record<string, unknown>)[
-		"document"
-	];
+	const candidate = (globalThis as unknown as Record<string, unknown>).document;
 	if (typeof candidate !== "object" || candidate === null) {
 		throw new TypeError("no document is available");
 	}

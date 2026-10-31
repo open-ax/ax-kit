@@ -13,13 +13,13 @@ pnpm --filter @ax-kit/demo-store test:browser    # the built output, real browse
 
 ## What it demonstrates
 
-| | |
-|---|---|
-| `search_products({ query, maxPrice? })` | a tool with an optional argument |
-| `view_cart()` | a tool that takes no arguments |
-| `add_to_cart({ sku, quantity })` | a mutation, **not** consequential |
-| `apply_coupon_code({ code })` | a mutation, **not** consequential |
-| `proceed_to_checkout()` | **consequential** — spends money, cannot be undone |
+|                                         |                                                    |
+| --------------------------------------- | -------------------------------------------------- |
+| `search_products({ query, maxPrice? })` | a tool with an optional argument                   |
+| `view_cart()`                           | a tool that takes no arguments                     |
+| `add_to_cart({ sku, quantity })`        | a mutation, **not** consequential                  |
+| `apply_coupon_code({ code })`           | a mutation, **not** consequential                  |
+| `proceed_to_checkout()`                 | **consequential** — spends money, cannot be undone |
 
 Those names and argument shapes are canonical. They appear identically here, in
 the documentation, and in every example in this project, and a test asserts the
@@ -29,7 +29,7 @@ storefront's page and its tool table agree.
 
 **The consequential annotation is argued, not chosen by feel.** Only
 `proceed_to_checkout` carries `consequentialHint`, because it is the only
-irreversible one. The two cart mutations are deliberately *not* annotated: both
+irreversible one. The two cart mutations are deliberately _not_ annotated: both
 are reversible, neither costs anything, and a user who clicked "add to cart" has
 already confirmed it. Over-annotating trains agents and users to dismiss
 confirmations, which is the exact failure mode the annotation exists to prevent.
@@ -42,7 +42,7 @@ declaration and the check are written from one table so they cannot drift apart.
 
 One consequence worth knowing: the draft specifies that a callback which throws
 rejects the caller with `OperationError`, so the readable message a handler throws
-is *not* what an agent sees. See `buildTool` in `src/lib/register.ts`.
+is _not_ what an agent sees. See `buildTool` in `src/lib/register.ts`.
 
 **The polyfill installs without the tree becoming client-side.** `layout.tsx`,
 `page.tsx` and `storefront.tsx` are server components, and the catalogue, the
@@ -60,7 +60,7 @@ carry `"use client"`.
   well-formed body that a reader might mistake for support.
 - **The install is a client component, not a client entry hook.** Next.js's App
   Router has no `client.js` convention, and `instrumentation.ts` runs on the
-  *server*. `src/app/install-polyfill.tsx` explains what that costs — the install
+  _server_. `src/app/install-polyfill.tsx` explains what that costs — the install
   happens after hydration begins rather than before it.
 - **Tools are per-document, so a frame or a popup sees nothing.** That is the
   largest known gap in this implementation and it is recorded in

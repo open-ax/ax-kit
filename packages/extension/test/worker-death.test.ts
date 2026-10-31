@@ -365,14 +365,14 @@ function pendingFrom(reply: unknown): ReadonlyArray<Record<string, unknown>> {
 		return [];
 	}
 	const outer = reply as Record<string, unknown>;
-	if (outer["ok"] !== true) {
+	if (outer.ok !== true) {
 		return [];
 	}
-	const result = outer["result"];
+	const result = outer.result;
 	if (typeof result !== "object" || result === null) {
 		return [];
 	}
-	const pending = (result as Record<string, unknown>)["pending"];
+	const pending = (result as Record<string, unknown>).pending;
 	if (!Array.isArray(pending)) {
 		return [];
 	}
@@ -391,10 +391,10 @@ function confirmationOf(reply: unknown): Record<string, unknown> {
 		return {};
 	}
 	const outer = reply as Record<string, unknown>;
-	if (outer["ok"] !== true) {
+	if (outer.ok !== true) {
 		return {};
 	}
-	const result = outer["result"];
+	const result = outer.result;
 	return typeof result === "object" && result !== null
 		? (result as Record<string, unknown>)
 		: {};
@@ -405,9 +405,9 @@ async function approve(binding: string): Promise<void> {
 	const listed = await ask({ panel: "list", args: {} });
 	expect(listed.ok).toBe(true);
 	const entry = pendingFrom(listed.reply).find(
-		(candidate) => candidate["key"] === binding,
+		(candidate) => candidate.key === binding,
 	);
-	const version = entry?.["definitionVersion"];
+	const version = entry?.definitionVersion;
 	expect(typeof version, "the pending card a person would be reading").toBe(
 		"string",
 	);
@@ -448,8 +448,7 @@ beforeAll(async () => {
 	page = await context.newPage();
 	await page.goto(`${origin}/shop`);
 	await page.waitForFunction(
-		() =>
-			(globalThis as unknown as Record<string, unknown>)["__ready"] === true,
+		() => (globalThis as unknown as Record<string, unknown>).__ready === true,
 		undefined,
 		{ timeout: 60_000 },
 	);
@@ -571,8 +570,8 @@ describe("a worker terminated mid-call", () => {
 		const filed = await deliver(asking, "asking");
 		expect(filed.ok).toBe(true);
 		const confirmation = confirmationOf(filed.reply);
-		expect(confirmation["requiresConfirmation"]).toBe(true);
-		const binding = String(confirmation["pendingApproval"]);
+		expect(confirmation.requiresConfirmation).toBe(true);
+		const binding = String(confirmation.pendingApproval);
 		expect(binding.length).toBeGreaterThan(0);
 
 		// A person answers it, and the approved invocation starts running.
@@ -605,8 +604,8 @@ describe("a worker terminated mid-call", () => {
 		const recovered = await deliver(approved, "recovered-consequential");
 		expect(recovered.ok).toBe(true);
 		const result = confirmationOf(recovered.reply);
-		expect(result["requiresConfirmation"], "a fresh confirmation").toBe(true);
-		expect(result["pendingApproval"], "bound to the same invocation").toBe(
+		expect(result.requiresConfirmation, "a fresh confirmation").toBe(true);
+		expect(result.pendingApproval, "bound to the same invocation").toBe(
 			binding,
 		);
 

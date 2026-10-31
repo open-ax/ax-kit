@@ -17,7 +17,7 @@ import "../../src/auto.js";
 import { autoInstallModelContext } from "../../src/auto.js";
 
 function surface(): EventTarget | undefined {
-	return (document as unknown as Record<string, unknown>)["modelContext"] as
+	return (document as unknown as Record<string, unknown>).modelContext as
 		| EventTarget
 		| undefined;
 }

@@ -30,9 +30,8 @@ function errorName(error: unknown): string {
 }
 
 function context(): ModelContext {
-	const installed = (document as unknown as Record<string, unknown>)[
-		"modelContext"
-	] as ModelContext | undefined;
+	const installed = (document as unknown as Record<string, unknown>)
+		.modelContext as ModelContext | undefined;
 	if (installed === undefined) {
 		throw new Error("document.modelContext is not installed");
 	}
@@ -234,7 +233,7 @@ describe("secure context and policy gates", () => {
 		try {
 			expect(installModelContext(docOf(win))).toBeUndefined();
 			expect(
-				(win.document as unknown as Record<string, unknown>)["modelContext"],
+				(win.document as unknown as Record<string, unknown>).modelContext,
 			).toBeUndefined();
 		} finally {
 			void win.happyDOM?.close();

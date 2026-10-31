@@ -16,7 +16,6 @@ untrusted input like any other.
 
 Enforce a restricted subset with our own guards, documented as ours and never
 cited as draft-derived:
-
 - Dangerous keys (`__proto__`, `constructor`, `prototype`) rejected at any
   depth, including inside unknown keywords.
 - Caps: depth 10, 500 total keys, 65,536 serialized characters.

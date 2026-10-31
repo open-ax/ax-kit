@@ -26,11 +26,11 @@ installed from this package's `dist`, so build before running tests.
 import { expect, test } from "@ax-kit/playwright";
 
 test("drives the offered surface", async ({ page }) => {
-  await page.goto("/");
-  const tools = await page.ax.getAvailableTools();
-  expect(tools.map((tool) => tool.name)).toContain("viewCart");
-  const cart = await page.ax.executeTool("viewCart", {});
-  expect(cart).toEqual({ items: [] });
+	await page.goto("/");
+	const tools = await page.ax.getAvailableTools();
+	expect(tools.map((tool) => tool.name)).toContain("viewCart");
+	const cart = await page.ax.executeTool("viewCart", {});
+	expect(cart).toEqual({ items: [] });
 });
 ```
 

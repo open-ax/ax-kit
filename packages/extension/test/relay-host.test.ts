@@ -55,10 +55,10 @@ function installChrome(): void {
 	// Saved and restored rather than merely overwritten: this file and the
 	// browser suites can land in the same worker, and a `chrome` double left
 	// behind would be inherited by tests that are exercising the real platform.
-	savedChrome = scope["chrome"];
-	savedFetch = scope["fetch"];
-	savedSetTimeout = scope["setTimeout"];
-	scope["chrome"] = {
+	savedChrome = scope.chrome;
+	savedFetch = scope.fetch;
+	savedSetTimeout = scope.setTimeout;
+	scope.chrome = {
 		runtime: {
 			connectNative: (): Port => {
 				connectCalls += 1;
@@ -70,14 +70,14 @@ function installChrome(): void {
 	};
 	// A pull that never answers, so an attached relay stays attached for the
 	// length of the test instead of racing a real connection to a dead port.
-	scope["fetch"] = (): Promise<never> => new Promise<never>(() => {});
+	scope.fetch = (): Promise<never> => new Promise<never>(() => {});
 }
 
 function restoreChrome(): void {
 	const scope = globalThis as unknown as Record<string, unknown>;
-	scope["chrome"] = savedChrome;
-	scope["fetch"] = savedFetch;
-	scope["setTimeout"] = savedSetTimeout;
+	scope.chrome = savedChrome;
+	scope.fetch = savedFetch;
+	scope.setTimeout = savedSetTimeout;
 }
 
 const ATTACHMENT = { ok: true, port: 43219, token: "0123456789abcdef0123" };
@@ -179,8 +179,8 @@ describe("relay connection lifecycle", () => {
 		const scheduled: number[] = [];
 		const scope = globalThis as unknown as Record<string, unknown>;
 		const realSetTimeout = globalThis.setTimeout;
-		scope["fetch"] = (): Promise<never> => Promise.reject(new Error("refused"));
-		scope["setTimeout"] = (fn: () => void, ms?: number): unknown => {
+		scope.fetch = (): Promise<never> => Promise.reject(new Error("refused"));
+		scope.setTimeout = (fn: () => void, ms?: number): unknown => {
 			// 100ms and up is the backoff; anything else is a test's own timer.
 			if (typeof ms === "number" && ms >= 100) {
 				scheduled.push(ms);
@@ -203,7 +203,7 @@ describe("relay connection lifecycle", () => {
 			// And still no new connection was made without the wait.
 			expect(connectCalls).toBe(1);
 		} finally {
-			scope["setTimeout"] = realSetTimeout;
+			scope.setTimeout = realSetTimeout;
 		}
 	});
 

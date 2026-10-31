@@ -14,28 +14,27 @@ Versions below were verified against nodejs.org/dist and the npm registry on
 
 ### Verified against nodejs.org/dist on 2026-09-27
 
-| Fact | Value |
-|---|---|
-| Active LTS line | **24.x, codename "Krypton"** |
-| Newest 24.x | **24.21.0** (2026-09-07) |
-| 24.20.0 | 2026-08-26 — real, one patch behind newest |
-| 24.19.0 | 2026-08-03 — real, two patches behind newest |
-| Maintenance LTS | 22.x "Jod" |
-| Current (non-LTS) | 26.x |
+| Fact              | Value                                        |
+| ----------------- | -------------------------------------------- |
+| Active LTS line   | **24.x, codename "Krypton"**                 |
+| Newest 24.x       | **24.21.0** (2026-09-07)                     |
+| 24.20.0           | 2026-08-26 — real, one patch behind newest   |
+| 24.19.0           | 2026-08-03 — real, two patches behind newest |
+| Maintenance LTS   | 22.x "Jod"                                   |
+| Current (non-LTS) | 26.x                                         |
 
 ### Verified against the npm registry on 2026-09-27
 
-| Fact | Value |
-|---|---|
+| Fact                      | Value      |
+| ------------------------- | ---------- |
 | `pnpm` `dist-tags.latest` | **12.6.0** |
-| Newest 12.x | 12.7.0 |
-| Newest 10.x | 10.34.5 |
+| Newest 12.x               | 12.7.0     |
+| Newest 10.x               | 10.34.5    |
 
 ### Could not be verified
 
 Three claims are **not** checked, because they have no consumer yet and no code
 to check them against:
-
 1. That pnpm 12 is a Rust rewrite.
 2. That Turborepo 2.11 deprecates `packageManager` in favour of
    `devEngines.packageManager`.
@@ -49,11 +48,11 @@ be checked then rather than configured now on the strength of an unsourced note.
 **Separate what we develop on from what we support.** These are different
 questions and conflating them produces friction.
 
-| Concern | Value | Where |
-|---|---|---|
-| Supported Node range | `>=24.19.0 <25` | `package.json` `engines.node` |
-| Node we develop and test on | `24.21.0` | `.nvmrc` |
-| pnpm | **not pinned yet** | decided when the toolchain lands |
+| Concern                     | Value              | Where                            |
+| --------------------------- | ------------------ | -------------------------------- |
+| Supported Node range        | `>=24.19.0 <25`    | `package.json` `engines.node`    |
+| Node we develop and test on | `24.21.0`          | `.nvmrc`                         |
+| pnpm                        | **not pinned yet** | decided when the toolchain lands |
 
 ### Why `>=24.19.0` and not `>=24.20.0`
 
@@ -99,7 +98,6 @@ field with what the workflow actually reads.
 One repository-level file was deliberately **excluded** from the first
 commit, because at this point it configures a tool that is not installed yet
 and therefore does nothing:
-
 - **`.npmrc`** — `engine-strict=true`, `strict-peer-dependencies=true`,
   `save-exact=true`. All three are wanted and all three are inert without a
   `package.json`. They ship with the commit that creates the root manifest.

@@ -144,7 +144,7 @@ describe("MCP over HTTP", () => {
 		);
 		expect(response.status).toBe(200);
 		const body = JSON.parse(response.body) as Record<string, unknown>;
-		expect((body["result"] as Record<string, unknown>)["resultType"]).toBe(
+		expect((body.result as Record<string, unknown>).resultType).toBe(
 			"complete",
 		);
 	});
@@ -158,10 +158,10 @@ describe("MCP over HTTP", () => {
 		);
 		expect(response.status).toBe(200);
 		const body = JSON.parse(response.body) as Record<string, unknown>;
-		const result = body["result"] as Record<string, unknown>;
-		expect(result["resultType"]).toBe("complete");
-		expect(result["isError"]).toBeUndefined();
-		expect(JSON.stringify(result["content"])).toMatch(/viewCart/);
+		const result = body.result as Record<string, unknown>;
+		expect(result.resultType).toBe("complete");
+		expect(result.isError).toBeUndefined();
+		expect(JSON.stringify(result.content)).toMatch(/viewCart/);
 	});
 
 	it("refuses a header that disagrees with the body", async () => {
