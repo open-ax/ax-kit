@@ -51,10 +51,10 @@
 		"@vitest/browser-playwright": "5.0.2",
 		"happy-dom": "21.0.4",
 		"playwright": "1.64.1",
-		"tsdown": "0.23.1",
+		"tsdown": "0.23.7",
 		"typescript": "6.0.3",
 		"vitest": "5.0.2",
-		"vue": "3.5.43",
-		"vue-tsc": "3.3.13"
+		"vue": "3.5.45",
+		"vue-tsc": "3.3.14"
 	}
 }
